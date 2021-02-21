@@ -21,9 +21,9 @@ In case SQL or PL/pgSQL is not appropriate:
 * If type-safety is not possible or 3rd party libraries access is more important than type-safety then PL/Python, PL/Perl, and other languages should be considered.
 * The choice of language should depend on how easy the functionality can be expressed using [Postgraphile Schema Design](https://www.graphile.org/postgraphile/postgresql-schema-design/).
 
-## Information Assurance and Security in the Database
+## Information Assurance and Security _in the Database_
 
-PgDCP requires _database-first_ security, which means PostgreSQL schemas, users, roles, permissions, and row-level security (RLS) should drive all data security requirements. Role-based access control (RBAC) and attribute based access control (ABAC) should be implemented in PostgreSQL stored routines.
+PgDCP requires _database-first_ security, which means PostgreSQL schemas, users, roles, permissions, and row-level security (RLS) should drive all data security requirements. Role-based access control (RBAC) and attribute based access control (ABAC) should be implemented in PostgreSQL stored routines. If necessary, [ldap2pg](https://github.com/dalibo/ldap2pg) can be used to synchronize roles with LDAP.
 
 ## GraphQL-first but REST-capable
 
@@ -59,12 +59,13 @@ Engineers writing applications should consider these PostgreSQL-native libraries
 * [dox Document Database API extension](https://github.com/robconery/dox) when needing simple JSON store
 * [colpivot.sql](https://github.com/hnsl/colpivot) dynamic row to column pivotation/transpose
 * [Guidance to implement NIST level 2 RBAC Hierarchical RBAC](https://github.com/morenoh149/postgresDBSamples/tree/master/role-based-access-control) in PostgreSQL
-* 
+* [ldap2pg](https://github.com/dalibo/ldap2pg) to synchronize Postgres roles and privileges from YAML or LDAP
 
 Engineers writing SQL-first code should use the following tools:
 
-* [plpgsql_check](https://github.com/okbob/plpgsql_check) for linting plpgsql source code
+* [sqlcheck](https://github.com/jarulraj/sqlcheck) and [plpgsql_check](https://github.com/okbob/plpgsql_check) for linting SQL source code
 * [pgTAP](https://pgtap.org/) - Database testing framework for Postgres
+* [pgcmp](https://github.com/cbbrowne/pgcmp) for comparing Postgres database schemas
 * [Web-based Explain Visualizer \(pev\)](https://github.com/AlexTatiyants/pev) and [CLI query visualizer (gocmdpev)](https://github.com/simon-engledew/gocmdpev) for performance optimization
 * [JSON Schema validation for PostgreSQL](https://github.com/gavinwahl/postgres-json-schema) when using JSON and JSONB columns
 * Use [readable database errors](https://github.com/Shyp/go-dberror) as a guide for creating errors in the database which can be used in the front-end
