@@ -1,6 +1,6 @@
 # PostgreSQL Data Computing Platform (PgDCP)
 
-PgDCP is Netspective's approach for using PostgreSQL to host tables, views, plus polyglot stored routines and surface them as GraphQL and REST using Postgraphile, Hasura, and PostgREST. Using PostgreSQL whenever possible is called our _Zero Middleware_ automated backend as a service (AutoBaaS) strategy. AutoBaaS helps us eliminate signficant amounts of GraphQL and REST boilerplate code plus reduces the number of microservices we need to deploy and manage. 
+PgDCP is Netspective's approach for using PostgreSQL to host tables, views, plus polyglot stored routines and surface them as GraphQL and REST using Postgraphile, Hasura, [pREST](https://github.com/prest/prest), and PostgREST. Using PostgreSQL whenever possible is called our _Zero Middleware_ automated backend as a service (AutoBaaS) strategy. AutoBaaS helps us eliminate signficant amounts of GraphQL and REST boilerplate code plus reduces the number of microservices we need to deploy and manage. 
 
 _Zero Middleware_ is not tool or framework but an approach to reducing data-centric code surfaces to just PostgreSQL, with automatic and auto-generated, secure GraphQL and REST endpoints whenever possible. For use cases when higher-performance or more secure interfaces are necessary, direct access to tables, views, and stored routines using PostgreSQL wire protocol is encouraged.
 
@@ -27,7 +27,7 @@ PgDCP requires _database-first_ security, which means PostgreSQL schemas, users,
 
 ## GraphQL-first but REST-capable
 
-All micro services code in PostgreSQL tables, views, functions and stored procedures will be surfaced through Postgraphile GraphQL first but our AutoBaaS requirements are that all services should be exposed through safe and secure REST interfaces as a fallback for non-GraphQL clients. We favor Postgraphile GraphQL because it generates code which honors PostgreSQL security, roles, and unique features more faithfully than other utilities such as Hasura. 
+All micro services code in PostgreSQL tables, views, functions and stored procedures will be surfaced through Postgraphile GraphQL first but our AutoBaaS requirements are that all services should be exposed through safe and secure REST interfaces via [pREST](https://github.com/prest/prest) as a fallback for non-GraphQL clients. We favor Postgraphile's GraphQL API because it generates code which honors PostgreSQL security, roles, and unique features more faithfully than other utilities such as Hasura. 
 
 ## Assurance as Code
 
@@ -45,11 +45,13 @@ Platform and site reliability engineers should review:
 * [Postgres features showcase \(commented SQL samples\)](https://github.com/cybertec-postgresql/postgres-showcase)
 * [postgres_dba](https://github.com/NikolayS/postgres_dba) set of useful tools for Postgres DBAs and all engineers
 * [pgcenter](https://github.com/lesovsky/pgcenter) CLI tool for observing and troubleshooting Postgres
+* [PGXN client](https://github.com/pgxn/pgxnclient) CLI tool to interact with the PostgreSQL Extension Network
 
 Engineers writing applications should consider these PostgreSQL-native libraries:
 
 * [ltree](https://www.postgresql.org/docs/13/ltree.html) for representing labels of data stored in a hierarchical tree\-like structure
 * [Audit Trigger 91plus](https://wiki.postgresql.org/wiki/Audit_trigger_91plus) generic trigger function used for recording changes to tables into an audit log table
+* [pg_cron](https://github.com/citusdata/pg_cron) to run periodic jobs in PostgreSQL
 * [shortkey](https://github.com/turbo/pg-shortkey) for YouTube-like Short IDs as Postgres Primary Keys
 * [dexter](https://github.com/ankane/dexter) automatic indexer
 * [message-db](https://github.com/message-db/message-db) message and event store
@@ -61,6 +63,8 @@ Engineers writing applications should consider these PostgreSQL-native libraries
 
 Engineers writing SQL-first code should use the following tools:
 
+* [plpgsql_check](https://github.com/okbob/plpgsql_check) for linting plpgsql source code
+* [pgTAP](https://pgtap.org/) - Database testing framework for Postgres
 * [Web-based Explain Visualizer \(pev\)](https://github.com/AlexTatiyants/pev) and [CLI query visualizer (gocmdpev)](https://github.com/simon-engledew/gocmdpev) for performance optimization
 * [JSON Schema validation for PostgreSQL](https://github.com/gavinwahl/postgres-json-schema) when using JSON and JSONB columns
 * Use [readable database errors](https://github.com/Shyp/go-dberror) as a guide for creating errors in the database which can be used in the front-end
