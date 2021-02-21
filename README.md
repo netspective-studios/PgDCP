@@ -48,6 +48,7 @@ Platform and site reliability engineers should review:
 
 Engineers writing applications should consider these PostgreSQL-native libraries:
 
+* [ltree](https://www.postgresql.org/docs/13/ltree.html) for representing labels of data stored in a hierarchical tree\-like structure
 * [Audit Trigger 91plus](https://wiki.postgresql.org/wiki/Audit_trigger_91plus) generic trigger function used for recording changes to tables into an audit log table
 * [shortkey](https://github.com/turbo/pg-shortkey) for YouTube-like Short IDs as Postgres Primary Keys
 * [dexter](https://github.com/ankane/dexter) automatic indexer
