@@ -78,6 +78,7 @@ Machine Learning without leaving PostgreSQL:
 * [Apache MADlib](https://madlib.apache.org/)
 * [mindsdb.com](https://mindsdb.com/) for machine Learning without leaving the database
 
-Content engineers who need datasets and ML:
+Content engineers who need datasets:
 
+* [pgloader](https://pgloader.readthedocs.io/en/latest/index.html) loads data from various sources into PostgreSQL
 * [ISO\-3166 \- All countries and subcountries in the world](https://github.com/morenoh149/postgresDBSamples)
