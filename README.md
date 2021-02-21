@@ -34,9 +34,9 @@ All micro services code in PostgreSQL tables, views, functions and stored proced
 
 All code in PostgreSQL should be tested, or _assured_, with pgTAP code. All _Assurance Engineering Cases_ (AECs) should be written code-first, not human-first (what we call  _Assurance as Code_).
 
-## Stateless, non-data-centric services, are out of scope
+## Microsoft Excel-first UX but client-independent
 
-If a custom micro service is completely stateless and does not have anything to do with reading or writing structured data, it should be written in TypeScript hosted on Deno or other micro service using Microsoft Dapr sidecar.
+Microsoft Excel should be the first UI that all data access should be designed for when accessing outside of developer-centric PgDCP use cases. If Excel can properly show your data, in a safe, secure, and performant way, then every other client can also do so. Excel-first UX should target "live ODBC" use cases where the database is directly accessed using PostgreSQL binary protocol.
 
 ## PgDCP Engineering Resources
 
@@ -90,3 +90,8 @@ Content engineers who need datasets:
 
 * [pgloader](https://pgloader.readthedocs.io/en/latest/index.html) loads data from various sources into PostgreSQL
 * [ISO\-3166 \- All countries and subcountries in the world](https://github.com/morenoh149/postgresDBSamples)
+
+## Stateless, non-data-centric services, are out of scope
+
+If a custom micro service is completely stateless and does not have anything to do with reading or writing structured data, it should be written in TypeScript hosted on Deno or other micro service using Microsoft Dapr sidecar.
+
