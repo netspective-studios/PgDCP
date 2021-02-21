@@ -56,6 +56,7 @@ Engineers writing applications should consider these PostgreSQL-native libraries
 * [dexter](https://github.com/ankane/dexter) automatic indexer
 * [message-db](https://github.com/message-db/message-db) message and event store
 * [RecDB Recommendation Engine](https://github.com/DataSystemsLab/recdb-postgresql)
+* [pg_similarity](http://www.postgresql.org/) extension to support similarity queries on PostgreSQL
 * [dox Document Database API extension](https://github.com/robconery/dox) when needing simple JSON store
 * [colpivot.sql](https://github.com/hnsl/colpivot) dynamic row to column pivotation/transpose
 * [Guidance to implement NIST level 2 RBAC Hierarchical RBAC](https://github.com/morenoh149/postgresDBSamples/tree/master/role-based-access-control) in PostgreSQL
