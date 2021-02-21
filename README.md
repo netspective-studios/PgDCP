@@ -77,6 +77,10 @@ Engineers writing SQL-first code should use the following tools:
 * Use [HyperLogLog data structures](https://github.com/citusdata/postgresql-hll) and [TopN PostgreSQL extension](https://github.com/citusdata/postgresql-topn) for higher performing value counting when data amounts get large
 * See [GraphQL for Postgres](https://github.com/solidsnack/GraphpostgresQL) which teaches techniques for how to parse GraphQL queries and transform them into SQL, all inside PostgreSQL (this is not production-level code but is good for education)
 
+Engineers needing to instrument PostgreSQL:
+
+* Deno [Postgres SQL parser](https://github.com/oguimbal/pgsql-ast-parser)
+
 Machine Learning without leaving PostgreSQL:
 
 * [Apache MADlib](https://madlib.apache.org/)
