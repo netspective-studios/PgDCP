@@ -37,24 +37,36 @@ All code in PostgreSQL should be tested, or assured, with pgTAP code. All Assura
 
 If a custom micro service is completely stateless and does not have anything to do with reading or writing structured data, it should be written in TypeScript hosted on Deno or other micro service using Microsoft Dapr sidecar.
 
-## Software Engineering Tools
+## PgDCP Engineering Resources
 
 Platform and site reliability engineers should review:
 
 * [psql command line tutorial and cheat sheet](https://github.com/tomcam/postgres)
 * [Postgres features showcase \(commented SQL samples\)](https://github.com/cybertec-postgresql/postgres-showcase)
 * [postgres_dba](https://github.com/NikolayS/postgres_dba) set of useful tools for Postgres DBAs and all engineers
+* [pgcenter](https://github.com/lesovsky/pgcenter) CLI tool for observing and troubleshooting Postgres
 
-Engineers writing applications should consider:
+Engineers writing applications should consider these PostgreSQL-native libraries:
 
+* [Audit Trigger 91plus](https://wiki.postgresql.org/wiki/Audit_trigger_91plus) generic trigger function used for recording changes to tables into an audit log table
 * [shortkey](https://github.com/turbo/pg-shortkey) for YouTube-like Short IDs as Postgres Primary Keys
+* [dexter](https://github.com/ankane/dexter) automatic indexer
+* [message-db](https://github.com/message-db/message-db) message and event store
 * [RecDB Recommendation Engine](https://github.com/DataSystemsLab/recdb-postgresql)
 * [dox Document Database API extension](https://github.com/robconery/dox) when needing simple JSON store
 * [colpivot.sql](https://github.com/hnsl/colpivot) dynamic row to column pivotation/transpose
+* [Guidance to implement NIST level 2 RBAC Hierarchical RBAC](https://github.com/morenoh149/postgresDBSamples/tree/master/role-based-access-control) in PostgreSQL
+* 
 
 Engineers writing SQL-first code should use the following tools:
 
 * [Web-based Explain Visualizer \(pev\)](https://github.com/AlexTatiyants/pev) and [CLI query visualizer (gocmdpev)](https://github.com/simon-engledew/gocmdpev) for performance optimization
 * [JSON Schema validation for PostgreSQL](https://github.com/gavinwahl/postgres-json-schema) when using JSON and JSONB columns
 * Use [readable database errors](https://github.com/Shyp/go-dberror) as a guide for creating errors in the database which can be used in the front-end
+* [postgresqltuner](https://github.com/jfcoz/postgresqltuner) script to analyse PostgreSQL database configuration, and give tuning advice
 * Use [HyperLogLog data structures](https://github.com/citusdata/postgresql-hll) and [TopN PostgreSQL extension](https://github.com/citusdata/postgresql-topn) for higher performing value counting when data amounts get large
+* See [GraphQL for Postgres](https://github.com/solidsnack/GraphpostgresQL) which teaches techniques for how to parse GraphQL queries and transform them into SQL, all inside PostgreSQL (this is not production-level code but is good for education)
+
+Content engineers who need datasets:
+
+* [ISO\-3166 \- All countries and subcountries in the world](https://github.com/morenoh149/postgresDBSamples)
