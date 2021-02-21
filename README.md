@@ -67,6 +67,11 @@ Engineers writing SQL-first code should use the following tools:
 * Use [HyperLogLog data structures](https://github.com/citusdata/postgresql-hll) and [TopN PostgreSQL extension](https://github.com/citusdata/postgresql-topn) for higher performing value counting when data amounts get large
 * See [GraphQL for Postgres](https://github.com/solidsnack/GraphpostgresQL) which teaches techniques for how to parse GraphQL queries and transform them into SQL, all inside PostgreSQL (this is not production-level code but is good for education)
 
-Content engineers who need datasets:
+Machine Learning without leaving PostgreSQL:
+
+* [Apache MADlib](https://madlib.apache.org/)
+* [mindsdb.com](https://mindsdb.com/) for machine Learning without leaving the database
+
+Content engineers who need datasets and ML:
 
 * [ISO\-3166 \- All countries and subcountries in the world](https://github.com/morenoh149/postgresDBSamples)
