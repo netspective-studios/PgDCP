@@ -17,8 +17,9 @@ Our first choice of languages for writing data-centric micro services should be:
 
 In case SQL or PL/pgSQL is not appropriate:
 
-* PL/Rust, PL/Java, PL/Go or other type-safe PostgreSQL-hosted language should be prioritized.
+* PL/Rust, PL/Java, PL/Go, [PL/Deno](https://github.com/supabase/postgres-deno) or other type-safe PostgreSQL-hosted language should be prioritized.
 * If type-safety is not possible or 3rd party libraries access is more important than type-safety then PL/Python, PL/Perl, and other languages should be considered.
+  * When using PL/Python or other language with package managers, consider using guidance such as [programmatic access to PIP modules](http://jelly.codes/articles/python-pip-module/) so that PostgreSQL server admins are not required for administering module dependencies
 * The choice of language should depend on how easy the functionality can be expressed using [Postgraphile Schema Design](https://www.graphile.org/postgraphile/postgresql-schema-design/).
 
 ## Information Assurance and Security _in the Database_
@@ -44,12 +45,14 @@ Platform and site reliability engineers should review:
 * [psql command line tutorial and cheat sheet](https://github.com/tomcam/postgres)
 * [Postgres features showcase \(commented SQL samples\)](https://github.com/cybertec-postgresql/postgres-showcase)
 * [postgres_dba](https://github.com/NikolayS/postgres_dba) set of useful tools for Postgres DBAs and all engineers
+* [Set of Practices](https://kukuruku.co/post/postgresql-set-of-practices/) for common PG engineering suggestions
 * [pgcenter](https://github.com/lesovsky/pgcenter) CLI tool for observing and troubleshooting Postgres
 * [PGXN client](https://github.com/pgxn/pgxnclient) CLI tool to interact with the PostgreSQL Extension Network
 
 Engineers writing applications should consider these PostgreSQL-native libraries:
 
 * [ltree](https://www.postgresql.org/docs/13/ltree.html) for representing labels of data stored in a hierarchical tree\-like structure
+* [pg_trgm](https://www.postgresql.org/docs/11/pgtrgm.html) module provides functions and operators for determining the similarity of alphanumeric text based on trigram matching
 * [Audit Trigger 91plus](https://wiki.postgresql.org/wiki/Audit_trigger_91plus) generic trigger function used for recording changes to tables into an audit log table
 * [pg_cron](https://github.com/citusdata/pg_cron) to run periodic jobs in PostgreSQL
 * [shortkey](https://github.com/turbo/pg-shortkey) for YouTube-like Short IDs as Postgres Primary Keys
