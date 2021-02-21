@@ -31,9 +31,9 @@ All micro services code in PostgreSQL tables, views, functions and stored proced
 
 ## Assurance as Code
 
-All code in PostgreSQL should be tested, or assured, with pgTAP code. All Assurance Engineering Cases (AECs) should be written code-first, not human-first (what we call  _Assurance as Code_).
+All code in PostgreSQL should be tested, or _assured_, with pgTAP code. All _Assurance Engineering Cases_ (AECs) should be written code-first, not human-first (what we call  _Assurance as Code_).
 
-## Stateless, non-data-centric services are out of scope
+## Stateless, non-data-centric services, are out of scope
 
 If a custom micro service is completely stateless and does not have anything to do with reading or writing structured data, it should be written in TypeScript hosted on Deno or other micro service using Microsoft Dapr sidecar.
 
