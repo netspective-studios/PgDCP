@@ -49,6 +49,10 @@ Platform and site reliability engineers should review:
 * [pgcenter](https://github.com/lesovsky/pgcenter) CLI tool for observing and troubleshooting Postgres
 * [PGXN client](https://github.com/pgxn/pgxnclient) CLI tool to interact with the PostgreSQL Extension Network
 
+Engineers writing stored routines (functions, SPs) should review:
+
+* [Boost your User-Defined Functions in PostgreSQL](https://www.ongres.com/blog/boost-your-user-defined-functions-in-postgresql/) describes some useful techniques for improving UDFs.
+
 Engineers writing applications should consider these PostgreSQL-native libraries:
 
 * [ltree](https://www.postgresql.org/docs/13/ltree.html) for representing labels of data stored in a hierarchical tree\-like structure
