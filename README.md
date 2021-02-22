@@ -59,6 +59,7 @@ Engineers writing stored routines (functions, SPs) should review:
 
 Engineers writing applications should consider these PostgreSQL-native libraries:
 
+* [uuid\-ossp](https://www.postgresql.org/docs/13/uuid-ossp.html) for UUIDs as primary keys
 * [ltree](https://www.postgresql.org/docs/13/ltree.html) for representing labels of data stored in a hierarchical tree\-like structure
 * [pg_trgm](https://www.postgresql.org/docs/11/pgtrgm.html) module provides functions and operators for determining the similarity of alphanumeric text based on trigram matching
 * [Audit Trigger 91plus](https://wiki.postgresql.org/wiki/Audit_trigger_91plus) generic trigger function used for recording changes to tables into an audit log table
