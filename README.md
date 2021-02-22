@@ -38,6 +38,10 @@ All code in PostgreSQL should be tested, or _assured_, with pgTAP code. All _Ass
 
 Microsoft Excel should be the first UI that all data access should be designed for when accessing outside of developer-centric PgDCP use cases. If Excel can properly show your data, in a safe, secure, and performant way, then every other client can also do so. Excel-first UX should target "live ODBC" use cases where the database is directly accessed using PostgreSQL binary protocol.
 
+## Primary Keys vs. Surrogate Keys for external consumption
+
+Good security practice for modern apps that will allow record IDs to be shared externally is to either have UUID or shortkey (see below) non-serial primary keys. If you use a `serial` type primary key, never send the PK out for external consumption - always use surrogate keys via [uuid\-ossp](https://www.postgresql.org/docs/13/uuid-ossp.html) or similar. If you use a serial PK and share the ID externally then it will be possible for external users to "guess" IDs since the PKs would adjacent numerically.
+
 ## PgDCP Engineering Resources
 
 Platform and site reliability engineers should review:
