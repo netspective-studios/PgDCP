@@ -38,6 +38,10 @@ All code in PostgreSQL should be tested, or _assured_, with pgTAP code. All _Ass
 
 Microsoft Excel should be the first UI that all data access should be designed for when accessing outside of developer-centric PgDCP use cases. If Excel can properly show your data, in a safe, secure, and performant way, then every other client can also do so. Excel-first UX should target "live ODBC" use cases where the database is directly accessed using PostgreSQL binary protocol.
 
+## Primary Keys vs. Surrogate Keys for external consumption
+
+Good security practice for modern apps that will allow record IDs to be shared externally is to either have UUID or shortkey (see below) non-serial primary keys. If you use a `serial` type primary key, never send the PK out for external consumption - always use surrogate keys via [uuid\-ossp](https://www.postgresql.org/docs/13/uuid-ossp.html) or similar. If you use a serial PK and share the ID externally then it will be possible for external users to "guess" IDs since the PKs would adjacent numerically.
+
 ## PgDCP Engineering Resources
 
 Platform and site reliability engineers should review:
@@ -49,8 +53,13 @@ Platform and site reliability engineers should review:
 * [pgcenter](https://github.com/lesovsky/pgcenter) CLI tool for observing and troubleshooting Postgres
 * [PGXN client](https://github.com/pgxn/pgxnclient) CLI tool to interact with the PostgreSQL Extension Network
 
+Engineers writing stored routines (functions, SPs) should review:
+
+* [Boost your User-Defined Functions in PostgreSQL](https://www.ongres.com/blog/boost-your-user-defined-functions-in-postgresql/) describes some useful techniques for improving UDFs.
+
 Engineers writing applications should consider these PostgreSQL-native libraries:
 
+* [uuid\-ossp](https://www.postgresql.org/docs/13/uuid-ossp.html) for UUIDs as primary keys
 * [ltree](https://www.postgresql.org/docs/13/ltree.html) for representing labels of data stored in a hierarchical tree\-like structure
 * [pg_trgm](https://www.postgresql.org/docs/11/pgtrgm.html) module provides functions and operators for determining the similarity of alphanumeric text based on trigram matching
 * [Audit Trigger 91plus](https://wiki.postgresql.org/wiki/Audit_trigger_91plus) generic trigger function used for recording changes to tables into an audit log table
