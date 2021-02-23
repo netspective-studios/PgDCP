@@ -54,3 +54,11 @@ begin
 end;
 $$ LANGUAGE plpgsql STRICT IMMUTABLE;
 comment on function url_brand(url TEXT) IS 'Given a URL, return the hostname only without "www." prefix';
+
+CREATE OR REPLACE FUNCTION :schema_assurance.test_content_assembler_text_manipulation() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
+BEGIN 
+    RETURN NEXT has_function('slugify');
+    RETURN NEXT has_function('prepare_file_name');
+    RETURN NEXT has_function('url_brand');
+END;
+$$;
