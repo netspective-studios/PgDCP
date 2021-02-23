@@ -15,6 +15,6 @@ psql-assurance-engine-version expectMinVersion testFnName="test_engine_version":
     CREATE OR REPLACE FUNCTION :schema_assurance.{{testFnName}}() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
     BEGIN 
         RETURN NEXT ok(pg_version_num() > {{expectMinVersion}}, 
-                       format('PostgreSQL engine instance versions should be at least $expectedVersion [%s]', pg_version()));
+                       format('PostgreSQL engine instance versions should be at least {{expectMinVersion}} [%s]', pg_version()));
     END;
     $$;
