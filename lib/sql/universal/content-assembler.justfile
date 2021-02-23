@@ -19,13 +19,17 @@ psql-construct-media-types tableName: (_pg-dcp-recipe "psql-set-var-with-default
         CONSTRAINT :media_type_table_unq_row_constraint_name UNIQUE(mime_type, file_extn, label)
     );
 
-    CREATE OR REPLACE FUNCTION :schema_assurance.:test_media_types_fn_name() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
-    BEGIN 
-        RETURN NEXT has_table(:'media_type_table_name');
-        RETURN NEXT ok(((select count(*) from :media_type_table_name) > 0),
-                    format('Should have content in %s', :'media_type_table_name'));
-    END;
-    $$;
+    -- We want to use :'media_type_table_name' inside the function body but $$...$$ is already interpolated
+    -- so we need to create a dynamic body first, assign it to a variable, then create the function from the 
+    -- variable. 
+    select format($$BEGIN
+        RETURN NEXT has_table('%s');
+        RETURN NEXT ok(((select count(*) from %I) > 0),
+                      'Should have content in %s');
+    END;$$, :'media_type_table_name', :'media_type_table_name', :'media_type_table_name') as interpolated_fn_body \gset
+    CREATE OR REPLACE FUNCTION :schema_assurance.:test_media_types_fn_name() RETURNS SETOF TEXT AS
+    :'interpolated_fn_body'
+    LANGUAGE plpgsql;
 
 # Generate psql SQL snippet to drop the media type table if it exists
 psql-destroy-media-types tableName: (_pg-dcp-recipe "psql-set-var-with-default" "media_type_table_name" tableName)
