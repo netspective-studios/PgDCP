@@ -48,7 +48,7 @@ populate-media-types tableName psqlCmd:
 
 # Generate psql SQL snippets to create common content manipulation functions
 psql-construct-immutable-functions:
-    @cat content-assembler-routines.sql
+    @cat content-assembler.sql
 
 # Generate psql SQL snippets to drop common content manipulation functions
 psql-destroy-immutable-functions:
