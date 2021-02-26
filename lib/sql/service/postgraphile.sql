@@ -37,7 +37,7 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql STRICT SECURITY DEFINER;
-comment on function grant_all_privileges_schema_role(schema_name TEXT, role_name TEXT) IS 'Create a user with user_name and password and assign it to the given role';
+comment on function authenticate_postgraphile(schema_name TEXT, role_name TEXT) IS 'Create a user with user_name and password and assign it to the given role';
 
 CREATE OR REPLACE FUNCTION :schema_assurance.test_auth_postgraphile() RETURNS SETOF TEXT AS $$
 BEGIN 
