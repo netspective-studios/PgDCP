@@ -93,6 +93,7 @@ Engineers writing applications should consider these PostgreSQL-native libraries
 * [colpivot.sql](https://github.com/hnsl/colpivot) dynamic row to column pivotation/transpose
 * [Guidance to implement NIST level 2 RBAC Hierarchical RBAC](https://github.com/morenoh149/postgresDBSamples/tree/master/role-based-access-control) in PostgreSQL
 * [ldap2pg](https://github.com/dalibo/ldap2pg) to synchronize Postgres roles and privileges from YAML or LDAP
+* [SeeQR](https://www.theseeqr.io/) database analytic tool to compare the efficiency of different schemas and queries on a granular level
 
 Engineers writing SQL-first code should use the following tools:
 
@@ -119,6 +120,11 @@ Content engineers who need datasets:
 
 * [pgloader](https://pgloader.readthedocs.io/en/latest/index.html) loads data from various sources into PostgreSQL
 * [ISO\-3166 \- All countries and subcountries in the world](https://github.com/morenoh149/postgresDBSamples)
+
+Precision Knowledge:
+
+* [6 Common Mistakes for SQL Queries that "Should be Working"](https://blog.arctype.com/6-common-mistakes-for-sql-queries/)
+* [Postgres regex search over 10,000 GitHub repositories \(using only a Macbook\)](https://devlog.hexops.com/2021/postgres-regex-search-over-10000-github-repositories)
 
 ## Stateless, non-data-centric services, are out of scope
 
