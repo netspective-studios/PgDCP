@@ -38,6 +38,18 @@ PgDCP requires _database-first_ security, which means PostgreSQL schemas, users,
 
 All micro services code in PostgreSQL tables, views, functions and stored procedures will be surfaced through Postgraphile GraphQL first but our AutoBaaS requirements are that all services should be exposed through safe and secure REST interfaces via PostgREST (or [pREST](https://github.com/prest/prest)) as a fallback for non-GraphQL clients. We favor Postgraphile's GraphQL API because it generates code which honors PostgreSQL security, roles, and unique features more faithfully than other utilities such as Hasura. 
 
+## Friendlier and Safer Experimentation
+
+Promote the use of [Database Lab Engine (DLE)](https://gitlab.com/postgres-ai/database-lab) to "provision independent non-production environments with multi-terabyte PostgreSQL databases in a few seconds." Every developer should be able to have their own easy to create and teardown development instances for experimentation purposes and to make sure scripts are idempotent and repeatable. If database cannot be easily torn down and recreated in development and quality assurance environments, scripting is harder.
+
+Part of the DLE is "Joe", which should be used by engineering and QA teams:
+
+> “Joe Bot”, a virtual DBA for SQL optimization, is a revolutionary new way to troubleshoot and optimize PostgreSQL query performance. Instead of running EXPLAIN or EXPLAIN (ANALYZE, BUFFERS) directly in production, users send queries for troubleshooting to Joe Bot. Joe Bot uses the Database Lab Engine (DLE) to:
+> * Generate a fresh thin clone
+> * Execute the query on the clone
+> * Return the resulting execution plan to the user
+> * The returned plan is identical to production in terms of structure and data volumes – this is achieved thanks to two factors: thin clones have the same data and statistics as production (at a specified point in time), and the PostgreSQL planner configuration on clones matches the production configuration.
+
 ## Assurance as Code
 
 All code in PostgreSQL should be tested, or _assured_, with pgTAP code. All _Assurance Engineering Cases_ (AECs) should be written code-first, not human-first (what we call  _Assurance as Code_).
