@@ -16,22 +16,23 @@ EXCEPTION
 END
 $$;
 
-CREATE OR REPLACE FUNCTION authenticate_postgraphile(username TEXT, password TEXT) RETURNS jwt_token_postgraphile AS $$
+CREATE OR REPLACE FUNCTION authenticate_postgraphile_pg_native(username TEXT, password TEXT) RETURNS jwt_token_postgraphile AS $$
 DECLARE
     found_user_name text := NULL;
     found_user_passwd text := NULL;
+    id text :=NULL;
 BEGIN
     SELECT rolname, rolpassword 
-    INTO found_user_name, found_user_passwd
-    FROM postgres.pg_roles
+    INTO found_user_name, found_user_passwd,id
+    FROM pg_catalog.pg_roles
     WHERE rolname = username;
 
-    IF rolpassword = md5(password) THEN
+    IF found_user_passwd = md5(password) THEN
     RETURN (
-        rolname,
+        found_user_name,
         extract(epoch FROM now() + interval '7 days'),
-        account.id,
-        account.username);
+        id,
+        found_user_name);
     ELSE
         RETURN NULL;
     END IF;

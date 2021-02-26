@@ -14,6 +14,7 @@ psql-destroy-immutable-functions:
     #!/usr/bin/env {{emitRecipeCmd}}
     DROP FUNCTION IF EXISTS :schema_assurance.test_image_management();
     DROP FUNCTION IF EXISTS image_format_size(bytea);
+    DROP TYPE IF EXISTS image_format_size_type;
 
 # Generate complete psql SQL to create all image management library of objects
 psql-construct: psql-construct-immutable-functions
