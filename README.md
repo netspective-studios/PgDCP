@@ -34,7 +34,21 @@ In case SQL or PL/pgSQL is not appropriate:
 
 PgDCP requires _database-first_ security, which means PostgreSQL schemas, users, roles, permissions, and row-level security (RLS) should drive all data security requirements. Role-based access control (RBAC) and attribute based access control (ABAC) should be implemented in PostgreSQL stored routines. If necessary, [ldap2pg](https://github.com/dalibo/ldap2pg) can be used to synchronize roles with LDAP.
 
-## GraphQL-first but REST-capable
+## Deliberate and Disciplined Change Management _in the Database_
+
+In PgDCP PostgreSQL is not treated as a "bit bucket" where you just store data for an application. It's the center and most important part of our services' universe and requires a deliberate, disciplined, database-first change management approach. While there are many database migrations tools like LiquiBase, Flyway, and Sqitch, they all assume that the problem should be solved in a database-independent manner outside of PostgreSQL. Since the PgDCP approach is to double-down on PostgreSQL and not worry about database portability, we want to perform PosgreSQL-first database change management. See tools like [postgresql\-dbpatch](https://github.com/linz/postgresql-dbpatch), which support conducting database changes and deploying them in a robust and automated way through the database instead of external tools.
+
+## Integrated Observability for Metrics and Traceability _in the Database_
+
+Observability of the database is important for forensics and quality assurance. Try to use [simplified auditing based on SQL logging and FDWs to import logs](https://mydbanotebook.org/post/auditing/) instead of writing brittle custom triggers on each table/object. Separate observability into DDL changes, which can be alerted upon, as well as DML change logs which can be used for forensics. Wrap the observability of logs into a metrics table that can be scraped by Prometheus and used for alerting (e.g. whenever DDL changes occur, send alerts to anyone who needs to be informed). 
+
+Especially important is to integrate OpenTelemetry trace IDs into each DDL and DML statement so that end to end traceability becomes native to the database. Being able to track context and propogation of SQL through service layers will be critical to maintain high quality and reliability. 
+
+## Client Application-friendly Type-safety _in the Database_
+
+Modern applications demand type-safety (which is why PgDCP recommends TypeScript or Rust for applications). Since applications should be type-safe, we want our data models and database objects to also be type-safe. To enhance type-safety, create custom [domains](https://www.postgresql.org/docs/current/domains.html), custom enumerations or lookup tables based on inheritance, [business types](https://www.postgresql.org/docs/current/sql-createtype.html), and [inheritable transaction tables](https://www.postgresql.org/docs/current/ddl-inherit.html) ("table types"). Once you're using table inheritance you can use [table inheritance wrapper functions](https://github.com/trimark-jp/tm-postgres-basics).
+
+## GraphQL-first but REST-capable _in the Database_
 
 All micro services code in PostgreSQL tables, views, functions and stored procedures will be surfaced through Postgraphile GraphQL first but our AutoBaaS requirements are that all services should be exposed through safe and secure REST interfaces via PostgREST (or [pREST](https://github.com/prest/prest)) as a fallback for non-GraphQL clients. We favor Postgraphile's GraphQL API because it generates code which honors PostgreSQL security, roles, and unique features more faithfully than other utilities such as Hasura. 
 
@@ -50,7 +64,7 @@ Part of the DLE is "Joe", which should be used by engineering and QA teams:
 > * Return the resulting execution plan to the user
 > * The returned plan is identical to production in terms of structure and data volumes – this is achieved thanks to two factors: thin clones have the same data and statistics as production (at a specified point in time), and the PostgreSQL planner configuration on clones matches the production configuration.
 
-## Assurance as Code
+## Assurance as Code _in the Database_
 
 All code in PostgreSQL should be tested, or _assured_, with pgTAP code. All _Assurance Engineering Cases_ (AECs) should be written code-first, not human-first (what we call  _Assurance as Code_).
 
@@ -72,6 +86,8 @@ Platform and site reliability engineers should review:
 * [Set of Practices](https://kukuruku.co/post/postgresql-set-of-practices/) for common PG engineering suggestions
 * [pgcenter](https://github.com/lesovsky/pgcenter) CLI tool for observing and troubleshooting Postgres
 * [PGXN client](https://github.com/pgxn/pgxnclient) CLI tool to interact with the PostgreSQL Extension Network
+* [Useful views and functions for postgreSQL DBA's](https://github.com/sahapasci/dba.postgresql)
+* [Postgres clone schema utility](https://github.com/denishpatel/pg-clone-schema) without need of going outside of database. Makes developers life easy by running single function to clone schema with all objects. It is very handy on Postgres RDS.
 
 Engineers writing stored routines (functions, SPs) should review:
 
@@ -82,6 +98,7 @@ Engineers writing applications should consider these PostgreSQL-native libraries
 * [uuid\-ossp](https://www.postgresql.org/docs/13/uuid-ossp.html) for UUIDs as primary keys
 * [ltree](https://www.postgresql.org/docs/13/ltree.html) for representing labels of data stored in a hierarchical tree\-like structure
 * [pg_trgm](https://www.postgresql.org/docs/11/pgtrgm.html) module provides functions and operators for determining the similarity of alphanumeric text based on trigram matching
+* [simplified auditing based on SQL logging and FDWs to import logs](https://mydbanotebook.org/post/auditing/) instead of writing triggers
 * [Audit Trigger 91plus](https://wiki.postgresql.org/wiki/Audit_trigger_91plus) generic trigger function used for recording changes to tables into an audit log table
 * [pg_cron](https://github.com/citusdata/pg_cron) to run periodic jobs in PostgreSQL
 * [shortkey](https://github.com/turbo/pg-shortkey) for YouTube-like Short IDs as Postgres Primary Keys
@@ -94,6 +111,11 @@ Engineers writing applications should consider these PostgreSQL-native libraries
 * [Guidance to implement NIST level 2 RBAC Hierarchical RBAC](https://github.com/morenoh149/postgresDBSamples/tree/master/role-based-access-control) in PostgreSQL
 * [ldap2pg](https://github.com/dalibo/ldap2pg) to synchronize Postgres roles and privileges from YAML or LDAP
 * [SeeQR](https://www.theseeqr.io/) database analytic tool to compare the efficiency of different schemas and queries on a granular level
+* [postgres\-basename\-dirname](https://github.com/elfsternberg/postgres-basename-dirname) contains functions which provide equivalents to the POSIX functions basename and dirname
+* [postgresql\-similarity](https://github.com/urbic/postgresql-similarity) extension package which provides functions that calculate similarity between two strings
+* [pg\_median\_utils](https://github.com/greenape/pg_median_utils) functions like median_filter which behaves the same as SciPy's [medfilt](https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/scipy.signal.medfilt.html)
+* [orafce](https://github.com/orafce/orafce) ORACLE compatibility functions
+* [postgres\-typescript](https://github.com/Portchain/postgres-typescript) generates typescript functions from SQL files and lets you call these functions from your app
 
 Engineers writing SQL-first code should use the following tools:
 
