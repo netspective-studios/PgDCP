@@ -12,7 +12,7 @@ psql-construct-immutable-functions:
 # Generate psql SQL snippets to drop common image management functions
 psql-destroy-immutable-functions:
     #!/usr/bin/env {{emitRecipeCmd}}
-    DROP FUNCTION IF EXISTS :schema_assurance.test_image_management();
+    DROP FUNCTION IF EXISTS :dcp_schema_assurance.test_image_management();
     DROP FUNCTION IF EXISTS image_format_size(bytea);
     DROP TYPE IF EXISTS image_format_size_type;
 

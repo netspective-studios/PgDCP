@@ -27,7 +27,7 @@ psql-construct-media-types tableName: (_pg-dcp-recipe "psql-set-var-with-default
         RETURN NEXT ok(((select count(*) from %I) > 0),
                       'Should have content in %s');
     END;$$, :'media_type_table_name', :'media_type_table_name', :'media_type_table_name') as interpolated_fn_body \gset
-    CREATE OR REPLACE FUNCTION :schema_assurance.:test_media_types_fn_name() RETURNS SETOF TEXT AS
+    CREATE OR REPLACE FUNCTION :dcp_schema_assurance.:test_media_types_fn_name() RETURNS SETOF TEXT AS
     :'interpolated_fn_body'
     LANGUAGE plpgsql;
 
@@ -35,7 +35,7 @@ psql-construct-media-types tableName: (_pg-dcp-recipe "psql-set-var-with-default
 psql-destroy-media-types tableName: (_pg-dcp-recipe "psql-set-var-with-default" "media_type_table_name" tableName)
     #!/usr/bin/env {{emitRecipeCmd}}
     select format('test_%s', :'media_type_table_name') as test_media_types_fn_name \gset
-    DROP FUNCTION IF EXISTS :schema_assurance.:test_media_types_fn_name();
+    DROP FUNCTION IF EXISTS :dcp_schema_assurance.:test_media_types_fn_name();
     DROP TABLE IF NOT EXISTS :media_type_table_name;
 
 # Execute psql to load MIME type and file extensions mapping content into media type table
@@ -53,7 +53,7 @@ psql-construct-immutable-functions:
 # Generate psql SQL snippets to drop common content manipulation functions
 psql-destroy-immutable-functions:
     #!/usr/bin/env {{emitRecipeCmd}}
-    DROP FUNCTION IF EXISTS :schema_assurance.test_content_assembler_text_manipulation();
+    DROP FUNCTION IF EXISTS :dcp_schema_assurance.test_content_assembler_text_manipulation();
     DROP FUNCTION IF EXISTS slugify(text);
     DROP FUNCTION IF EXISTS prepare_file_name(text, text);
     DROP FUNCTION IF EXISTS url_brand(text);

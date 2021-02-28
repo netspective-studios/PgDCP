@@ -38,7 +38,7 @@ return format,icon_size
 $$ LANGUAGE plpython3u;
 comment on function image_format_size(image bytea) is 'Given a binary image, detect its format and size';
 
-CREATE OR REPLACE FUNCTION :schema_assurance.test_image_management() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION :dcp_schema_assurance.test_image_management() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
 BEGIN 
     RETURN NEXT has_extension('plpython3u');
     -- TODO: figure how to test whether required pip modules (e.g. pillow) are installed

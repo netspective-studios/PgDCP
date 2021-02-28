@@ -38,9 +38,9 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql STRICT SECURITY DEFINER;
-comment on function authenticate_postgraphile_pg_native(schema_name TEXT, role_name TEXT) IS 'Create a user with user_name and password and assign it to the given role';
+comment on function authenticate_postgraphile_pg_native(dcp_schema_name TEXT, role_name TEXT) IS 'Create a user with user_name and password and assign it to the given role';
 
-CREATE OR REPLACE FUNCTION :schema_assurance.test_auth_postgraphile() RETURNS SETOF TEXT AS $$
+CREATE OR REPLACE FUNCTION :dcp_schema_assurance.test_auth_postgraphile() RETURNS SETOF TEXT AS $$
 BEGIN 
     RETURN NEXT has_extension('pgcrypto');
     RETURN NEXT has_type('jwt_token_postgraphile');
