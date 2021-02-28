@@ -1,5 +1,5 @@
+interpolateShebangContent := "../../interpolate-shebang-content.pl"
 supplyRecipeJustFile := "../recipe-suppliers.justfile"
-emitRecipeCmd := "../emit-recipe-content.pl"
 
 _pg-dcp-recipe +ARGS:
     @just -f {{supplyRecipeJustFile}} {{ARGS}}
@@ -11,7 +11,7 @@ psql-construct-auth-manager:
 
 # Generate psql SQL snippets to drop auth functions
 psql-destroy-auth-manager:
-    #!/usr/bin/env {{emitRecipeCmd}}
+    #!/usr/bin/env {{interpolateShebangContent}}
     DROP FUNCTION IF EXISTS :dcp_schema_assurance.test_auth_manager();
     DROP FUNCTION IF EXISTS :dcp_schema_assurance.test_auth_postgraphile();
     DROP FUNCTION IF EXISTS authenticate_postgraphile(text,text);

@@ -1,8 +1,8 @@
-emitRecipeCmd := "./emit-recipe-content.pl"
+interpolateShebangContent := "./interpolate-shebang-content.pl"
 
 # Generate psql SQL snippet that can create a variable assignment with default value
 psql-set-var-with-default varName varDefault:
-    #!/usr/bin/env {{emitRecipeCmd}}
+    #!/usr/bin/env {{interpolateShebangContent}}
     -- default {{varName}} if not passed in (\gset will capture output and assign to variable)
     \set {{varName}} :{{varName}}
     SELECT CASE 
@@ -13,7 +13,7 @@ psql-set-var-with-default varName varDefault:
 
 # Generate psql SQL snippet to load CSV into a destination table
 sql-import-csv-from-STDIN destTableName:
-    #!/usr/bin/env {{emitRecipeCmd}}
+    #!/usr/bin/env {{interpolateShebangContent}}
     COPY {{destTableName}} FROM STDIN (format csv, delimiter ',', header true);
 
 # Generate a snippet of SQL that can be passed into psql to read CSV stream via 
@@ -23,7 +23,7 @@ sql-import-csv-from-STDIN destTableName:
 # want the CSV loading to be idemponent.
 # Generate psql snippet to load CSV idemponently into a destination table
 sql-idempotent-import-csv-from-STDIN destTableName:
-    #!/usr/bin/env {{emitRecipeCmd}}
+    #!/usr/bin/env {{interpolateShebangContent}}
     CREATE TEMP TABLE temp_{{destTableName}} AS SELECT * FROM {{destTableName}} LIMIT 0;
     COPY temp_{{destTableName}} FROM STDIN (format csv, delimiter ',', header true);
     INSERT INTO {{destTableName}} SELECT * FROM temp_{{destTableName}} ON CONFLICT DO NOTHING;

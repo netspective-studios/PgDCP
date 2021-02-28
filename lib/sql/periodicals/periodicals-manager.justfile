@@ -1,5 +1,5 @@
+interpolateShebangContent := "../../interpolate-shebang-content.pl"
 supplyRecipeJustFile := "../recipe-suppliers.justfile"
-emitRecipeCmd := "../emit-recipe-content.pl"
 
 _pg-dcp-recipe +ARGS:
     @just -f {{supplyRecipeJustFile}} {{ARGS}}
@@ -18,7 +18,7 @@ psql-construct-periodicals:
 
 # Generate psql SQL snippets to drop auth functions
 psql-destroy-periodicals:
-    #!/usr/bin/env {{emitRecipeCmd}}
+    #!/usr/bin/env {{interpolateShebangContent}}
     DROP FUNCTION IF EXISTS :dcp_schema_assurance.test_periodicals_manager();
 
 # Generate the SQL snippets from child recipes

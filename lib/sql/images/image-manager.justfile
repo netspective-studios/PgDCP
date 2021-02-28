@@ -1,6 +1,6 @@
+interpolateShebangContent := "../../interpolate-shebang-content.pl"
 contentCsvFileName := "IETF-RFC6838-media-types.content.csv"
 supplyRecipeJustFile := "../../recipe-suppliers.justfile"
-emitRecipeCmd := "../../emit-recipe-content.pl"
 
 _pg-dcp-recipe +ARGS:
     @just -f {{supplyRecipeJustFile}} {{ARGS}}
@@ -11,7 +11,7 @@ psql-construct-immutable-functions:
 
 # Generate psql SQL snippets to drop common image management functions
 psql-destroy-immutable-functions:
-    #!/usr/bin/env {{emitRecipeCmd}}
+    #!/usr/bin/env {{interpolateShebangContent}}
     DROP FUNCTION IF EXISTS :dcp_schema_assurance.test_image_management();
     DROP FUNCTION IF EXISTS image_format_size(bytea);
     DROP TYPE IF EXISTS image_format_size_type;

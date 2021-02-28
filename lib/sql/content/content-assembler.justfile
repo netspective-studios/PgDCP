@@ -1,13 +1,13 @@
+interpolateShebangContent := "../../interpolate-shebang-content.pl"
 contentCsvFileName := "IETF-RFC6838-media-types.content.csv"
 supplyRecipeJustFile := "../../recipe-suppliers.justfile"
-emitRecipeCmd := "../../emit-recipe-content.pl"
 
 _pg-dcp-recipe +ARGS:
     @just -f {{supplyRecipeJustFile}} {{ARGS}}
 
 # Generate psql SQL snippet to create the media type table
 psql-construct-media-types tableName: (_pg-dcp-recipe "psql-set-var-with-default" "media_type_table_name" tableName)
-    #!/usr/bin/env {{emitRecipeCmd}}
+    #!/usr/bin/env {{interpolateShebangContent}}
     -- compute derived objects based on table name (\gset will capture output and assign to variable)
     select format('%s_unq_row', :'media_type_table_name') as media_type_table_unq_row_constraint_name \gset
     select format('test_%s', :'media_type_table_name') as test_media_types_fn_name \gset
@@ -33,7 +33,7 @@ psql-construct-media-types tableName: (_pg-dcp-recipe "psql-set-var-with-default
 
 # Generate psql SQL snippet to drop the media type table if it exists
 psql-destroy-media-types tableName: (_pg-dcp-recipe "psql-set-var-with-default" "media_type_table_name" tableName)
-    #!/usr/bin/env {{emitRecipeCmd}}
+    #!/usr/bin/env {{interpolateShebangContent}}
     select format('test_%s', :'media_type_table_name') as test_media_types_fn_name \gset
     DROP FUNCTION IF EXISTS :dcp_schema_assurance.:test_media_types_fn_name();
     DROP TABLE IF NOT EXISTS :media_type_table_name;
@@ -52,7 +52,7 @@ psql-construct-immutable-functions:
 
 # Generate psql SQL snippets to drop common content manipulation functions
 psql-destroy-immutable-functions:
-    #!/usr/bin/env {{emitRecipeCmd}}
+    #!/usr/bin/env {{interpolateShebangContent}}
     DROP FUNCTION IF EXISTS :dcp_schema_assurance.test_content_assembler_text_manipulation();
     DROP FUNCTION IF EXISTS slugify(text);
     DROP FUNCTION IF EXISTS prepare_file_name(text, text);
