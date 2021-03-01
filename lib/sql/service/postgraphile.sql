@@ -16,29 +16,35 @@ EXCEPTION
 END
 $$;
 
-CREATE OR REPLACE FUNCTION authenticate_postgraphile_pg_native(username TEXT, password TEXT) RETURNS jwt_token_postgraphile AS $$
+CREATE OR REPLACE FUNCTION authenticate_postgraphile_pg_native(username text, password text)
+ RETURNS jwt_token_postgraphile
+ LANGUAGE plpgsql
+ STRICT SECURITY DEFINER
+AS $function$
 DECLARE
-    found_user_name text := NULL;
-    found_user_passwd text := NULL;
-    id text :=NULL;
+     account pg_catalog.pg_authid;
+     username_password text;
 BEGIN
-    SELECT rolname, rolpassword 
-    INTO found_user_name, found_user_passwd,id
-    FROM pg_catalog.pg_roles
-    WHERE rolname = username;
-
-    IF found_user_passwd = md5(password) THEN
+    select a.* into account
+    from pg_catalog.pg_authid as a
+    where a.rolname = username;
+    username_password:=(select concat(password,username));
+    
+    IF account.rolname IS NOT NULL and account.rolpassword = concat('md5',md5(username_password)) THEN
     RETURN (
-        found_user_name,
-        extract(epoch FROM now() + interval '7 days'),
-        id,
-        found_user_name);
+     account.rolname,
+      extract(epoch from now() + interval '7 days'),
+      account.oid,
+      account.rolname
+    )::jwt_token_postgraphile;
     ELSE
-        RETURN NULL;
+       RETURN NULL;
     END IF;
 END;
-$$ LANGUAGE plpgsql STRICT SECURITY DEFINER;
-comment on function authenticate_postgraphile_pg_native(dcp_schema_name TEXT, role_name TEXT) IS 'Create a user with user_name and password and assign it to the given role';
+$function$
+;
+
+COMMENT ON FUNCTION authenticate_postgraphile_pg_native("text","text") IS 'Authenticate a user and provide a Postgraphile JWT payload';
 
 CREATE OR REPLACE FUNCTION :dcp_schema_assurance.test_auth_postgraphile() RETURNS SETOF TEXT AS $$
 BEGIN 
