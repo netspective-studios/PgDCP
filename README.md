@@ -95,6 +95,7 @@ Engineers writing stored routines (functions, SPs) should review:
 
 Engineers writing applications should consider these PostgreSQL-native libraries:
 
+* [makeExtendSchemaPlugin](https://www.graphile.org/postgraphile/make-extend-schema-plugin/) merges additional GraphQL types and resolvers into a Postgraphile PostgreSQL schema using a similar syntax to [graphql-tools](https://www.graphql-tools.com/docs/generate-schema).
 * [uuid\-ossp](https://www.postgresql.org/docs/13/uuid-ossp.html) for UUIDs as primary keys
 * [ltree](https://www.postgresql.org/docs/13/ltree.html) for representing labels of data stored in a hierarchical tree\-like structure
 * [pg_trgm](https://www.postgresql.org/docs/11/pgtrgm.html) module provides functions and operators for determining the similarity of alphanumeric text based on trigram matching
@@ -145,6 +146,7 @@ Content engineers who need datasets:
 
 Precision Knowledge:
 
+* [Beyond REST](https://netflixtechblog.com/beyond-rest-1b76f7c20ef6) is Netflix's approach to Rapid Development with GraphQL Microservices
 * [6 Common Mistakes for SQL Queries that "Should be Working"](https://blog.arctype.com/6-common-mistakes-for-sql-queries/)
 * [Postgres regex search over 10,000 GitHub repositories \(using only a Macbook\)](https://devlog.hexops.com/2021/postgres-regex-search-over-10000-github-repositories)
 
