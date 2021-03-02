@@ -44,7 +44,7 @@ Observability of the database is important for forensics and quality assurance. 
 
 Especially important is to integrate OpenTelemetry trace IDs into each DDL and DML statement so that end to end traceability becomes native to the database. Being able to track context and propogation of SQL through service layers will be critical to maintain high quality and reliability. 
 
-See [semantic conventions for database client calls](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/database.md) for how to provide traceability for database client calls and integrate W3C's Trace Context.
+See [semantic conventions for database client calls](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/database.md) for how to provide traceability for database client calls and integrate [W3C's Trace Context](https://www.w3.org/TR/trace-context/).
 
 ## Client Application-friendly Type-safety _in the Database_
 
