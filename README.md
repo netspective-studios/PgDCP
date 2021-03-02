@@ -117,6 +117,7 @@ Engineers writing applications should consider these PostgreSQL-native libraries
 * [pg\_median\_utils](https://github.com/greenape/pg_median_utils) functions like median_filter which behaves the same as SciPy's [medfilt](https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/scipy.signal.medfilt.html)
 * [orafce](https://github.com/orafce/orafce) ORACLE compatibility functions
 * [postgres\-typescript](https://github.com/Portchain/postgres-typescript) generates typescript functions from SQL files and lets you call these functions from your app
+* [SPARQL compiler functions for PostgreSQL](https://github.com/lacanoid/pgsparql)
 
 Engineers writing SQL-first code should use the following tools:
 
