@@ -149,6 +149,7 @@ Precision Knowledge:
 * [Beyond REST](https://netflixtechblog.com/beyond-rest-1b76f7c20ef6) is Netflix's approach to Rapid Development with GraphQL Microservices
 * [6 Common Mistakes for SQL Queries that "Should be Working"](https://blog.arctype.com/6-common-mistakes-for-sql-queries/)
 * [Postgres regex search over 10,000 GitHub repositories \(using only a Macbook\)](https://devlog.hexops.com/2021/postgres-regex-search-over-10000-github-repositories)
+* [How to Modernize Your Data & Analytics Platform](https://www.linkedin.com/pulse/part-1-3-how-modernize-your-data-analytics-platform-alaa/) parts [one](https://www.linkedin.com/pulse/part-1-3-how-modernize-your-data-analytics-platform-alaa), [two](https://www.linkedin.com/pulse/part-2-3-how-modernize-your-data-analytics-platform-alaa), [three](https://www.linkedin.com/pulse/part-3-4-toolkit-modernizing-transmission-system-data-alaa-mahjoub), and [four](https://www.linkedin.com/pulse/part-4-toolkit-modernizing-transmission-system-data-platform-mahjoub).
 
 ## Stateless, non-data-centric services, are out of scope
 
