@@ -38,11 +38,13 @@ PgDCP requires _database-first_ security, which means PostgreSQL schemas, users,
 
 In PgDCP PostgreSQL is not treated as a "bit bucket" where you just store data for an application. It's the center and most important part of our services' universe and requires a deliberate, disciplined, database-first change management approach. While there are many database migrations tools like LiquiBase, Flyway, and Sqitch, they all assume that the problem should be solved in a database-independent manner outside of PostgreSQL. Since the PgDCP approach is to double-down on PostgreSQL and not worry about database portability, we want to perform PosgreSQL-first database change management. See tools like [postgresql\-dbpatch](https://github.com/linz/postgresql-dbpatch), which support conducting database changes and deploying them in a robust and automated way through the database instead of external tools.
 
-## Integrated Observability for Metrics and Traceability _in the Database_
+## Integrated Observability for Health, Metrics and Traceability _in the Database_
 
 Observability of the database is important for forensics and quality assurance. Try to use [simplified auditing based on SQL logging and FDWs to import logs](https://mydbanotebook.org/post/auditing/) instead of writing brittle custom triggers on each table/object. Separate observability into DDL changes, which can be alerted upon, as well as DML change logs which can be used for forensics. Wrap the observability of logs into a metrics table that can be scraped by Prometheus and used for alerting (e.g. whenever DDL changes occur, send alerts to anyone who needs to be informed). 
 
 Especially important is to integrate OpenTelemetry trace IDs into each DDL and DML statement so that end to end traceability becomes native to the database. Being able to track context and propogation of SQL through service layers will be critical to maintain high quality and reliability. 
+
+See [semantic conventions for database client calls](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/database.md) for how to provide traceability for database client calls and integrate W3C's Trace Context.
 
 ## Client Application-friendly Type-safety _in the Database_
 
