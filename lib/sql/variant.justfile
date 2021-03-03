@@ -44,6 +44,16 @@ psql-construct variant:
         value JSONB not null
     );
 
+    CREATE OR REPLACE VIEW {{variant}}_text AS
+        select {{variant}}.id as {{variant}}_id,
+               value, path, name, description,
+               {{variant}}_value_text.id as text_value_id
+          from {{variant}}, {{variant}}_value_text
+         where {{variant}}.id = {{variant}}_value_text.etc_id 
+           and active = true
+
+    -- TODO: create functions to add/update/delete variants from tables
+
 # Generate psql SQL snippet to drop all named variant objects
 psql-destroy variant:
     #!/usr/bin/env {{interpolateShebangContent}}
