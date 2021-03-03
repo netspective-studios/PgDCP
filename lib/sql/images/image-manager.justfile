@@ -1,5 +1,4 @@
 interpolateShebangContent := "../../interpolate-shebang-content.pl"
-contentCsvFileName := "IETF-RFC6838-media-types.content.csv"
 supplyRecipeJustFile := "../../recipe-suppliers.justfile"
 
 _pg-dcp-recipe +ARGS:
@@ -20,4 +19,4 @@ psql-destroy-immutable-functions:
 psql-construct: psql-construct-immutable-functions
 
 # Generate complete psql SQL to drop  all image management library of objects
-psql-destroy mediaTypeTableName: psql-destroy-immutable-functions
+psql-destroy: psql-destroy-immutable-functions
