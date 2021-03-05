@@ -19,7 +19,7 @@ CREATE EXTENSION IF NOT EXISTS plpython3u;
 
 CREATE OR REPLACE FUNCTION http_client_fetch_content_text(endpoint_url text) returns TEXT AS $$
 import urllib.request
-req = urllib.request.Request(text)
+req = urllib.request.Request(endpoint_url)
 resp = urllib.request.urlopen(req)
 return resp.read().decode("utf-8")
 $$ LANGUAGE plpython3u;
