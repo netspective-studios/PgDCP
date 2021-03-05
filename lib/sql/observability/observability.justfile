@@ -6,7 +6,7 @@ _pg-dcp-recipe +ARGS:
 
 # Generate psql SQL snippets to create common Git management functions
 psql-construct-immutable-functions:
-    @cat git-manager.sql
+    @cat open-metrics.sql
 
 # Generate psql SQL snippets to drop common Git management functions
 psql-destroy-immutable-functions:
