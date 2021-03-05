@@ -35,3 +35,13 @@ sh-idempotent-import-csv-from-STDIN srcCsvFileName destTableName psqlCmd="psql -
     # TODO: make sure commands have their double-quotes escaped
     PSQL_CMDS=`just -f {{justfile()}} sql-idempotent-import-csv-from-STDIN {{destTableName}} | awk '{printf "-c \"%s\" ",$0} END {print ""}'`
     echo "cat {{srcCsvFileName}} | {{psqlCmd}} $PSQL_CMDS"
+
+# Generate psql SQL script which inserts CSV idemponently into a destination table
+psql-idempotent-import-csv-from-embedded srcCsvFileName destTableName:
+    #!/usr/bin/env bash
+    echo "CREATE TEMP TABLE temp_{{destTableName}} AS SELECT * FROM {{destTableName}} LIMIT 0;"
+    echo "COPY temp_{{destTableName}} FROM STDIN (format csv, delimiter ',', header true);"
+    cat {{srcCsvFileName}}
+    echo "\."
+    echo "INSERT INTO {{destTableName}} SELECT * FROM temp_{{destTableName}} ON CONFLICT DO NOTHING;"
+    echo "DROP TABLE temp_{{destTableName}};"

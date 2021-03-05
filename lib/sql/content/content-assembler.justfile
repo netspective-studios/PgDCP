@@ -38,13 +38,9 @@ psql-destroy-media-types tableName: (_pg-dcp-recipe "psql-set-var-with-default" 
     DROP FUNCTION IF EXISTS :dcp_schema_assurance.:test_media_types_fn_name();
     DROP TABLE IF NOT EXISTS :media_type_table_name;
 
-# Execute psql to load MIME type and file extensions mapping content into media type table
-populate-media-types tableName psqlCmd:
-    #!/usr/bin/env bash
-    CSVFILE="{{justfile_directory()}}/{{contentCsvFileName}}"
-    SCRIPT=`just -f {{supplyRecipeJustFile}} sh-idempotent-import-csv-from-STDIN $CSVFILE {{tableName}} "{{psqlCmd}}"`
-    # TODO: need to make sure generated $SCRIPT does not have double-quotes inside?
-    eval "$SCRIPT"
+# Generate psql SQL snippet to load MIME type and file extensions mapping content into media type table
+psql-populate-media-types tableName:
+    just -f {{supplyRecipeJustFile}} psql-idempotent-import-csv-from-embedded "{{justfile_directory()}}/{{contentCsvFileName}}" {{tableName}}
 
 # Generate psql SQL snippets to create common content manipulation functions
 psql-construct-immutable-functions:
@@ -59,7 +55,7 @@ psql-destroy-immutable-functions:
     DROP FUNCTION IF EXISTS url_brand(text);
 
 # Generate complete psql SQL to create all content assembler library of objects
-psql-construct mediaTypeTableName: (psql-construct-media-types mediaTypeTableName) (psql-construct-immutable-functions)
+psql-construct mediaTypeTableName: (psql-construct-media-types mediaTypeTableName) (psql-construct-immutable-functions) (psql-populate-media-types mediaTypeTableName)
 
 # Generate complete psql SQL to drop all content assembler library of objects
 psql-destroy mediaTypeTableName: (psql-destroy-media-types mediaTypeTableName) (psql-destroy-immutable-functions)
