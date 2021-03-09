@@ -34,9 +34,24 @@ In case SQL or PL/pgSQL is not appropriate:
 
 PgDCP requires _database-first_ security, which means PostgreSQL schemas, users, roles, permissions, and row-level security (RLS) should drive all data security requirements. Role-based access control (RBAC) and attribute based access control (ABAC) should be implemented in PostgreSQL stored routines. If necessary, [ldap2pg](https://github.com/dalibo/ldap2pg) can be used to synchronize roles with LDAP.
 
+Because all our API functionality (except for serving the endpoints) will also be *in the database* we want to ensure that we secure views, stored procedures, and stored functions as if they were the API endpoints. [OWASP API Security Project](https://owasp.org/www-project-api-security/) provides some great advice.
+
+### Securing Access _to the Database_
+
+If all access management is *in the database*, then securing access _to the database_ is paramount. To that end, see:
+
+* [Securing Databases with Dynamic Credentials and HashiCorp Vault](https://github.com/sql2/PostgreSQL_with_Dynamic_Credentials)
+* [Using Vault to manage dynamic credentials of a Postgres](https://github.com/florx/secrets-are-hard-demo)
+
 ## Deliberate and Disciplined Change Management _in the Database_
 
-In PgDCP PostgreSQL is not treated as a "bit bucket" where you just store data for an application. It's the center and most important part of our services' universe and requires a deliberate, disciplined, database-first change management approach. While there are many database migrations tools like LiquiBase, Flyway, and Sqitch, they all assume that the problem should be solved in a database-independent manner outside of PostgreSQL. Since the PgDCP approach is to double-down on PostgreSQL and not worry about database portability, we want to perform PosgreSQL-first database change management. See tools like [postgresql\-dbpatch](https://github.com/linz/postgresql-dbpatch), which support conducting database changes and deploying them in a robust and automated way through the database instead of external tools.
+In PgDCP PostgreSQL is not treated as a "bit bucket" where you just store data for an application. It's the center and most important part of our services' universe and requires a deliberate, disciplined, database-first change management approach. While there are many database migrations tools like LiquiBase, Flyway, and Sqitch, they all assume that the problem should be solved in a database-independent manner outside of PostgreSQL. Since the PgDCP approach is to double-down on PostgreSQL and not worry about database portability, we want to perform PosgreSQL-first database change management. 
+
+See tools like:
+
+* [postgresql\-dbpatch](https://github.com/linz/postgresql-dbpatch), which support conducting database changes and deploying them in a robust and automated way through the database instead of external tools
+* [Metagration](https://github.com/michelp/metagration), a PostgreSQL migration tool written in PostgreSQL 
+* [Konfigraf](https://github.com/PaulHatch/konfigraf), a Postgres extension that allows you to store and manipulate data in Git repositories stored in tables within the database. This is designed to be used for storage of configuration data for applications and services. 
 
 ## Integrated Observability for Health, Metrics and Traceability _in the Database_
 
@@ -70,6 +85,10 @@ Part of the DLE is "Joe", which should be used by engineering and QA teams:
 
 All code in PostgreSQL should be tested, or _assured_, with pgTAP code. All _Assurance Engineering Cases_ (AECs) should be written code-first, not human-first (what we call  _Assurance as Code_).
 
+### Chaos in _in the Database_
+
+Because our responses to bugs in the database which might lead to database crashes is only as good as the number of times we see such crashes, we should use tools like [pg_crash](https://github.com/cybertec-postgresql/pg_crash), a "Chaos Monkey" Extension for PostgreSQL databases. Per their repo "pg_crash is an extension to PostgreSQL, which allows you to periodically or randomly crash your database infrastructure by sending kill (or other) signals to your DB processes and make them fail. It is ideal for HA and failover testing."
+
 ## Microsoft Excel-first UX but client-independent
 
 Microsoft Excel should be the first UI that all data access should be designed for when accessing outside of developer-centric PgDCP use cases. If Excel can properly show your data, in a safe, secure, and performant way, then every other client can also do so. Excel-first UX should target "live ODBC" use cases where the database is directly accessed using PostgreSQL binary protocol.
@@ -77,6 +96,10 @@ Microsoft Excel should be the first UI that all data access should be designed f
 ## Primary Keys vs. Surrogate Keys for external consumption
 
 Good security practice for modern apps that will allow record IDs to be shared externally is to either have UUID or shortkey (see below) non-serial primary keys. If you use a `serial` type primary key, never send the PK out for external consumption - always use surrogate keys via [uuid\-ossp](https://www.postgresql.org/docs/13/uuid-ossp.html) or similar. If you use a serial PK and share the ID externally then it will be possible for external users to "guess" IDs since the PKs would adjacent numerically.
+
+## Real-time Information via PostgreSQL Notify
+
+[Postgres Notify for Real Time Dashboards](https://blog.arctype.com/postgres-notify-for-real-time-dashboards/) provides a great description of how to "push" updates to clients.
 
 ## PgDCP Engineering Resources
 
@@ -89,11 +112,17 @@ Platform and site reliability engineers should review:
 * [pgcenter](https://github.com/lesovsky/pgcenter) CLI tool for observing and troubleshooting Postgres
 * [PGXN client](https://github.com/pgxn/pgxnclient) CLI tool to interact with the PostgreSQL Extension Network
 * [Useful views and functions for postgreSQL DBA's](https://github.com/sahapasci/dba.postgresql)
+* [Postgres extension to introspect postgres log files](https://github.com/sroeschus/loginfo) from within the database
 * [Postgres clone schema utility](https://github.com/denishpatel/pg-clone-schema) without need of going outside of database. Makes developers life easy by running single function to clone schema with all objects. It is very handy on Postgres RDS.
+* [An unassuming proposal for PLSQL Continuous Integration using revision control, Jenkins and Maven\.](https://github.com/pauldzy/Tentative_PLpgSQL_CI)
 
 Engineers writing stored routines (functions, SPs) should review:
 
 * [Boost your User-Defined Functions in PostgreSQL](https://www.ongres.com/blog/boost-your-user-defined-functions-in-postgresql/) describes some useful techniques for improving UDFs.
+* [Building a recommendation engine inside Postgres with Python and Pandas](https://blog.crunchydata.com/blog/recommendation_engine_in_postgres_with_pandas_and_python)
+* [postgresql\-plpython\-webservice](https://github.com/bryantbhowell/postgresql-plpython-webservice) shows how to caching web service requests via PL/Python
+* [Metagration](https://github.com/michelp/metagration), a PostgreSQL migration tool written in PostgreSQL
+* [BedquiltDB](https://bedquiltdb.github.io/) is a JSON document-store built on PostgreSQL using PL/Python
 
 Engineers writing applications should consider these PostgreSQL-native libraries:
 
@@ -102,7 +131,8 @@ Engineers writing applications should consider these PostgreSQL-native libraries
 * [ltree](https://www.postgresql.org/docs/13/ltree.html) for representing labels of data stored in a hierarchical tree\-like structure
 * [pg_trgm](https://www.postgresql.org/docs/11/pgtrgm.html) module provides functions and operators for determining the similarity of alphanumeric text based on trigram matching
 * [simplified auditing based on SQL logging and FDWs to import logs](https://mydbanotebook.org/post/auditing/) instead of writing triggers
-* [Audit Trigger 91plus](https://wiki.postgresql.org/wiki/Audit_trigger_91plus) generic trigger function used for recording changes to tables into an audit log table
+  * [Audit Trigger 91plus](https://wiki.postgresql.org/wiki/Audit_trigger_91plus) generic trigger function used for recording changes to tables into an audit log table
+  * [pgMemento](https://github.com/pgMemento/pgMemento) provides an audit trail for your data inside a PostgreSQL database using triggers and server\-side functions written in PL/pgSQL
 * [pg_cron](https://github.com/citusdata/pg_cron) to run periodic jobs in PostgreSQL
 * [shortkey](https://github.com/turbo/pg-shortkey) for YouTube-like Short IDs as Postgres Primary Keys
 * [dexter](https://github.com/ankane/dexter) automatic indexer
@@ -120,6 +150,11 @@ Engineers writing applications should consider these PostgreSQL-native libraries
 * [orafce](https://github.com/orafce/orafce) ORACLE compatibility functions
 * [postgres\-typescript](https://github.com/Portchain/postgres-typescript) generates typescript functions from SQL files and lets you call these functions from your app
 * [SPARQL compiler functions for PostgreSQL](https://github.com/lacanoid/pgsparql)
+* [PL/pgSQL implementation of hashids library](https://github.com/andreystepanov/hashids.sql), another alternative: [plpg\_hashids](https://github.com/array-analytics/plpg_hashids)
+* [Helpers for PL/pgSQL applications](https://github.com/luk4z7/plpgsql-tools)
+* [session\_variable](https://github.com/splendiddata/session_variable) Postgres database extension provides a way to create and maintain session scoped variables and constants, more or less like Oracle's global variables
+* [Git Based Application Configuration](https://github.com/PaulHatch/konfigraf), a Postgres extension that allows you to store and manipulate data in Git repositories stored in tables within the database. This is designed to be used for storage of configuration data for applications and services. 
+* [PostgreSQL extension with support for version string comparison](https://github.com/repology/postgresql-libversion)
 
 Engineers writing SQL-first code should use the following tools:
 
@@ -132,6 +167,7 @@ Engineers writing SQL-first code should use the following tools:
 * [postgresqltuner](https://github.com/jfcoz/postgresqltuner) script to analyse PostgreSQL database configuration, and give tuning advice
 * Use [HyperLogLog data structures](https://github.com/citusdata/postgresql-hll) and [TopN PostgreSQL extension](https://github.com/citusdata/postgresql-topn) for higher performing value counting when data amounts get large
 * See [GraphQL for Postgres](https://github.com/solidsnack/GraphpostgresQL) which teaches techniques for how to parse GraphQL queries and transform them into SQL, all inside PostgreSQL (this is not production-level code but is good for education)
+* [Plugin for prettier to support formatting of PostgreSQL\-flavour SQL](https://github.com/benjie/prettier-plugin-pg), including function bodies in SQL, pgSQL, PLV8, plpython, etc.
 
 Engineers needing to instrument PostgreSQL:
 
@@ -149,8 +185,12 @@ Content engineers who need datasets:
 
 Precision Knowledge:
 
+* [Web development platform built entirely in PostgreSQL](https://github.com/aquametalabs/aquameta)
+* [Postgres Analytics \- Tips, best practices & extensions](https://github.com/swarm64/webinar-pg-analytics)
+* [OWASP API Security Project](https://owasp.org/www-project-api-security/)
 * [Beyond REST](https://netflixtechblog.com/beyond-rest-1b76f7c20ef6) is Netflix's approach to Rapid Development with GraphQL Microservices
 * [6 Common Mistakes for SQL Queries that "Should be Working"](https://blog.arctype.com/6-common-mistakes-for-sql-queries/)
+* [Postgres Notify for Real Time Dashboards](https://blog.arctype.com/postgres-notify-for-real-time-dashboards/)
 * [Postgres regex search over 10,000 GitHub repositories \(using only a Macbook\)](https://devlog.hexops.com/2021/postgres-regex-search-over-10000-github-repositories)
 * [How to Modernize Your Data & Analytics Platform](https://www.linkedin.com/pulse/part-1-3-how-modernize-your-data-analytics-platform-alaa/) parts [one](https://www.linkedin.com/pulse/part-1-3-how-modernize-your-data-analytics-platform-alaa), [two](https://www.linkedin.com/pulse/part-2-3-how-modernize-your-data-analytics-platform-alaa), [three](https://www.linkedin.com/pulse/part-3-4-toolkit-modernizing-transmission-system-data-alaa-mahjoub), and [four](https://www.linkedin.com/pulse/part-4-toolkit-modernizing-transmission-system-data-platform-mahjoub).
 
