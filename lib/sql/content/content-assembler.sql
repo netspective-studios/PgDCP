@@ -27,7 +27,7 @@ CREATE OR REPLACE FUNCTION slugify("value" TEXT) RETURNS TEXT AS $$
     )
     SELECT "value"
     FROM "trimmed";
-$$ LANGUAGE SQL STRICT IMMUTABLE SET SEARCH_PATH TO :dcp_schema_content_assembler, :dcp_schema_miniflux;
+$$ LANGUAGE SQL STRICT IMMUTABLE ;
 comment on function slugify("value" TEXT) is 'Given a string such as a URL, remove diacritic marks, lowercase the string, and return with hyphens between words';
 
 create or replace function prepare_file_name(basis TEXT, extn TEXT, max_length smallint = 100) returns TEXT as $$
@@ -40,7 +40,7 @@ begin
         from 1 for max_length
     );
 end;
-$$ LANGUAGE plpgsql STRICT IMMUTABLE SET SEARCH_PATH TO :dcp_schema_content_assembler, :dcp_schema_miniflux;
+$$ LANGUAGE plpgsql STRICT IMMUTABLE ;
 comment on function prepare_file_name(basis TEXT, extn TEXT, max_length smallint) IS 'Given a title or other basis, create a good filename for storing content';
 
 create or replace function url_brand(url TEXT) returns TEXT as $$
@@ -52,7 +52,7 @@ begin
     where alias = 'host' into host_name;
     return ltrim(host_name, 'www.');
 end;
-$$ LANGUAGE plpgsql STRICT IMMUTABLE SET SEARCH_PATH TO :dcp_schema_content_assembler, :dcp_schema_miniflux;
+$$ LANGUAGE plpgsql STRICT IMMUTABLE ;
 comment on function url_brand(url TEXT) IS 'Given a URL, return the hostname only without "www." prefix';
 
 CREATE OR REPLACE FUNCTION :dcp_schema_assurance.test_content_assembler_text_manipulation() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
