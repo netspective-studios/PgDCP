@@ -1,0 +1,17 @@
+{
+  "editor.fontFamily": "CascadianCode NF",
+  "explorer.openEditors.visible": 0,
+  "terminal.integrated.fontFamily": "CascadianCode NF",
+  "editor.formatOnSave": true,
+  "git.autofetch": true,
+  "deno.autoFmtOnSave": true,
+  "deno.enable": true,
+  "deno.unstable": true,
+  "deno.lint": true,
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  }
+}
