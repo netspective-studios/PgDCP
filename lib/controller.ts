@@ -194,7 +194,7 @@ export abstract class Controller {
   ): Promise<string> {
     return this.ec.version || await gsv.determineVersionFromRepoTag(
       importMetaURL,
-      { repoIdentity: importMetaURL.split("/").pop() },
+      { repoIdentity: "PgDCP" },
     );
   }
 }
