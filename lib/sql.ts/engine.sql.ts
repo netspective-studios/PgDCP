@@ -1,33 +1,32 @@
 import * as mod from "../mod.ts";
 
 export async function SQL<C extends mod.InterpolationContext>(
-  engine: mod.InterpolationEngine<C>,
+  engine: mod.InterpolationEngine<C, mod.TemplateProvenance>,
 ): Promise<mod.InterpolationResult<C, mod.TemplateProvenance>> {
   const state = await mod.typicalState(engine, import.meta.url);
   const { schemaName: schema, functionName: fn } = engine.ctx;
-  return mod.SQL(engine, state, { unindent: true, includeFrontmatter: true })`
+  return mod.SQL(engine, state, { unindent: true })`
     -- TODO: add custom type for semantic version management
     -- TODO: add table to manage DCP functions/procs/versions for lifecycle management
 
     CREATE EXTENSION IF NOT EXISTS pgtap;
     CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
     CREATE EXTENSION IF NOT EXISTS ltree;
-    CREATE SCHEMA IF NOT EXISTS ${schema.lifecycle};
-    CREATE SCHEMA IF NOT EXISTS ${schema.assurance};
-    CREATE SCHEMA IF NOT EXISTS ${schema.experimental};
+    CREATE SCHEMA IF NOT EXISTS ${schema.lifecycle};     -- manages all PgDCP construction/destruction
+    CREATE SCHEMA IF NOT EXISTS ${schema.assurance};     -- unit tests
+    CREATE SCHEMA IF NOT EXISTS ${schema.experimental};  -- the default schema, useful for experimentation
 
     CREATE OR REPLACE PROCEDURE ${fn.deploy.construct("engine_common")}() AS $$
     BEGIN
-        -- TODO: add anything that should be run after engine is constructed
+        CREATE SCHEMA IF NOT EXISTS ${schema.assurance};
+        CREATE SCHEMA IF NOT EXISTS ${schema.experimental};
     END;
     $$ LANGUAGE PLPGSQL;
 
     CREATE OR REPLACE PROCEDURE ${fn.deploy.destroy("engine_common")}() AS $$
     BEGIN
-        DROP SCHEMA ${schema.assurance};
-        DROP EXTENSION pgtap;
-        DROP EXTENSION pg_stat_statements;
-        DROP EXTENSION ltree;
+        DROP SCHEMA ${schema.assurance} CASCADE;
+        DROP SCHEMA ${schema.experimental} CASCADE;
     END;
     $$ LANGUAGE PLPGSQL;
 
@@ -70,9 +69,6 @@ export async function SQL<C extends mod.InterpolationContext>(
     RETURN 'Dropped ' || numfunctions || ' functions';
     END;
     $$ LANGUAGE plpgsql VOLATILE COST 100;
-    comment on ${
-    fn.stateless("drop_all_functions_with_name")
-  } drop_all_functions_with_name(TEXT) is 'Drop all overloaded functions with given function name';
 
     CREATE OR REPLACE FUNCTION ${schema.assurance}.test_engine_version() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
     BEGIN 

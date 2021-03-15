@@ -1,13 +1,16 @@
 import * as mod from "../mod.ts";
 
 export async function SQL<C extends mod.InterpolationContext>(
-  engine: mod.InterpolationEngine<C>,
+  engine: mod.InterpolationEngine<C, mod.TemplateProvenance>,
 ): Promise<mod.InterpolationResult<C, mod.TemplateProvenance>> {
-  const packageName = "content_assembler";
-  const unitTestFn = "test_content_assembler_text_manipulation";
-  const state = await mod.typicalState(engine, import.meta.url);
+  const state = await mod.typicalSchemaState(
+    engine,
+    import.meta.url,
+    "content_assembler",
+  );
   const { schemaName: schema, functionName: fn } = engine.ctx;
-  return mod.SQL(engine, state, { unindent: true, includeFrontmatter: true })`
+  const unitTestFn = `test_${state.schema}_text_manipulation`;
+  return mod.SQL(engine, state, { unindent: true })`
     create extension if not exists unaccent;
     
     CREATE OR REPLACE FUNCTION slugify("value" TEXT) RETURNS TEXT AS $$ 
@@ -65,7 +68,7 @@ export async function SQL<C extends mod.InterpolationContext>(
     $$ LANGUAGE plpgsql STRICT IMMUTABLE ;
     comment on function url_brand(url TEXT) IS 'Given a URL, return the hostname only without "www." prefix';
     
-    CREATE OR REPLACE PROCEDURE ${fn.deploy.destroy(packageName)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.deploy.destroy(state.schema)}() AS $$
     BEGIN
         DROP FUNCTION IF EXISTS ${schema.assurance}.${unitTestFn}();
         DROP FUNCTION IF EXISTS slugify(text);

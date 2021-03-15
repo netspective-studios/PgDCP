@@ -1,11 +1,11 @@
 import * as mod from "../mod.ts";
 
 export async function SQL<C extends mod.InterpolationContext>(
-  engine: mod.InterpolationEngine<C>,
+  engine: mod.InterpolationEngine<C, mod.TemplateProvenance>,
 ): Promise<mod.InterpolationResult<C, mod.TemplateProvenance>> {
   const state = await mod.typicalState(engine, import.meta.url);
   const { schemaName: schema, functionName: fn } = engine.ctx;
-  return mod.SQL(engine, state, { unindent: true, includeFrontmatter: true })`
+  return mod.SQL(engine, state, { unindent: true })`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
     -- TODO: create a custom HTTP Client result which would give back a complete, 

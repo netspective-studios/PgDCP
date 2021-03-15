@@ -1,11 +1,11 @@
 import * as mod from "../mod.ts";
 
 export async function SQL<C extends mod.InterpolationContext>(
-  engine: mod.InterpolationEngine<C>,
+  engine: mod.InterpolationEngine<C, mod.TemplateProvenance>,
 ): Promise<mod.InterpolationResult<C, mod.TemplateProvenance>> {
   const state = await mod.typicalState(engine, import.meta.url);
   const { assurance: assuranceSchemaName } = engine.ctx.schemaName;
-  return mod.SQL(engine, state, { unindent: true, includeFrontmatter: true })`
+  return mod.SQL(engine, state, { unindent: true })`
 
     -- PostgreSQL treats users and roles as synonyms. We treat roles as permissions
     -- policies and users as authenticatable entities. It's just nomenclature but
@@ -35,7 +35,6 @@ export async function SQL<C extends mod.InterpolationContext>(
     $$ LANGUAGE plpgsql;
     comment on procedure create_all_privileges_dcp_schema_role(dcp_schema_name NAME, role_name TEXT) IS 'Create the role_name and grant all privileges to it in dcp_schema_name';
 
-
     CREATE OR REPLACE PROCEDURE create_read_only_privileges_dcp_schema_role(dcp_schema_name TEXT, role_name TEXT) AS $$ 
     BEGIN
         call create_role_if_not_exists(role_name);
@@ -49,7 +48,6 @@ export async function SQL<C extends mod.InterpolationContext>(
     $$ LANGUAGE plpgsql;
     comment on procedure create_read_only_privileges_dcp_schema_role(dcp_schema_name TEXT, role_name TEXT) IS 'Create the role_name and grant read only privileges to it in dcp_schema_name';
 
-
     CREATE OR REPLACE FUNCTION create_database_user_with_role(user_name NAME, user_passwd TEXT, role_name text) RETURNS smallint AS $BODY$
     BEGIN
         -- escape properly to prevent SQL injection
@@ -59,7 +57,6 @@ export async function SQL<C extends mod.InterpolationContext>(
     END;
     $BODY$ LANGUAGE plpgsql STRICT VOLATILE SECURITY DEFINER COST 100;
     comment on function create_database_user_with_role(user_name NAME, user_password text, user_role text) IS 'Create a user with user_name and password and assign it to the given role';
-
 
     -- CREATE OR REPLACE PROCEDURE revoke_all_privileges_views_role(schema_name text,view_name TEXT, role_name TEXT) AS $$
     -- BEGIN
@@ -72,15 +69,12 @@ export async function SQL<C extends mod.InterpolationContext>(
 
     CREATE OR REPLACE PROCEDURE revoke_all_privileges_dcp_schema_role(dcp_schema_name NAME, role_name text) AS $$
     BEGIN
-
-    EXECUTE FORMAT('REVOKE ALL PRIVILEGES ON SCHEMA %I FROM %I', dcp_schema_name, role_name);
-    EXECUTE FORMAT('REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA %I FROM %I', dcp_schema_name, role_name);
-    EXECUTE FORMAT('REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA %I FROM %I', dcp_schema_name, role_name);
+        EXECUTE FORMAT('REVOKE ALL PRIVILEGES ON SCHEMA %I FROM %I', dcp_schema_name, role_name);
+        EXECUTE FORMAT('REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA %I FROM %I', dcp_schema_name, role_name);
+        EXECUTE FORMAT('REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA %I FROM %I', dcp_schema_name, role_name);
     END;
     $$ LANGUAGE plpgsql;
     comment on procedure revoke_all_privileges_dcp_schema_role(dcp_schema_name NAME, role_name TEXT) IS 'Revoke all privileges to it in dcp_schema_name';
-
-
 
     CREATE OR REPLACE PROCEDURE drop_role_and_user_if_exists(role_name text, user_name NAME) AS $$
     BEGIN
@@ -90,7 +84,6 @@ export async function SQL<C extends mod.InterpolationContext>(
     END;
     $$ LANGUAGE plpgsql;
     comment on procedure drop_role_and_user_if_exists(role_name TEXT, user_name NAME) IS 'Drop the role_name/user_name if it exists after clearing dependencies';
-
 
     CREATE OR REPLACE FUNCTION ${assuranceSchemaName}.test_auth_manager() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
     BEGIN 
@@ -127,6 +120,5 @@ export async function SQL<C extends mod.InterpolationContext>(
         RETURN NEXT hasnt_role('assurance_role1');
         RETURN NEXT hasnt_user('assurance_user1');
         DROP SCHEMA assuranceTmp1 cascade;
-    END;
-    $$;`;
+    END;$$;`;
 }

@@ -1,19 +1,24 @@
 import { textWhitespace as tw } from "./deps.ts";
 
 export interface TemplateProvenance {
+  readonly identity: string;
   readonly importMetaURL: string;
   readonly version: string;
 }
 
-export interface InterpolationEngine<C> {
+export interface InterpolationEngine<C, P extends TemplateProvenance> {
   readonly version: string;
   readonly ctx: C;
-  readonly prepareIdentity: (
+  readonly prepareExecution: (
     p: TemplateProvenance,
   ) => InterpolationExecutionIdentity;
   readonly onSuccessfulInterpolation?: (
     result: InterpolationResult<C, TemplateProvenance>,
   ) => void;
+  readonly transformResult?: InterpolationResultTransformer<C, P>;
+  readonly transformContent?: (
+    result: InterpolationResult<C, TemplateProvenance>,
+  ) => string;
 }
 
 export interface InterpolationExecutionIdentity {
@@ -23,7 +28,6 @@ export interface InterpolationExecutionIdentity {
 
 export interface InterpolationState<P extends TemplateProvenance> {
   readonly provenance: P;
-  readonly frontMatter: () => string;
   readonly execID: InterpolationExecutionIdentity;
 }
 
@@ -34,16 +38,14 @@ export interface InterpolationResultTransformer<
   (result: InterpolationResult<C, P>): InterpolationResult<C, P>;
 }
 
-export interface InterpolationOptions<C, P extends TemplateProvenance> {
+export interface InterpolationOptions {
   readonly unindent: boolean;
-  readonly includeFrontmatter: boolean;
-  readonly transformResult?: InterpolationResultTransformer<C, P>;
 }
 
 export interface InterpolationResult<C, P extends TemplateProvenance> {
-  readonly engine: InterpolationEngine<C>;
+  readonly engine: InterpolationEngine<C, P>;
   readonly state: InterpolationState<P>;
-  readonly options: InterpolationOptions<C, P>;
+  readonly options: InterpolationOptions;
   readonly interpolated: string;
 }
 
@@ -56,7 +58,7 @@ export interface TemplateLiteral<C, P extends TemplateProvenance> {
 
 export interface TemplateSupplier<T, P extends TemplateProvenance> {
   (
-    ctx: InterpolationEngine<T>,
+    ctx: InterpolationEngine<T, P>,
     state: InterpolationState<P>,
   ): TemplateLiteral<T, P>;
 }
@@ -69,9 +71,9 @@ export interface TemplateSupplier<T, P extends TemplateProvenance> {
  * @returns the interpolated template text
  */
 export function executeTemplate<C, P extends TemplateProvenance, LS>(
-  engine: InterpolationEngine<C>,
+  engine: InterpolationEngine<C, P>,
   state: InterpolationState<P>,
-  options: InterpolationOptions<C, P>,
+  options: InterpolationOptions,
 ): TemplateLiteral<C, P> {
   return (literals: TemplateStringsArray, ...expressions: unknown[]) => {
     let interpolated = "";
@@ -83,17 +85,14 @@ export function executeTemplate<C, P extends TemplateProvenance, LS>(
     if (options.unindent) {
       interpolated = tw.unindentWhitespace(interpolated);
     }
-    if (options.includeFrontmatter) {
-      interpolated = tw.unindentWhitespace(state.frontMatter()) + interpolated;
-    }
     const computed: InterpolationResult<C, P> = {
       engine,
       state,
       interpolated,
       options,
     };
-    const result = options.transformResult
-      ? options.transformResult(computed)
+    const result = engine.transformResult
+      ? engine.transformResult(computed)
       : computed;
     if (engine.onSuccessfulInterpolation) {
       engine.onSuccessfulInterpolation(result);
@@ -113,9 +112,9 @@ export function executeTemplate<C, P extends TemplateProvenance, LS>(
  * @returns the interpolated template text
  */
 export function SQL<C, P extends TemplateProvenance>(
-  ctx: InterpolationEngine<C>,
+  ctx: InterpolationEngine<C, P>,
   state: InterpolationState<P>,
-  options: InterpolationOptions<C, P>,
+  options: InterpolationOptions,
 ): TemplateLiteral<C, P> {
   return executeTemplate(ctx, state, options);
 }

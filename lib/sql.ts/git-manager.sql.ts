@@ -1,11 +1,11 @@
 import * as mod from "../mod.ts";
 
 export async function SQL<C extends mod.InterpolationContext>(
-  engine: mod.InterpolationEngine<C>,
+  engine: mod.InterpolationEngine<C, mod.TemplateProvenance>,
 ): Promise<mod.InterpolationResult<C, mod.TemplateProvenance>> {
   const state = await mod.typicalState(engine, import.meta.url);
   const { schemaName: schema, functionName: fn } = engine.ctx;
-  return mod.SQL(engine, state, { unindent: true, includeFrontmatter: true })`
+  return mod.SQL(engine, state, { unindent: true })`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
     CREATE OR REPLACE FUNCTION gitlab_project_asset_content_text(gl_api_base_url text, gl_auth_token text, project_id integer, asset_file_name text) returns TEXT AS $$

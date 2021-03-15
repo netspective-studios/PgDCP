@@ -1,13 +1,13 @@
 import * as mod from "../mod.ts";
 
 export async function SQL<C extends mod.InterpolationContext>(
-  engine: mod.InterpolationEngine<C>,
+  engine: mod.InterpolationEngine<C, mod.TemplateProvenance>,
 ): Promise<mod.InterpolationResult<C, mod.TemplateProvenance>> {
   const packageName = "periodicals_manager";
   const unitTestFn = "test_periodicals_manager";
   const state = await mod.typicalState(engine, import.meta.url);
   const { schemaName: schema, functionName: fn } = engine.ctx;
-  return mod.SQL(engine, state, { unindent: true, includeFrontmatter: true })`
+  return mod.SQL(engine, state, { unindent: true })`
     -- TODO: CREATE DOMAIN provenance, URLs, etc.
     -- TODO: CREATE TYPE for type safety
 

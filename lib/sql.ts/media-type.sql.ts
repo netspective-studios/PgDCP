@@ -1,13 +1,13 @@
 import * as mod from "../mod.ts";
 
 export async function SQL<C extends mod.InterpolationContext>(
-  engine: mod.InterpolationEngine<C>,
+  engine: mod.InterpolationEngine<C, mod.TemplateProvenance>,
 ): Promise<mod.InterpolationResult<C, mod.TemplateProvenance>> {
   const packageName = "content_assembler";
   const unitTestFn = "test_content_assembler_text_manipulation";
   const state = await mod.typicalState(engine, import.meta.url);
   const { schemaName: schema, functionName: fn } = engine.ctx;
-  return mod.SQL(engine, state, { unindent: true, includeFrontmatter: true })`
+  return mod.SQL(engine, state, { unindent: true })`
     CREATE OR REPLACE FUNCTION media_type_objects_construction_sql(schemaName text, tableName text) RETURNS text AS $$
     BEGIN
         return format($execBody$
