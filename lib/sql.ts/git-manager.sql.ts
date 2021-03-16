@@ -1,9 +1,12 @@
 import * as mod from "../mod.ts";
 
 export async function SQL<C extends mod.InterpolationContext>(
-  engine: mod.InterpolationEngine<C, mod.TemplateProvenance>,
-): Promise<mod.InterpolationResult<C, mod.TemplateProvenance>> {
-  const state = await mod.typicalState(engine, import.meta.url);
+  engine: mod.InterpolationEngine<C>,
+): Promise<mod.InterpolationResult<C>> {
+  const state = await mod.typicalState(
+    engine,
+    await mod.tsModuleProvenance(import.meta.url),
+  );
   const { schemaName: schema, functionName: fn } = engine.ctx;
   return mod.SQL(engine, state, { unindent: true })`
     CREATE EXTENSION IF NOT EXISTS plpython3u;

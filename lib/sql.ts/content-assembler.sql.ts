@@ -1,11 +1,11 @@
 import * as mod from "../mod.ts";
 
 export async function SQL<C extends mod.InterpolationContext>(
-  engine: mod.InterpolationEngine<C, mod.TemplateProvenance>,
-): Promise<mod.InterpolationResult<C, mod.TemplateProvenance>> {
+  engine: mod.InterpolationEngine<C>,
+): Promise<mod.InterpolationResult<C>> {
   const state = await mod.typicalSchemaState(
     engine,
-    import.meta.url,
+    await mod.tsModuleProvenance(import.meta.url),
     "content_assembler",
   );
   const { schemaName: schema, functionName: fn } = engine.ctx;

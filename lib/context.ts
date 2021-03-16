@@ -86,11 +86,12 @@ export function typicalInterpolationContext(): InterpolationContext {
 }
 
 // deno-lint-ignore require-await
-export async function typicalProvenance(
+export async function tsModuleProvenance(
   importMetaURL: string,
-  defaultP: Partial<Omit<interp.TemplateProvenance, "importMetaURL">>,
-): Promise<interp.TemplateProvenance> {
+  defaultP: Partial<Omit<interp.TemplateProvenance, "importMetaURL">> = {},
+): Promise<interp.TypeScriptModuleProvenance> {
   return {
+    source: importMetaURL,
     importMetaURL,
     identity: defaultP.identity || importMetaURL.split("/").pop() ||
       importMetaURL,
@@ -98,31 +99,29 @@ export async function typicalProvenance(
   };
 }
 
+// deno-lint-ignore require-await
 export async function typicalState<C extends InterpolationContext>(
-  engine: interp.InterpolationEngine<C, interp.TemplateProvenance>,
-  importMetaURL: string,
-  defaultP: Partial<Omit<interp.TemplateProvenance, "importMetaURL">> = {},
-): Promise<interp.InterpolationState<interp.TemplateProvenance>> {
-  const provenance = await typicalProvenance(importMetaURL, defaultP);
-  const result: interp.InterpolationState<interp.TemplateProvenance> = {
+  engine: interp.InterpolationEngine<C>,
+  provenance: interp.TypeScriptModuleProvenance,
+): Promise<interp.InterpolationState> {
+  const result: interp.InterpolationState = {
     provenance: provenance,
-    execID: engine.prepareExecution(provenance),
+    execID: engine.prepareInterpolation(provenance),
   };
   return result;
 }
 
 export async function typicalSchemaState<C extends InterpolationContext>(
-  engine: interp.InterpolationEngine<C, interp.TemplateProvenance>,
-  importMetaURL: string,
+  engine: interp.InterpolationEngine<C>,
+  provenance: interp.TypeScriptModuleProvenance,
   schema: string,
-  defaultP: Partial<Omit<interp.TemplateProvenance, "importMetaURL">> = {},
 ): Promise<
-  & interp.InterpolationState<interp.TemplateProvenance>
+  & interp.InterpolationState
   & InterpolationSchemaSupplier
   & InterpolationSchemaSearchPathSupplier
 > {
   return {
-    ...await typicalState(engine, importMetaURL, defaultP),
+    ...await typicalState(engine, provenance),
     schema,
     searchPath: [schema],
   };
@@ -131,18 +130,17 @@ export async function typicalSchemaState<C extends InterpolationContext>(
 export async function typicalSchemaSearchPathState<
   C extends InterpolationContext,
 >(
-  engine: interp.InterpolationEngine<C, interp.TemplateProvenance>,
-  importMetaURL: string,
+  engine: interp.InterpolationEngine<C>,
+  provenance: interp.TypeScriptModuleProvenance,
   schema: string,
   searchPath: string[],
-  defaultP: Partial<Omit<interp.TemplateProvenance, "importMetaURL">> = {},
 ): Promise<
-  & interp.InterpolationState<interp.TemplateProvenance>
+  & interp.InterpolationState
   & InterpolationSchemaSupplier
   & InterpolationSchemaSearchPathSupplier
 > {
   return {
-    ...await typicalSchemaState(engine, importMetaURL, schema, defaultP),
+    ...await typicalSchemaState(engine, provenance, schema),
     searchPath: [schema, ...searchPath],
   };
 }

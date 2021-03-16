@@ -1,11 +1,14 @@
 import * as mod from "../mod.ts";
 
 export async function SQL<C extends mod.InterpolationContext>(
-  engine: mod.InterpolationEngine<C, mod.TemplateProvenance>,
-): Promise<mod.InterpolationResult<C, mod.TemplateProvenance>> {
+  engine: mod.InterpolationEngine<C>,
+): Promise<mod.InterpolationResult<C>> {
   const packageName = "periodicals_manager";
-  const unitTestFn = "test_periodicals_manager";
-  const state = await mod.typicalState(engine, import.meta.url);
+  const unitTestFn = `test_${packageName}`;
+  const state = await mod.typicalState(
+    engine,
+    await mod.tsModuleProvenance(import.meta.url),
+  );
   const { schemaName: schema, functionName: fn } = engine.ctx;
   return mod.SQL(engine, state, { unindent: true })`
     -- TODO: CREATE DOMAIN provenance, URLs, etc.
@@ -23,9 +26,9 @@ export async function SQL<C extends mod.InterpolationContext>(
             CONSTRAINT periodical_nature_unq_row UNIQUE(periodical_nature, provenance)
         );
         comment on table periodical_nature IS 'The kind of periodicals that can be managed';
-        comment on table periodical_nature is E'@name periodical_nature\n@omit update,delete\nThis is to avoid mutations through Postgraphile.';
+        comment on table periodical_nature is E'@name periodical_nature\\n@omit update,delete\\nThis is to avoid mutations through Postgraphile.';
 
-        CREATE OR REPLACE FUNCTION register_periodical_nature(nature TEXT, provenance TEXT) RETURNS INTEGER AS $$ 
+        CREATE OR REPLACE FUNCTION register_periodical_nature(nature TEXT, provenance TEXT) RETURNS INTEGER AS $innerFn$ 
         DECLARE
             pnId integer;
         BEGIN
@@ -36,9 +39,9 @@ export async function SQL<C extends mod.InterpolationContext>(
                 select periodical_nature_id into pnId from periodical_nature where periodical_nature = nature and provenance = provenance;
                 return pnId;
         END;
-        $$ LANGUAGE plpgsql;
+        $innerFn$ LANGUAGE plpgsql;
         comment on function register_periodical_nature(nature TEXT, provenance TEXT) IS 'Register a new periodical type (ignore if it already exists)';
-        comment on function register_periodical_nature(nature TEXT, provenance TEXT) is E'@name register_periodical_nature\n@omit update,delete\nThis is to avoid mutations through Postgraphile.';
+        comment on function register_periodical_nature(nature TEXT, provenance TEXT) is E'@name register_periodical_nature\\n@omit update,delete\\nThis is to avoid mutations through Postgraphile.';
 
         CREATE TABLE periodical(
             periodical_id BIGINT primary key generated always as identity,
@@ -46,7 +49,7 @@ export async function SQL<C extends mod.InterpolationContext>(
             constraint periodical_nature_fk foreign key (periodical_nature_id) REFERENCES periodical_nature(periodical_nature_id)
         );
         comment on table periodical IS 'An RSS/ATOM feed, e-mail newsletter, website, or other content source that changes periodically';
-        comment on table periodical is E'@name periodical\n@omit update,delete\nThis is to avoid mutations through Postgraphile.';
+        comment on table periodical is E'@name periodical\\n@omit update,delete\\nThis is to avoid mutations through Postgraphile.';
 
         CREATE TABLE periodical_edition(
             periodical_edition_id bigint primary key generated always as identity,
@@ -54,19 +57,21 @@ export async function SQL<C extends mod.InterpolationContext>(
             constraint periodical_fk foreign key (periodical_id) REFERENCES periodical(periodical_id)
         );
         comment on table periodical IS 'A specific edition or instance of an RSS/Atom feed, e-mail newsletter, website, or other periodical';
-        comment on table periodical is E'@name periodical\n@omit update,delete\nThis is to avoid mutations through Postgraphile.';
-    END;
-    $$ LANGUAGE PLPGSQL;
+        comment on table periodical is E'@name periodical\\n@omit update,delete\\nThis is to avoid mutations through Postgraphile.';
 
-    CREATE OR REPLACE PROCEDURE ${fn.deploy.destroy(packageName)}() AS $$
-    BEGIN
-        DROP FUNCTION IF EXISTS ${schema.assurance}.${unitTestFn}();
-        DROP FUNCTION IF register_periodical_nature;
-        DROP TABLE IF EXISTS periodical_edition CASCADE;
-        DROP TABLE IF EXISTS periodical CASCADE;
-        DROP TABLE IF EXISTS periodical_nature CASCADE;
-        DROP DOMAIN periodical_nature_id;
-        DROP DOMAIN periodical_id;
+        CREATE OR REPLACE PROCEDURE ${
+    fn.deploy.destroy(packageName)
+  }() AS $innerFn$
+        BEGIN
+            DROP FUNCTION IF EXISTS ${schema.assurance}.${unitTestFn}();
+            DROP FUNCTION IF register_periodical_nature;
+            DROP TABLE IF EXISTS periodical_edition CASCADE;
+            DROP TABLE IF EXISTS periodical CASCADE;
+            DROP TABLE IF EXISTS periodical_nature CASCADE;
+            DROP DOMAIN periodical_nature_id;
+            DROP DOMAIN periodical_id;
+        END;
+        $innerFn$ LANGUAGE PLPGSQL;
     END;
     $$ LANGUAGE PLPGSQL;
 

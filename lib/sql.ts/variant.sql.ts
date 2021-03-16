@@ -1,9 +1,12 @@
 import * as mod from "../mod.ts";
 
 export async function SQL<C extends mod.InterpolationContext>(
-  engine: mod.InterpolationEngine<C, mod.TemplateProvenance>,
-): Promise<mod.InterpolationResult<C, mod.TemplateProvenance>> {
-  const state = await mod.typicalState(engine, import.meta.url);
+  engine: mod.InterpolationEngine<C>,
+): Promise<mod.InterpolationResult<C>> {
+  const state = await mod.typicalState(
+    engine,
+    await mod.tsModuleProvenance(import.meta.url),
+  );
   const constructSqlFn = engine.ctx.functionName.stateless("variant_sql");
   const constructFn = engine.ctx.functionName.stateless("construct_variant");
   return mod.SQL(engine, state, { unindent: true })`
