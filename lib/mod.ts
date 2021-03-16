@@ -1,3 +1,3 @@
 export * from "./interpolate.ts";
-export * from "./context.ts";
+export * from "./dcp.ts";
 export * from "./controller.ts";

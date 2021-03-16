@@ -17,9 +17,8 @@ export interface InterpolationExecution {
 
 export type InterpolatedContent = string;
 
-export interface InterpolationEngine<C> {
+export interface InterpolationEngine {
   readonly version: string;
-  readonly ctx: C;
   readonly prepareInterpolation: (
     p: TemplateProvenance,
   ) => InterpolationExecution;
@@ -27,7 +26,7 @@ export interface InterpolationEngine<C> {
     interpolated: InterpolatedContent,
     state: InterpolationState,
     options: InterpolationOptions,
-  ) => InterpolationResult<C>;
+  ) => InterpolationResult;
 }
 
 export interface InterpolationState {
@@ -39,25 +38,25 @@ export interface InterpolationOptions {
   readonly unindent: boolean;
 }
 
-export interface InterpolationResult<C> {
-  readonly engine: InterpolationEngine<C>;
+export interface InterpolationResult {
+  readonly engine: InterpolationEngine;
   readonly state: InterpolationState;
   readonly options: InterpolationOptions;
   readonly interpolated: string;
 }
 
-export interface TemplateLiteral<C> {
+export interface TemplateLiteral {
   (
     literals: TemplateStringsArray,
     ...expressions: unknown[]
-  ): InterpolationResult<C>;
+  ): InterpolationResult;
 }
 
-export interface TemplateSupplier<C> {
+export interface TemplateSupplier {
   (
-    ctx: InterpolationEngine<C>,
+    ctx: InterpolationEngine,
     state: InterpolationState,
-  ): TemplateLiteral<C>;
+  ): TemplateLiteral;
 }
 
 /**
@@ -67,11 +66,11 @@ export interface TemplateSupplier<C> {
  * @param state is the "local" state of a single interpolation
  * @returns the interpolated template text
  */
-export function executeTemplate<C>(
-  engine: InterpolationEngine<C>,
+export function executeTemplate(
+  engine: InterpolationEngine,
   state: InterpolationState,
   options: InterpolationOptions,
-): TemplateLiteral<C> {
+): TemplateLiteral {
   return (literals: TemplateStringsArray, ...expressions: unknown[]) => {
     let interpolated = "";
     for (let i = 0; i < expressions.length; i++) {
@@ -96,10 +95,10 @@ export function executeTemplate<C>(
  * @param state is the "local" state of a single interpolation
  * @returns the interpolated template text
  */
-export function SQL<C>(
-  engine: InterpolationEngine<C>,
+export function SQL(
+  engine: InterpolationEngine,
   state: InterpolationState,
   options: InterpolationOptions,
-): TemplateLiteral<C> {
+): TemplateLiteral {
   return executeTemplate(engine, state, options);
 }

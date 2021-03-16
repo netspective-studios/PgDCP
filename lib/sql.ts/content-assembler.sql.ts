@@ -1,16 +1,16 @@
 import * as mod from "../mod.ts";
 
-export async function SQL<C extends mod.InterpolationContext>(
-  engine: mod.InterpolationEngine<C>,
-): Promise<mod.InterpolationResult<C>> {
+export async function SQL(
+  ctx: mod.InterpolationContext,
+): Promise<mod.InterpolationResult> {
   const state = await mod.typicalSchemaState(
-    engine,
+    ctx.engine,
     await mod.tsModuleProvenance(import.meta.url),
     "content_assembler",
   );
-  const { schemaName: schema, functionName: fn } = engine.ctx;
+  const { schemaName: schema, functionName: fn } = ctx.sql;
   const unitTestFn = `test_${state.schema}_text_manipulation`;
-  return mod.SQL(engine, state, { unindent: true })`
+  return mod.SQL(ctx.engine, state, { unindent: true })`
     create extension if not exists unaccent;
     
     CREATE OR REPLACE FUNCTION slugify("value" TEXT) RETURNS TEXT AS $$ 

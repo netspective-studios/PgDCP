@@ -1,14 +1,14 @@
 import * as mod from "../mod.ts";
 
-export async function SQL<C extends mod.InterpolationContext>(
-  engine: mod.InterpolationEngine<C>,
-): Promise<mod.InterpolationResult<C>> {
+export async function SQL(
+  ctx: mod.InterpolationContext,
+): Promise<mod.InterpolationResult> {
   const state = await mod.typicalState(
-    engine,
+    ctx.engine,
     await mod.tsModuleProvenance(import.meta.url),
   );
-  const { schemaName: schema, functionName: fn } = engine.ctx;
-  return mod.SQL(engine, state, { unindent: true })`
+  const { schemaName: schema, functionName: fn } = ctx.sql;
+  return mod.SQL(ctx.engine, state, { unindent: true })`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
     -- TODO: perform pip install or upgrade of required packages via an anonymous code block

@@ -6,7 +6,7 @@ export interface TextValueSupplier {
   (...args: string[]): string;
 }
 
-export interface SchemaNameSupplier {
+export interface DcpSqlSchemaNameSupplier {
   readonly prefix: TextValue;
   readonly lifecycle: TextValue;
   readonly assurance: TextValue;
@@ -14,23 +14,28 @@ export interface SchemaNameSupplier {
   readonly stateless: TextValueSupplier;
 }
 
-export interface DeploymentLifecycleFunctionCriterionSupplier {
+export interface DcpSqlDeploymentLifecycleFunctionCriterionSupplier {
   readonly prefix: TextValue;
   readonly construct: TextValueSupplier;
   readonly destroy: TextValueSupplier;
 }
 
-export interface FunctionNameSupplier {
+export interface DcpSqlFunctionNameSupplier {
   readonly prefix: TextValue;
   readonly stateless: TextValueSupplier;
   readonly administrative: TextValueSupplier;
   readonly destructive: TextValueSupplier;
-  readonly deploy: DeploymentLifecycleFunctionCriterionSupplier;
+  readonly deploy: DcpSqlDeploymentLifecycleFunctionCriterionSupplier;
+}
+
+export interface DataComputingPlatformSqlSupplier {
+  readonly schemaName: DcpSqlSchemaNameSupplier;
+  readonly functionName: DcpSqlFunctionNameSupplier;
 }
 
 export interface InterpolationContext {
-  readonly schemaName: SchemaNameSupplier;
-  readonly functionName: FunctionNameSupplier;
+  readonly engine: interp.InterpolationEngine;
+  readonly sql: DataComputingPlatformSqlSupplier;
 }
 
 export interface InterpolationSchemaSupplier {
@@ -49,8 +54,8 @@ export const isInterpolationSchemaSearchPathSupplier = safety.typeGuard<
   InterpolationSchemaSearchPathSupplier
 >("searchPath");
 
-export function typicalInterpolationContext(): InterpolationContext {
-  const ic: InterpolationContext = {
+export function typicalDcpSqlSupplier(): DataComputingPlatformSqlSupplier {
+  const ic: DataComputingPlatformSqlSupplier = {
     schemaName: {
       prefix: "dcp_",
       lifecycle: "dcp_lifecyle",
@@ -100,8 +105,8 @@ export async function tsModuleProvenance(
 }
 
 // deno-lint-ignore require-await
-export async function typicalState<C extends InterpolationContext>(
-  engine: interp.InterpolationEngine<C>,
+export async function typicalState(
+  engine: interp.InterpolationEngine,
   provenance: interp.TypeScriptModuleProvenance,
 ): Promise<interp.InterpolationState> {
   const result: interp.InterpolationState = {
@@ -111,8 +116,8 @@ export async function typicalState<C extends InterpolationContext>(
   return result;
 }
 
-export async function typicalSchemaState<C extends InterpolationContext>(
-  engine: interp.InterpolationEngine<C>,
+export async function typicalSchemaState(
+  engine: interp.InterpolationEngine,
   provenance: interp.TypeScriptModuleProvenance,
   schema: string,
 ): Promise<
@@ -128,9 +133,9 @@ export async function typicalSchemaState<C extends InterpolationContext>(
 }
 
 export async function typicalSchemaSearchPathState<
-  C extends InterpolationContext,
+  C extends DataComputingPlatformSqlSupplier,
 >(
-  engine: interp.InterpolationEngine<C>,
+  engine: interp.InterpolationEngine,
   provenance: interp.TypeScriptModuleProvenance,
   schema: string,
   searchPath: string[],

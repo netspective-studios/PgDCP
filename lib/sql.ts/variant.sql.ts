@@ -1,15 +1,15 @@
 import * as mod from "../mod.ts";
 
-export async function SQL<C extends mod.InterpolationContext>(
-  engine: mod.InterpolationEngine<C>,
-): Promise<mod.InterpolationResult<C>> {
+export async function SQL(
+  ctx: mod.InterpolationContext,
+): Promise<mod.InterpolationResult> {
   const state = await mod.typicalState(
-    engine,
+    ctx.engine,
     await mod.tsModuleProvenance(import.meta.url),
   );
-  const constructSqlFn = engine.ctx.functionName.stateless("variant_sql");
-  const constructFn = engine.ctx.functionName.stateless("construct_variant");
-  return mod.SQL(engine, state, { unindent: true })`
+  const constructSqlFn = ctx.sql.functionName.stateless("variant_sql");
+  const constructFn = ctx.sql.functionName.stateless("construct_variant");
+  return mod.SQL(ctx.engine, state, { unindent: true })`
     CREATE EXTENSION IF NOT EXISTS ltree;
 
     CREATE OR REPLACE FUNCTION ${constructSqlFn}(schemaName text, variantName text, defaultCtx text, defaultPath text) RETURNS text AS $$
