@@ -1,20 +1,18 @@
 import * as mod from "../mod.ts";
 
-export async function SQL(
+export function SQL(
   ctx: mod.InterpolationContext,
-): Promise<mod.InterpolationResult> {
-  const state = await mod.typicalSchemaState(
-    ctx,
-    await mod.tsModuleProvenance(import.meta.url),
-    ctx.sql.schemaName.lib,
+): mod.InterpolationResult {
+  const state = ctx.prepareState(
+    ctx.prepareTsModuleExecution(import.meta.url),
+    { schema: ctx.sql.schemaName.lib },
   );
   const { schemaName: schema, functionName: fn } = ctx.sql;
   const unitTestFn = `test_${state.schema}_text_manipulation`;
   return mod.SQL(ctx.engine, state, {
     // if this template is embedded in another, leave indentation
     unindent: !mod.isEmbeddedInterpolationContext(ctx),
-  })`
-    create extension if not exists unaccent;
+  })`create extension if not exists unaccent;
     
     CREATE OR REPLACE FUNCTION slugify("value" TEXT) RETURNS TEXT AS $$ 
         -- removes accents (diacritic signs) from a given string --

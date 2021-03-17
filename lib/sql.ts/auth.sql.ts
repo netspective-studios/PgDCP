@@ -1,19 +1,17 @@
 import * as mod from "../mod.ts";
 
-export async function SQL(
+export function SQL(
   ctx: mod.InterpolationContext,
-): Promise<mod.InterpolationResult> {
-  const state = await mod.typicalSchemaState(
-    ctx,
-    await mod.tsModuleProvenance(import.meta.url),
-    ctx.sql.schemaName.lib,
+): mod.InterpolationResult {
+  const state = ctx.prepareState(
+    ctx.prepareTsModuleExecution(import.meta.url),
+    { schema: ctx.sql.schemaName.lib },
   );
   const { assurance: assuranceSchemaName } = ctx.sql.schemaName;
   return mod.SQL(ctx.engine, state, {
     // if this template is embedded in another, leave indentation
     unindent: !mod.isEmbeddedInterpolationContext(ctx),
   })`
-
     -- PostgreSQL treats users and roles as synonyms. We treat roles as permissions
     -- policies and users as authenticatable entities. It's just nomenclature but
     -- important for consistency.

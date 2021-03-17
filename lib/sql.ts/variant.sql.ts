@@ -1,12 +1,9 @@
 import * as mod from "../mod.ts";
 
-export async function SQL(
-  ctx: mod.InterpolationContext,
-): Promise<mod.InterpolationResult> {
-  const state = await mod.typicalSchemaState(
-    ctx,
-    await mod.tsModuleProvenance(import.meta.url),
-    ctx.sql.schemaName.lifecycle,
+export function SQL(ctx: mod.InterpolationContext): mod.InterpolationResult {
+  const state = ctx.prepareState(
+    ctx.prepareTsModuleExecution(import.meta.url),
+    { schema: ctx.sql.schemaName.lifecycle },
   );
   return mod.SQL(ctx.engine, state, {
     // if this template is embedded in another, leave indentation

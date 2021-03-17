@@ -6,13 +6,39 @@ export interface TemplateProvenance {
   readonly source: string;
 }
 
+export interface TextTransformer {
+  (text: string): string;
+}
+
+export const noTextTransformation: TextTransformer = (text) => {
+  return text;
+};
+
+export interface Indentable {
+  readonly indent: TextTransformer;
+  readonly unindent: TextTransformer;
+}
+
+export const noIndentation: Indentable = {
+  indent: noTextTransformation,
+  unindent: noTextTransformation,
+};
+
+export const isIndentable = safety.typeGuard<Indentable>(
+  "indent",
+  "unindent",
+);
+
 export interface TypeScriptModuleProvenance extends TemplateProvenance {
   readonly importMetaURL: string;
 }
 
+export const isTypeScriptModuleProvenance = safety.typeGuard<
+  TypeScriptModuleProvenance
+>("importMetaURL");
+
 export interface InterpolationExecution {
-  readonly index: number;
-  readonly stamp: Date;
+  readonly provenance: TemplateProvenance;
 }
 
 export type InterpolatedContent = string;
@@ -22,7 +48,7 @@ export interface InterpolationEngine {
   readonly prepareInterpolation: (
     p: TemplateProvenance,
   ) => InterpolationExecution;
-  readonly registerResult: (
+  readonly prepareResult: (
     interpolated: InterpolatedContent,
     state: InterpolationState,
     options: InterpolationOptions,
@@ -30,8 +56,7 @@ export interface InterpolationEngine {
 }
 
 export interface InterpolationState {
-  readonly provenance: TemplateProvenance;
-  readonly execID: InterpolationExecution;
+  readonly ie: InterpolationExecution;
 }
 
 export interface EmbeddedInterpolationState extends InterpolationState {
@@ -40,10 +65,10 @@ export interface EmbeddedInterpolationState extends InterpolationState {
 
 export const isEmbeddedInterpolationState = safety.typeGuard<
   EmbeddedInterpolationState
->("provenance", "execID", "parent");
+>("ie", "parent");
 
+// deno-lint-ignore no-empty-interface
 export interface InterpolationOptions {
-  readonly unindent: boolean;
 }
 
 export interface InterpolationResult {
@@ -86,10 +111,7 @@ export function executeTemplate(
       interpolated += expressions[i];
     }
     interpolated += literals[literals.length - 1];
-    if (options.unindent) {
-      interpolated = tw.unindentWhitespace(interpolated);
-    }
-    return engine.registerResult(interpolated, state, options);
+    return engine.prepareResult(interpolated, state, options);
   };
 }
 

@@ -1,4 +1,4 @@
-import { safety } from "./deps.ts";
+import { safety, textWhitespace as tw } from "./deps.ts";
 import * as interp from "./interpolate.ts";
 
 export type TextValue = string;
@@ -33,9 +33,53 @@ export interface DataComputingPlatformSqlSupplier {
   readonly functionName: DcpSqlFunctionNameSupplier;
 }
 
+export interface DcpSqlDecorationOptions {
+  readonly frontmatterDecoration: boolean;
+  readonly schemaDecoration: boolean;
+  readonly searchPathDecoration: boolean;
+}
+
+export const noDcpSqlDecorationOptions: DcpSqlDecorationOptions = {
+  schemaDecoration: false,
+  searchPathDecoration: false,
+  frontmatterDecoration: false,
+};
+
+export interface DcpTemplateState extends interp.InterpolationState {
+  readonly schema: string;
+  readonly isSchemaDefaulted: boolean;
+  readonly searchPath: string[];
+  readonly decorations?: DcpSqlDecorationOptions;
+}
+
+export const isDcpTemplateState = safety.typeGuard<DcpTemplateState>(
+  "schema",
+  "isSchemaDefaulted",
+  "searchPath",
+);
+
+export interface InterpolationContextStateOptions {
+  readonly schema?: string;
+  readonly searchPath?: string[];
+  readonly decorations?: DcpSqlDecorationOptions;
+}
+
 export interface InterpolationContext {
   readonly engine: interp.InterpolationEngine;
   readonly sql: DataComputingPlatformSqlSupplier;
+  readonly prepareTsModuleExecution: (
+    importMetaURL: string,
+    defaultP?: Partial<Omit<interp.TemplateProvenance, "importMetaURL">>,
+  ) => interp.InterpolationExecution;
+  readonly prepareState: (
+    ie: interp.InterpolationExecution,
+    options?: InterpolationContextStateOptions,
+  ) => DcpTemplateState;
+  readonly embed: (
+    ic: InterpolationContext,
+    state: DcpTemplateState,
+    irFn: (eic: EmbeddedInterpolationContext) => interp.InterpolationResult,
+  ) => interp.InterpolatedContent;
 }
 
 export interface EmbeddedInterpolationContext extends InterpolationContext {
@@ -45,29 +89,6 @@ export interface EmbeddedInterpolationContext extends InterpolationContext {
 export const isEmbeddedInterpolationContext = safety.typeGuard<
   EmbeddedInterpolationContext
 >("parent");
-
-export function embeddedContext(
-  ctx: InterpolationContext,
-  parent: interp.InterpolationState,
-): EmbeddedInterpolationContext {
-  return { ...ctx, parent };
-}
-
-export interface InterpolationSchemaSupplier {
-  readonly schema: string;
-}
-
-export interface InterpolationSchemaSearchPathSupplier {
-  readonly searchPath: string[];
-}
-
-export const isInterpolationSchemaSupplier = safety.typeGuard<
-  InterpolationSchemaSupplier
->("schema");
-
-export const isInterpolationSchemaSearchPathSupplier = safety.typeGuard<
-  InterpolationSchemaSearchPathSupplier
->("searchPath");
 
 export function typicalDcpSqlSupplier(): DataComputingPlatformSqlSupplier {
   const ic: DataComputingPlatformSqlSupplier = {
@@ -103,69 +124,83 @@ export function typicalDcpSqlSupplier(): DataComputingPlatformSqlSupplier {
   return ic;
 }
 
-// deno-lint-ignore require-await
-export async function tsModuleProvenance(
-  importMetaURL: string,
-  defaultP: Partial<Omit<interp.TemplateProvenance, "importMetaURL">> = {},
-): Promise<interp.TypeScriptModuleProvenance> {
-  return {
-    source: importMetaURL,
-    importMetaURL,
-    identity: defaultP.identity || importMetaURL.split("/").pop() ||
-      importMetaURL,
-    version: defaultP.version || "0.0.0",
+export function typicalDcpInterpolationContext(
+  engine: interp.InterpolationEngine,
+  sql: DataComputingPlatformSqlSupplier,
+  defaultDecorations: DcpSqlDecorationOptions = {
+    schemaDecoration: true,
+    searchPathDecoration: true,
+    frontmatterDecoration: true,
+  },
+): InterpolationContext {
+  const result: InterpolationContext = {
+    engine,
+    sql,
+    prepareTsModuleExecution: (
+      importMetaURL: string,
+      defaultP?: Partial<Omit<interp.TemplateProvenance, "importMetaURL">>,
+    ): interp.InterpolationExecution => {
+      const provenance: interp.TypeScriptModuleProvenance & interp.Indentable =
+        {
+          source: importMetaURL,
+          importMetaURL,
+          identity: defaultP?.identity || importMetaURL.split("/").pop() ||
+            importMetaURL,
+          version: defaultP?.version || "0.0.0",
+          indent: (text) => {
+            return text.replace(/^/gm, "    ");
+          },
+          unindent: (text) => {
+            return tw.unindentWhitespace(text);
+          },
+        };
+      return {
+        provenance,
+      };
+    },
+    prepareState: (
+      ie: interp.InterpolationExecution,
+      options: InterpolationContextStateOptions = {
+        schema: sql.schemaName.experimental,
+        decorations: defaultDecorations,
+      },
+    ): DcpTemplateState => {
+      const schema = options.schema || sql.schemaName.experimental;
+      const isSchemaDefaulted = options.schema ? false : true;
+      const searchPath = options.searchPath ? options.searchPath : [schema];
+      if (isEmbeddedInterpolationContext(result)) {
+        const eis: interp.EmbeddedInterpolationState & DcpTemplateState = {
+          ie,
+          parent: result.parent,
+          schema,
+          isSchemaDefaulted,
+          searchPath,
+          decorations: options.decorations || defaultDecorations,
+        };
+        return eis;
+      } else {
+        return {
+          ie,
+          schema,
+          isSchemaDefaulted,
+          searchPath,
+          decorations: options.decorations || defaultDecorations,
+        };
+      }
+    },
+    embed: (
+      ic: InterpolationContext,
+      state: DcpTemplateState,
+      irFn: (eic: EmbeddedInterpolationContext) => interp.InterpolationResult,
+    ): interp.InterpolatedContent => {
+      const eic: EmbeddedInterpolationContext = {
+        ...ic,
+        parent: state,
+      };
+      const eir = irFn(eic);
+      const { provenance } = eir.state.ie;
+      return `    -- Embedded from: ${provenance.identity} (${provenance.source})\n${eir.interpolated}`;
+    },
   };
-}
-
-// deno-lint-ignore require-await
-export async function typicalState(
-  ctx: InterpolationContext,
-  provenance: interp.TemplateProvenance,
-): Promise<interp.InterpolationState> {
-  if (isEmbeddedInterpolationContext(ctx)) {
-    const result: interp.EmbeddedInterpolationState = {
-      provenance: provenance,
-      execID: ctx.parent.execID,
-      parent: ctx.parent,
-    };
-    return result;
-  } else {
-    const result: interp.InterpolationState = {
-      provenance: provenance,
-      execID: ctx.engine.prepareInterpolation(provenance),
-    };
-    return result;
-  }
-}
-
-export async function typicalSchemaState(
-  ctx: InterpolationContext,
-  provenance: interp.TemplateProvenance,
-  schema: string,
-): Promise<
-  & interp.InterpolationState
-  & InterpolationSchemaSupplier
-  & InterpolationSchemaSearchPathSupplier
-> {
-  return {
-    ...await typicalState(ctx, provenance),
-    schema,
-    searchPath: [schema],
-  };
-}
-
-export async function typicalSchemaSearchPathState(
-  ctx: InterpolationContext,
-  provenance: interp.TemplateProvenance,
-  schema: string,
-  searchPath: string[],
-): Promise<
-  & interp.InterpolationState
-  & InterpolationSchemaSupplier
-  & InterpolationSchemaSearchPathSupplier
-> {
-  return {
-    ...await typicalSchemaState(ctx, provenance, schema),
-    searchPath: [schema, ...searchPath],
-  };
+  return result;
 }

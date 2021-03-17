@@ -1,13 +1,18 @@
 import * as mod from "../mod.ts";
 import * as variant from "./variant.sql.ts";
 
-export async function SQL(
-  ctx: mod.InterpolationContext,
-): Promise<mod.InterpolationResult> {
-  const state = await mod.typicalState(
-    ctx,
-    await mod.tsModuleProvenance(import.meta.url),
-  );
+export function SQL(ctx: mod.InterpolationContext): mod.InterpolationResult {
+  const state = {
+    ...ctx.prepareState(
+      ctx.prepareTsModuleExecution(import.meta.url),
+      {
+        decorations: {
+          ...mod.noDcpSqlDecorationOptions,
+          frontmatterDecoration: true,
+        },
+      },
+    ),
+  };
   const { schemaName: schema, functionName: fn } = ctx.sql;
   return mod.SQL(ctx.engine, state, {
     // if this template is embedded in another, leave indentation
@@ -95,5 +100,5 @@ export async function SQL(
                     format('PostgreSQL engine instance versions should be at least 13000 [%s]', pg_version()));
     END;$$;
     
-    ${(await variant.SQL(mod.embeddedContext(ctx, state))).interpolated}`;
+${ctx.embed(ctx, state, (eic) => variant.SQL(eic))}`;
 }
