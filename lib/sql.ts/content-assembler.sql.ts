@@ -4,13 +4,16 @@ export async function SQL(
   ctx: mod.InterpolationContext,
 ): Promise<mod.InterpolationResult> {
   const state = await mod.typicalSchemaState(
-    ctx.engine,
+    ctx,
     await mod.tsModuleProvenance(import.meta.url),
-    "content_assembler",
+    ctx.sql.schemaName.lib,
   );
   const { schemaName: schema, functionName: fn } = ctx.sql;
   const unitTestFn = `test_${state.schema}_text_manipulation`;
-  return mod.SQL(ctx.engine, state, { unindent: true })`
+  return mod.SQL(ctx.engine, state, {
+    // if this template is embedded in another, leave indentation
+    unindent: !mod.isEmbeddedInterpolationContext(ctx),
+  })`
     create extension if not exists unaccent;
     
     CREATE OR REPLACE FUNCTION slugify("value" TEXT) RETURNS TEXT AS $$ 
@@ -68,7 +71,7 @@ export async function SQL(
     $$ LANGUAGE plpgsql STRICT IMMUTABLE ;
     comment on function url_brand(url TEXT) IS 'Given a URL, return the hostname only without "www." prefix';
     
-    CREATE OR REPLACE PROCEDURE ${fn.deploy.destroy(state.schema)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.lifecycle.destroy(state.schema)}() AS $$
     BEGIN
         DROP FUNCTION IF EXISTS ${schema.assurance}.${unitTestFn}();
         DROP FUNCTION IF EXISTS slugify(text);

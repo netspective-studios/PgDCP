@@ -4,11 +4,14 @@ export async function SQL(
   ctx: mod.InterpolationContext,
 ): Promise<mod.InterpolationResult> {
   const state = await mod.typicalState(
-    ctx.engine,
+    ctx,
     await mod.tsModuleProvenance(import.meta.url),
   );
   const { schemaName: schema, functionName: fn } = ctx.sql;
-  return mod.SQL(ctx.engine, state, { unindent: true })`
+  return mod.SQL(ctx.engine, state, {
+    // if this template is embedded in another, leave indentation
+    unindent: !mod.isEmbeddedInterpolationContext(ctx),
+  })`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
     -- TODO: create a custom HTTP Client result which would give back a complete, 

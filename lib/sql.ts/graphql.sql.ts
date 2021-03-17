@@ -4,11 +4,14 @@ export async function SQL(
   ctx: mod.InterpolationContext,
 ): Promise<mod.InterpolationResult> {
   const state = await mod.typicalState(
-    ctx.engine,
+    ctx,
     await mod.tsModuleProvenance(import.meta.url),
   );
   const { schemaName: schema, functionName: fn } = ctx.sql;
-  return mod.SQL(ctx.engine, state, { unindent: true })`
+  return mod.SQL(ctx.engine, state, {
+    // if this template is embedded in another, leave indentation
+    unindent: !mod.isEmbeddedInterpolationContext(ctx),
+  })`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
     CREATE OR REPLACE FUNCTION http_client_graphql_anonymous_query_result(endpoint_url text, query text) returns JSON AS $$
@@ -31,7 +34,7 @@ export async function SQL(
     comment on function http_client_graphql_authn_header_query_result(text, text, text, text) is 'Execute a GraphQL query that requires authentication header and return result as JSON';
 
     CREATE OR REPLACE PROCEDURE ${
-    fn.deploy.destroy("http_client_graphql")
+    fn.lifecycle.destroy("http_client_graphql")
   }() AS $$
     BEGIN
         DROP FUNCTION IF EXISTS ${schema.assurance}.test_content_assembler_text_manipulation();

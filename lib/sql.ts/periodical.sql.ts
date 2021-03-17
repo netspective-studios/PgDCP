@@ -3,18 +3,21 @@ import * as mod from "../mod.ts";
 export async function SQL(
   ctx: mod.InterpolationContext,
 ): Promise<mod.InterpolationResult> {
-  const packageName = "periodicals_manager";
-  const unitTestFn = `test_${packageName}`;
-  const state = await mod.typicalState(
-    ctx.engine,
+  const state = await mod.typicalSchemaState(
+    ctx,
     await mod.tsModuleProvenance(import.meta.url),
+    ctx.sql.schemaName.typical("periodical"),
   );
+  const unitTestFn = `test_${state.schema}`;
   const { schemaName: schema, functionName: fn } = ctx.sql;
-  return mod.SQL(ctx.engine, state, { unindent: true })`
+  return mod.SQL(ctx.engine, state, {
+    // if this template is embedded in another, leave indentation
+    unindent: !mod.isEmbeddedInterpolationContext(ctx),
+  })`
     -- TODO: CREATE DOMAIN provenance, URLs, etc.
     -- TODO: CREATE TYPE for type safety
 
-    CREATE OR REPLACE PROCEDURE ${fn.deploy.construct(packageName)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.lifecycle.construct(state.schema)}() AS $$
     BEGIN
         CREATE DOMAIN periodical_nature_id as INTEGER;
         CREATE DOMAIN periodical_id as BIGINT;
@@ -60,7 +63,7 @@ export async function SQL(
         comment on table periodical is E'@name periodical\\n@omit update,delete\\nThis is to avoid mutations through Postgraphile.';
 
         CREATE OR REPLACE PROCEDURE ${
-    fn.deploy.destroy(packageName)
+    fn.lifecycle.destroy(state.schema)
   }() AS $innerFn$
         BEGIN
             DROP FUNCTION IF EXISTS ${schema.assurance}.${unitTestFn}();

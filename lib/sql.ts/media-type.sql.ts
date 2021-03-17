@@ -3,14 +3,16 @@ import * as mod from "../mod.ts";
 export async function SQL(
   ctx: mod.InterpolationContext,
 ): Promise<mod.InterpolationResult> {
-  const packageName = "content_assembler";
-  const unitTestFn = "test_content_assembler_text_manipulation";
-  const state = await mod.typicalState(
-    ctx.engine,
+  const state = await mod.typicalSchemaState(
+    ctx,
     await mod.tsModuleProvenance(import.meta.url),
+    ctx.sql.schemaName.lib,
   );
   const { schemaName: schema, functionName: fn } = ctx.sql;
-  return mod.SQL(ctx.engine, state, { unindent: true })`
+  return mod.SQL(ctx.engine, state, {
+    // if this template is embedded in another, leave indentation
+    unindent: !mod.isEmbeddedInterpolationContext(ctx),
+  })`
     CREATE OR REPLACE FUNCTION media_type_objects_construction_sql(schemaName text, tableName text) RETURNS text AS $$
     BEGIN
         return format($execBody$

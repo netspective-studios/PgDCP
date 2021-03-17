@@ -3,12 +3,16 @@ import * as mod from "../mod.ts";
 export async function SQL(
   ctx: mod.InterpolationContext,
 ): Promise<mod.InterpolationResult> {
-  const state = await mod.typicalState(
-    ctx.engine,
+  const state = await mod.typicalSchemaState(
+    ctx,
     await mod.tsModuleProvenance(import.meta.url),
+    ctx.sql.schemaName.lib,
   );
   const { schemaName: schema, functionName: fn } = ctx.sql;
-  return mod.SQL(ctx.engine, state, { unindent: true })`
+  return mod.SQL(ctx.engine, state, {
+    // if this template is embedded in another, leave indentation
+    unindent: !mod.isEmbeddedInterpolationContext(ctx),
+  })`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
     -- TODO: perform pip install or upgrade of required packages via an anonymous code block
@@ -34,9 +38,7 @@ export async function SQL(
     END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE PROCEDURE ${
-    fn.deploy.construct("image_management")
-  }() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.lifecycle.construct("image")}() AS $$
     BEGIN
         CALL safe_create_image_meta_data_type();
         
@@ -59,7 +61,7 @@ export async function SQL(
         $innerFn$ LANGUAGE plpython3u;
         comment on function inspect_image_meta_data(provenance text, image bytea) is 'Given a binary image, detect its format and size';
 
-        CREATE OR REPLACE FUNCTION ${schema.assurance}.test_image_management() RETURNS SETOF TEXT LANGUAGE plpgsql AS $unitTestFn$
+        CREATE OR REPLACE FUNCTION ${schema.assurance}.test_image() RETURNS SETOF TEXT LANGUAGE plpgsql AS $unitTestFn$
         DECLARE
             imgMD image_meta_data;
         BEGIN 
@@ -91,9 +93,9 @@ export async function SQL(
         $unitTestFn$;    END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE PROCEDURE ${fn.deploy.destroy("image_management")}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.lifecycle.destroy("image")}() AS $$
     BEGIN
-        DROP FUNCTION IF EXISTS ${schema.assurance}.test_image_management();
+        DROP FUNCTION IF EXISTS ${schema.assurance}.test_image();
         DROP FUNCTION IF EXISTS image_format_size(bytea);
         DROP TYPE IF EXISTS image_format_size_type;
     END;

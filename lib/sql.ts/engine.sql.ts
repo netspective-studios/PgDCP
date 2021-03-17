@@ -1,14 +1,18 @@
 import * as mod from "../mod.ts";
+import * as variant from "./variant.sql.ts";
 
 export async function SQL(
   ctx: mod.InterpolationContext,
 ): Promise<mod.InterpolationResult> {
   const state = await mod.typicalState(
-    ctx.engine,
+    ctx,
     await mod.tsModuleProvenance(import.meta.url),
   );
   const { schemaName: schema, functionName: fn } = ctx.sql;
-  return mod.SQL(ctx.engine, state, { unindent: true })`
+  return mod.SQL(ctx.engine, state, {
+    // if this template is embedded in another, leave indentation
+    unindent: !mod.isEmbeddedInterpolationContext(ctx),
+  })`
     -- TODO: add custom type for semantic version management
     -- TODO: add table to manage DCP functions/procs/versions for lifecycle management
 
@@ -18,18 +22,30 @@ export async function SQL(
     CREATE SCHEMA IF NOT EXISTS ${schema.lifecycle};     -- manages all PgDCP construction/destruction
     CREATE SCHEMA IF NOT EXISTS ${schema.assurance};     -- unit tests
     CREATE SCHEMA IF NOT EXISTS ${schema.experimental};  -- the default schema, useful for experimentation
+    CREATE SCHEMA IF NOT EXISTS ${schema.lib};           -- PgDCP utility library (e.g. /lib)
 
-    CREATE OR REPLACE PROCEDURE ${fn.deploy.construct("engine_common")}() AS $$
+    -- TODO: add, a common etc variant into dcp_lifecycle to store all common configs such as
+    --       * context - prod, test, devl, etc. 
+    -- TODO: add, to all *_construct() and *_destroy() functions the requirement that
+    --       all activities are logged into a lifecycle table
+    CREATE OR REPLACE PROCEDURE ${fn.lifecycle.construct("engine")}() AS $$
     BEGIN
         CREATE SCHEMA IF NOT EXISTS ${schema.assurance};
         CREATE SCHEMA IF NOT EXISTS ${schema.experimental};
+        CREATE SCHEMA IF NOT EXISTS ${schema.lib};
+        CALL ${schema.lifecycle}.variant_construct('${schema.lifecycle}', 'etc', 'common', 'root');
     END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE PROCEDURE ${fn.deploy.destroy("engine_common")}() AS $$
+    -- TODO: add, to all *_destroy() functions the requirement that it be a specific
+    --       user that is calling the destruction (e.g. "dcp_destroyer") and that
+    --       user is highly restricted.
+    CREATE OR REPLACE PROCEDURE ${fn.lifecycle.destroy("engine")}() AS $$
     BEGIN
+        -- TODO: if user = 'dcp_destroyer' ... else raise exception invalid user trying to destroy
         DROP SCHEMA ${schema.assurance} CASCADE;
         DROP SCHEMA ${schema.experimental} CASCADE;
+        DROP SCHEMA ${schema.lib} CASCADE;
     END;
     $$ LANGUAGE PLPGSQL;
 
@@ -77,6 +93,7 @@ export async function SQL(
     BEGIN 
         RETURN NEXT ok(pg_version_num() > 13000, 
                     format('PostgreSQL engine instance versions should be at least 13000 [%s]', pg_version()));
-    END;
-    $$;`;
+    END;$$;
+    
+    ${(await variant.SQL(mod.embeddedContext(ctx, state))).interpolated}`;
 }

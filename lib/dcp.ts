@@ -11,6 +11,8 @@ export interface DcpSqlSchemaNameSupplier {
   readonly lifecycle: TextValue;
   readonly assurance: TextValue;
   readonly experimental: TextValue;
+  readonly lib: TextValue;
+  readonly typical: TextValueSupplier;
   readonly stateless: TextValueSupplier;
 }
 
@@ -22,10 +24,8 @@ export interface DcpSqlDeploymentLifecycleFunctionCriterionSupplier {
 
 export interface DcpSqlFunctionNameSupplier {
   readonly prefix: TextValue;
-  readonly stateless: TextValueSupplier;
   readonly administrative: TextValueSupplier;
-  readonly destructive: TextValueSupplier;
-  readonly deploy: DcpSqlDeploymentLifecycleFunctionCriterionSupplier;
+  readonly lifecycle: DcpSqlDeploymentLifecycleFunctionCriterionSupplier;
 }
 
 export interface DataComputingPlatformSqlSupplier {
@@ -36,6 +36,21 @@ export interface DataComputingPlatformSqlSupplier {
 export interface InterpolationContext {
   readonly engine: interp.InterpolationEngine;
   readonly sql: DataComputingPlatformSqlSupplier;
+}
+
+export interface EmbeddedInterpolationContext extends InterpolationContext {
+  readonly parent: interp.InterpolationState;
+}
+
+export const isEmbeddedInterpolationContext = safety.typeGuard<
+  EmbeddedInterpolationContext
+>("parent");
+
+export function embeddedContext(
+  ctx: InterpolationContext,
+  parent: interp.InterpolationState,
+): EmbeddedInterpolationContext {
+  return { ...ctx, parent };
 }
 
 export interface InterpolationSchemaSupplier {
@@ -58,31 +73,29 @@ export function typicalDcpSqlSupplier(): DataComputingPlatformSqlSupplier {
   const ic: DataComputingPlatformSqlSupplier = {
     schemaName: {
       prefix: "dcp_",
-      lifecycle: "dcp_lifecyle",
+      lifecycle: "dcp_lifecycle",
       assurance: "dcp_assurance_engineering",
       experimental: "dcp_experimental",
-      stateless: (name: string) => {
+      lib: "dcp_lib",
+      typical: (name: string) => {
         return `${ic.schemaName.prefix}${name}`;
+      },
+      stateless: (name: string) => {
+        return `${ic.schemaName.prefix}stateless_${name}`;
       },
     },
     functionName: {
       prefix: "dcp_",
-      stateless: (name: string) => {
-        return `${ic.functionName.prefix}${name}`;
-      },
       administrative: (name: string) => {
-        return `${ic.schemaName.lifecycle}.${ic.functionName.prefix}${name}`;
+        return `${ic.schemaName.lifecycle}.${ic.functionName.prefix}admin_${name}`;
       },
-      destructive: (name: string) => {
-        return `${ic.schemaName.lifecycle}.${ic.functionName.prefix}${name}`;
-      },
-      deploy: {
-        prefix: "dcp_lc_deploy_",
+      lifecycle: {
+        prefix: "dcp_lc_",
         construct: (name: string) => {
-          return `${ic.schemaName.lifecycle}.${ic.functionName.deploy.prefix}construct_${name}`;
+          return `${ic.schemaName.lifecycle}.${ic.functionName.lifecycle.prefix}${name}_construct`;
         },
         destroy: (name: string) => {
-          return `${ic.schemaName.lifecycle}.${ic.functionName.deploy.prefix}destroy_${name}`;
+          return `${ic.schemaName.lifecycle}.${ic.functionName.lifecycle.prefix}${name}_destroy`;
         },
       },
     },
@@ -106,19 +119,28 @@ export async function tsModuleProvenance(
 
 // deno-lint-ignore require-await
 export async function typicalState(
-  engine: interp.InterpolationEngine,
-  provenance: interp.TypeScriptModuleProvenance,
+  ctx: InterpolationContext,
+  provenance: interp.TemplateProvenance,
 ): Promise<interp.InterpolationState> {
-  const result: interp.InterpolationState = {
-    provenance: provenance,
-    execID: engine.prepareInterpolation(provenance),
-  };
-  return result;
+  if (isEmbeddedInterpolationContext(ctx)) {
+    const result: interp.EmbeddedInterpolationState = {
+      provenance: provenance,
+      execID: ctx.parent.execID,
+      parent: ctx.parent,
+    };
+    return result;
+  } else {
+    const result: interp.InterpolationState = {
+      provenance: provenance,
+      execID: ctx.engine.prepareInterpolation(provenance),
+    };
+    return result;
+  }
 }
 
 export async function typicalSchemaState(
-  engine: interp.InterpolationEngine,
-  provenance: interp.TypeScriptModuleProvenance,
+  ctx: InterpolationContext,
+  provenance: interp.TemplateProvenance,
   schema: string,
 ): Promise<
   & interp.InterpolationState
@@ -126,17 +148,15 @@ export async function typicalSchemaState(
   & InterpolationSchemaSearchPathSupplier
 > {
   return {
-    ...await typicalState(engine, provenance),
+    ...await typicalState(ctx, provenance),
     schema,
     searchPath: [schema],
   };
 }
 
-export async function typicalSchemaSearchPathState<
-  C extends DataComputingPlatformSqlSupplier,
->(
-  engine: interp.InterpolationEngine,
-  provenance: interp.TypeScriptModuleProvenance,
+export async function typicalSchemaSearchPathState(
+  ctx: InterpolationContext,
+  provenance: interp.TemplateProvenance,
   schema: string,
   searchPath: string[],
 ): Promise<
@@ -145,7 +165,7 @@ export async function typicalSchemaSearchPathState<
   & InterpolationSchemaSearchPathSupplier
 > {
   return {
-    ...await typicalSchemaState(engine, provenance, schema),
+    ...await typicalSchemaState(ctx, provenance, schema),
     searchPath: [schema, ...searchPath],
   };
 }

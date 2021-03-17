@@ -1,4 +1,4 @@
-import { textWhitespace as tw } from "./deps.ts";
+import { safety, textWhitespace as tw } from "./deps.ts";
 
 export interface TemplateProvenance {
   readonly identity: string;
@@ -33,6 +33,14 @@ export interface InterpolationState {
   readonly provenance: TemplateProvenance;
   readonly execID: InterpolationExecution;
 }
+
+export interface EmbeddedInterpolationState extends InterpolationState {
+  readonly parent: InterpolationState;
+}
+
+export const isEmbeddedInterpolationState = safety.typeGuard<
+  EmbeddedInterpolationState
+>("provenance", "execID", "parent");
 
 export interface InterpolationOptions {
   readonly unindent: boolean;

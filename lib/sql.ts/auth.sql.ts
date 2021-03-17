@@ -3,12 +3,16 @@ import * as mod from "../mod.ts";
 export async function SQL(
   ctx: mod.InterpolationContext,
 ): Promise<mod.InterpolationResult> {
-  const state = await mod.typicalState(
-    ctx.engine,
+  const state = await mod.typicalSchemaState(
+    ctx,
     await mod.tsModuleProvenance(import.meta.url),
+    ctx.sql.schemaName.lib,
   );
   const { assurance: assuranceSchemaName } = ctx.sql.schemaName;
-  return mod.SQL(ctx.engine, state, { unindent: true })`
+  return mod.SQL(ctx.engine, state, {
+    // if this template is embedded in another, leave indentation
+    unindent: !mod.isEmbeddedInterpolationContext(ctx),
+  })`
 
     -- PostgreSQL treats users and roles as synonyms. We treat roles as permissions
     -- policies and users as authenticatable entities. It's just nomenclature but
@@ -81,14 +85,14 @@ export async function SQL(
 
     CREATE OR REPLACE PROCEDURE drop_role_and_user_if_exists(role_name text, user_name NAME) AS $$
     BEGIN
-    EXECUTE FORMAT('DROP OWNED BY %I', role_name);
-    EXECUTE FORMAT('DROP ROLE IF EXISTS %I', role_name);
-    EXECUTE FORMAT('DROP USER IF EXISTS %I', user_name);
+        EXECUTE FORMAT('DROP OWNED BY %I', role_name);
+        EXECUTE FORMAT('DROP ROLE IF EXISTS %I', role_name);
+        EXECUTE FORMAT('DROP USER IF EXISTS %I', user_name);
     END;
     $$ LANGUAGE plpgsql;
     comment on procedure drop_role_and_user_if_exists(role_name TEXT, user_name NAME) IS 'Drop the role_name/user_name if it exists after clearing dependencies';
 
-    CREATE OR REPLACE FUNCTION ${assuranceSchemaName}.test_auth_manager() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
+    CREATE OR REPLACE FUNCTION ${assuranceSchemaName}.test_auth() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
     BEGIN 
         RETURN NEXT has_function('create_role_if_not_exists');
         RETURN NEXT has_function('create_all_privileges_dcp_schema_role');
@@ -114,7 +118,7 @@ export async function SQL(
         'assurancetmp1', 'assurance_user1', ARRAY['USAGE'],
         'assurance_user1 should be granted USAGE on schema "assurancetmp1"');
         --RETURN NEXT table_privs_are ( 'assurancetmp1','assuranceView', 'assurance_role1', ARRAY['SELECT','INSERT', 'UPDATE','DELETE'], 'assurance_role1 should be able to SELECT, INSERT, UPDATE and DELETE on table assuranceView' ); 
-        CALL auth_manager.revoke_all_privileges_dcp_schema_role ('assurancetmp1','assurance_role1');
+        CALL ${state.schema}.revoke_all_privileges_dcp_schema_role ('assurancetmp1','assurance_role1');
         -- RETURN NEXT schema_privs_are(
         -- 'assurancetmp1', 'assurance_user1', ARRAY['USAGE'],
         -- 'assurance_user1 should be granted USAGE on schema "assurancetmp1"');
