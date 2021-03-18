@@ -9,6 +9,7 @@ import {
   textWhitespace as tw,
   uuid,
 } from "./deps.ts";
+import * as pattern from "https://cdn.skypack.dev/ts-pattern";
 import * as interp from "./interpolate.ts";
 import * as govn from "./governance.ts";
 
@@ -282,29 +283,32 @@ export abstract class Controller {
 
   abstract interpolate(interpOptions: InteropolateOptions): Promise<void>;
 
-  async handleCLI(): Promise<boolean> {
+  async handleCLI(): Promise<void> {
     if (!isCliExecutionContext(this.ec)) {
       throw Error("Expecting CLI execution environment");
     }
     const { cliArgs } = this.ec;
-
-    const { "interpolate": interpolate } = cliArgs;
-    if (interpolate) {
-      await this.interpolate(this.options.interpolate());
-      return true;
-    }
-
-    const { "version": version } = cliArgs;
-    if (version) {
-      console.log(
-        `PgDCP Controller ${
-          colors.yellow(await this.determineVersion(import.meta.url))
-        }`,
-      );
-      return true;
-    }
-
-    return false;
+    await pattern.match(cliArgs)
+      .with(
+        { interpolate: pattern.__.string },
+        async () => {
+          await this.interpolate(this.options.interpolate());
+        },
+      )
+      .with(
+        { version: pattern.__.boolean },
+        async () => {
+          console.log(
+            `PgDCP Controller ${
+              colors.yellow(await this.determineVersion(import.meta.url))
+            }`,
+          );
+        },
+      )
+      .otherwise(() => {
+        console.log("Unable to handle valid CLI arguments");
+        console.dir(cliArgs);
+      });
   }
 
   async determineVersion(
@@ -342,10 +346,7 @@ export function cliArgs(caller: ExecutionContext): CliExecutionContext {
 export async function CLI(ctl: Controller): Promise<void> {
   try {
     await ctl.initController();
-    if (!ctl.handleCLI()) {
-      console.error("Unable to handle validly parsed docoptSpec:");
-      console.dir(cliArgs);
-    }
+    await ctl.handleCLI();
     await ctl.finalizeController();
   } catch (e) {
     console.error(e.message);
