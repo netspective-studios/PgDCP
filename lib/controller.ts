@@ -88,6 +88,9 @@ export function cliControllerOptions(
           return pir.includeInDriver;
         },
         persist: async (fileName, content) => {
+          if (!isDryRun) {
+            Deno.writeTextFileSync(fileName, content);
+          }
           if (isDryRun || isVerbose) {
             const gs = showGitStatus ? await git.gitStatus(fileName) : {
               fileName: fileName,
@@ -107,9 +110,6 @@ export function cliControllerOptions(
                     colors.dim("(" + gs.status.label + ")"))
                   : basename),
             );
-          }
-          if (!isDryRun) {
-            Deno.writeTextFileSync(fileName, content);
           }
         },
       };
