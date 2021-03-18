@@ -27,3 +27,4 @@ export * as textWhitespace from "https://denopkg.com/shah/text-whitespace@v1.0.4
 // export * as safeHttpClient from "https://denopkg.com/shah/ts-safe-http-client@v0.8.2/git/mod.ts";
 // export * as shell from "https://denopkg.com/shah/tsd-shell@v0.9.2/mod.ts";
 export * as safety from "https://denopkg.com/shah/ts-safety@v0.3.1/mod.ts";
+export * as pattern from "https://cdn.skypack.dev/ts-pattern";

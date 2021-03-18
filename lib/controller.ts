@@ -5,11 +5,11 @@ import {
   fs,
   govnSvcVersion as gsv,
   path,
+  pattern,
   safety,
   textWhitespace as tw,
   uuid,
 } from "./deps.ts";
-import * as pattern from "https://cdn.skypack.dev/ts-pattern";
 import * as interp from "./interpolate.ts";
 import * as govn from "./governance.ts";
 
@@ -103,6 +103,7 @@ export interface PersistableInterpolationResult
   readonly index: number;
   readonly original: interp.InterpolatedContent;
   readonly indexedFileName: string;
+  readonly includeInDriver: boolean;
 }
 
 export class ControllerInterpolationEngine
@@ -175,7 +176,7 @@ export class ControllerInterpolationEngine
 
   registerPersistableResult(
     ir: interp.InterpolationResult,
-    options: { index?: number } = {},
+    options: { index?: number; includeInDriver?: boolean } = {},
   ): PersistableInterpolationResult {
     if (!govn.isDcpTemplateState(ir.state)) {
       throw Error(
@@ -198,6 +199,7 @@ export class ControllerInterpolationEngine
     );
     const result: PersistableInterpolationResult = {
       ...ir,
+
       index,
       interpolated: unindent(
         state.decorations?.frontmatterDecoration
@@ -209,6 +211,9 @@ export class ControllerInterpolationEngine
       ),
       original: ir.interpolated,
       indexedFileName,
+      includeInDriver: typeof options.includeInDriver === "boolean"
+        ? options.includeInDriver
+        : true,
     };
     this.persistable.push(result);
     return result;
@@ -242,9 +247,10 @@ export class ControllerInterpolationEngine
         console.log(colors.yellow(fileName));
       }
       if (!this.ctlOptions.isDryRun) {
-        const driver = this.persistable.map((pir) => {
-          return tw.unindentWhitespace(`\\ir ${pir.indexedFileName}`);
-        }).join("\n");
+        const driver = this.persistable.filter((pir) => pir.includeInDriver)
+          .map((pir) => {
+            return tw.unindentWhitespace(`\\ir ${pir.indexedFileName}`);
+          }).join("\n");
         Deno.writeTextFileSync(fileName, driver);
       }
     }
@@ -290,13 +296,13 @@ export abstract class Controller {
     const { cliArgs } = this.ec;
     await pattern.match(cliArgs)
       .with(
-        { interpolate: pattern.__.string },
+        { interpolate: true },
         async () => {
           await this.interpolate(this.options.interpolate());
         },
       )
       .with(
-        { version: pattern.__.boolean },
+        { version: true },
         async () => {
           console.log(
             `PgDCP Controller ${
