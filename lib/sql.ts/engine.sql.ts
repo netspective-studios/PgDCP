@@ -1,7 +1,7 @@
 import * as mod from "../mod.ts";
 import * as variant from "./variant.sql.ts";
 
-export function SQL(ctx: mod.InterpolationContext): mod.InterpolationResult {
+export function SQL(ctx: mod.DcpInterpolationContext): mod.InterpolationResult {
   const state = {
     ...ctx.prepareState(
       ctx.prepareTsModuleExecution(import.meta.url),

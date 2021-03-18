@@ -1,3 +1,3 @@
 export * from "./interpolate.ts";
-export * from "./dcp.ts";
+export * from "./governance.ts";
 export * from "./controller.ts";

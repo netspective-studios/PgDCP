@@ -64,7 +64,7 @@ export interface InterpolationContextStateOptions {
   readonly decorations?: DcpSqlDecorationOptions;
 }
 
-export interface InterpolationContext {
+export interface DcpInterpolationContext {
   readonly engine: interp.InterpolationEngine;
   readonly sql: DataComputingPlatformSqlSupplier;
   readonly prepareTsModuleExecution: (
@@ -76,18 +76,19 @@ export interface InterpolationContext {
     options?: InterpolationContextStateOptions,
   ) => DcpTemplateState;
   readonly embed: (
-    ic: InterpolationContext,
+    ic: DcpInterpolationContext,
     state: DcpTemplateState,
-    irFn: (eic: EmbeddedInterpolationContext) => interp.InterpolationResult,
+    irFn: (eic: DcpEmbeddedInterpolationContext) => interp.InterpolationResult,
   ) => interp.InterpolatedContent;
 }
 
-export interface EmbeddedInterpolationContext extends InterpolationContext {
+export interface DcpEmbeddedInterpolationContext
+  extends DcpInterpolationContext {
   readonly parent: interp.InterpolationState;
 }
 
 export const isEmbeddedInterpolationContext = safety.typeGuard<
-  EmbeddedInterpolationContext
+  DcpEmbeddedInterpolationContext
 >("parent");
 
 export function typicalDcpSqlSupplier(): DataComputingPlatformSqlSupplier {
@@ -132,8 +133,8 @@ export function typicalDcpInterpolationContext(
     searchPathDecoration: true,
     frontmatterDecoration: true,
   },
-): InterpolationContext {
-  const result: InterpolationContext = {
+): DcpInterpolationContext {
+  const result: DcpInterpolationContext = {
     engine,
     sql,
     prepareTsModuleExecution: (
@@ -189,11 +190,13 @@ export function typicalDcpInterpolationContext(
       }
     },
     embed: (
-      ic: InterpolationContext,
+      ic: DcpInterpolationContext,
       state: DcpTemplateState,
-      irFn: (eic: EmbeddedInterpolationContext) => interp.InterpolationResult,
+      irFn: (
+        eic: DcpEmbeddedInterpolationContext,
+      ) => interp.InterpolationResult,
     ): interp.InterpolatedContent => {
-      const eic: EmbeddedInterpolationContext = {
+      const eic: DcpEmbeddedInterpolationContext = {
         ...ic,
         parent: state,
       };

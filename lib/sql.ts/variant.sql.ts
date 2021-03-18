@@ -1,6 +1,6 @@
 import * as mod from "../mod.ts";
 
-export function SQL(ctx: mod.InterpolationContext): mod.InterpolationResult {
+export function SQL(ctx: mod.DcpInterpolationContext): mod.InterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
     { schema: ctx.sql.schemaName.lifecycle },

@@ -10,7 +10,7 @@ import {
   uuid,
 } from "./deps.ts";
 import * as interp from "./interpolate.ts";
-import * as dcp from "./dcp.ts";
+import * as govn from "./governance.ts";
 
 export interface ExecutionContext {
   readonly calledFromMetaURL: string;
@@ -111,7 +111,7 @@ export class ControllerInterpolationEngine
     readonly version: string,
     readonly ctlOptions: ControllerOptions,
     readonly interpOptions: InteropolateOptions,
-    readonly dcpSS: dcp.DataComputingPlatformSqlSupplier,
+    readonly dcpSS: govn.DataComputingPlatformSqlSupplier,
   ) {
   }
 
@@ -139,7 +139,7 @@ export class ControllerInterpolationEngine
     state: interp.InterpolationState,
     options: interp.InterpolationOptions,
   ): interp.InterpolationResult {
-    if (!dcp.isDcpTemplateState(state)) {
+    if (!govn.isDcpTemplateState(state)) {
       throw Error(
         `prepareResult(interpolated, state, options): state is expected to be of type DcpTemplateState not ${typeof state}`,
       );
@@ -174,7 +174,7 @@ export class ControllerInterpolationEngine
   registerPersistableResult(
     ir: interp.InterpolationResult,
   ): PersistableInterpolationResult {
-    if (!dcp.isDcpTemplateState(ir.state)) {
+    if (!govn.isDcpTemplateState(ir.state)) {
       throw Error(
         `preparePersistable(ir): ir.state is expected to be of type DcpTemplateState not ${typeof ir
           .state}`,
@@ -257,13 +257,13 @@ export abstract class Controller {
   }
 
   // deno-lint-ignore require-await
-  async dcpSqlSupplier(): Promise<dcp.DataComputingPlatformSqlSupplier> {
-    return dcp.typicalDcpSqlSupplier();
+  async dcpSqlSupplier(): Promise<govn.DataComputingPlatformSqlSupplier> {
+    return govn.typicalDcpSqlSupplier();
   }
 
   async interpolationEngine(
     interpOptions: InteropolateOptions,
-    dcpSS: dcp.DataComputingPlatformSqlSupplier,
+    dcpSS: govn.DataComputingPlatformSqlSupplier,
   ): Promise<ControllerInterpolationEngine> {
     return new ControllerInterpolationEngine(
       await this.determineVersion(),
