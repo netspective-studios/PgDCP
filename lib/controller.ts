@@ -99,6 +99,7 @@ export function cliControllerOptions(
 
 export interface PersistableInterpolationResult
   extends interp.InterpolationResult {
+  readonly index: number;
   readonly original: interp.InterpolatedContent;
   readonly indexedFileName: string;
 }
@@ -145,7 +146,7 @@ export class ControllerInterpolationEngine
       );
     }
     let decorated = interpolated;
-    const { indent, unindent } = this.indentation(state);
+    const { indent } = this.indentation(state);
     if (state.decorations?.searchPathDecoration) {
       decorated = indent(
         state.searchPath
@@ -173,6 +174,7 @@ export class ControllerInterpolationEngine
 
   registerPersistableResult(
     ir: interp.InterpolationResult,
+    options: { index?: number } = {},
   ): PersistableInterpolationResult {
     if (!govn.isDcpTemplateState(ir.state)) {
       throw Error(
@@ -181,16 +183,21 @@ export class ControllerInterpolationEngine
       );
     }
 
+    const lastIndex = this.persistable.length > 0
+      ? this.persistable[this.persistable.length - 1].index
+      : -1;
+    const index = options.index ? options.index : lastIndex + 1;
     const { state } = ir;
     const { provenance } = state.ie;
     const { indent, unindent } = this.indentation(state);
     const indexedFileName = fmt.sprintf(
       path.join("%03d_%s.auto.sql"),
-      this.persistable.length,
+      index,
       state.ie.provenance.identity.replace(/\..+$/, ""),
     );
     const result: PersistableInterpolationResult = {
       ...ir,
+      index,
       interpolated: unindent(
         state.decorations?.frontmatterDecoration
           ? indent(tw.unindentWhitespace(`
