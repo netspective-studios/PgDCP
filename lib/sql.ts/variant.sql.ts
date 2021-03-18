@@ -5,10 +5,7 @@ export function SQL(ctx: mod.DcpInterpolationContext): mod.InterpolationResult {
     ctx.prepareTsModuleExecution(import.meta.url),
     { schema: ctx.sql.schemaName.lifecycle },
   );
-  return mod.SQL(ctx.engine, state, {
-    // if this template is embedded in another, leave indentation
-    unindent: !mod.isEmbeddedInterpolationContext(ctx),
-  })`
+  return mod.SQL(ctx.engine, state)`
     CREATE EXTENSION IF NOT EXISTS ltree;
 
     CREATE OR REPLACE FUNCTION variant_sql(schemaName text, variantName text, defaultCtx text, defaultPath text) RETURNS text AS $$

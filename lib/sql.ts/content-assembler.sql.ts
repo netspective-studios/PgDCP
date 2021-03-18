@@ -9,10 +9,8 @@ export function SQL(
   );
   const { schemaName: schema, functionName: fn } = ctx.sql;
   const unitTestFn = `test_${state.schema}_text_manipulation`;
-  return mod.SQL(ctx.engine, state, {
-    // if this template is embedded in another, leave indentation
-    unindent: !mod.isEmbeddedInterpolationContext(ctx),
-  })`create extension if not exists unaccent;
+  return mod.SQL(ctx.engine, state)`
+    create extension if not exists unaccent;
     
     CREATE OR REPLACE FUNCTION slugify("value" TEXT) RETURNS TEXT AS $$ 
         -- removes accents (diacritic signs) from a given string --

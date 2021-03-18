@@ -8,10 +8,7 @@ export function SQL(
     { schema: ctx.sql.schemaName.lib },
   );
   const { assurance: assuranceSchemaName } = ctx.sql.schemaName;
-  return mod.SQL(ctx.engine, state, {
-    // if this template is embedded in another, leave indentation
-    unindent: !mod.isEmbeddedInterpolationContext(ctx),
-  })`
+  return mod.SQL(ctx.engine, state)`
     -- PostgreSQL treats users and roles as synonyms. We treat roles as permissions
     -- policies and users as authenticatable entities. It's just nomenclature but
     -- important for consistency.

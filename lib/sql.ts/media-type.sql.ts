@@ -8,10 +8,7 @@ export function SQL(
     { schema: ctx.sql.schemaName.lib },
   );
   const { schemaName: schema, functionName: fn } = ctx.sql;
-  return mod.SQL(ctx.engine, state, {
-    // if this template is embedded in another, leave indentation
-    unindent: !mod.isEmbeddedInterpolationContext(ctx),
-  })`
+  return mod.SQL(ctx.engine, state)`
     CREATE OR REPLACE FUNCTION media_type_objects_construction_sql(schemaName text, tableName text) RETURNS text AS $$
     BEGIN
         return format($execBody$

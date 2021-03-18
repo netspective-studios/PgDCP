@@ -102,7 +102,7 @@ export interface TemplateSupplier {
 export function executeTemplate(
   engine: InterpolationEngine,
   state: InterpolationState,
-  options: InterpolationOptions,
+  options: InterpolationOptions = {},
 ): TemplateLiteral {
   return (literals: TemplateStringsArray, ...expressions: unknown[]) => {
     let interpolated = "";
@@ -128,7 +128,7 @@ export function executeTemplate(
 export function SQL(
   engine: InterpolationEngine,
   state: InterpolationState,
-  options: InterpolationOptions,
+  options: InterpolationOptions = {},
 ): TemplateLiteral {
   return executeTemplate(engine, state, options);
 }

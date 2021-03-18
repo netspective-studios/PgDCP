@@ -8,10 +8,7 @@ export function SQL(
     { schema: ctx.sql.schemaName.lib },
   );
   const { schemaName: schema, functionName: fn } = ctx.sql;
-  return mod.SQL(ctx.engine, state, {
-    // if this template is embedded in another, leave indentation
-    unindent: !mod.isEmbeddedInterpolationContext(ctx),
-  })`
+  return mod.SQL(ctx.engine, state)`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
     CREATE OR REPLACE FUNCTION gitlab_project_asset_content_text(gl_api_base_url text, gl_auth_token text, project_id integer, asset_file_name text) returns TEXT AS $$

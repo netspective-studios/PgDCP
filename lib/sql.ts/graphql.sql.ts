@@ -7,10 +7,7 @@ export function SQL(
     ctx.prepareTsModuleExecution(import.meta.url),
   );
   const { schemaName: schema, functionName: fn } = ctx.sql;
-  return mod.SQL(ctx.engine, state, {
-    // if this template is embedded in another, leave indentation
-    unindent: !mod.isEmbeddedInterpolationContext(ctx),
-  })`
+  return mod.SQL(ctx.engine, state)`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
     CREATE OR REPLACE FUNCTION http_client_graphql_anonymous_query_result(endpoint_url text, query text) returns JSON AS $$

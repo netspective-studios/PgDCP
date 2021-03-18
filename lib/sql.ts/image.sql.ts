@@ -8,10 +8,7 @@ export function SQL(
     { schema: ctx.sql.schemaName.lib },
   );
   const { schemaName: schema, functionName: fn } = ctx.sql;
-  return mod.SQL(ctx.engine, state, {
-    // if this template is embedded in another, leave indentation
-    unindent: !mod.isEmbeddedInterpolationContext(ctx),
-  })`
+  return mod.SQL(ctx.engine, state)`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
     -- TODO: perform pip install or upgrade of required packages via an anonymous code block

@@ -14,10 +14,7 @@ export function SQL(ctx: mod.DcpInterpolationContext): mod.InterpolationResult {
     ),
   };
   const { schemaName: schema, functionName: fn } = ctx.sql;
-  return mod.SQL(ctx.engine, state, {
-    // if this template is embedded in another, leave indentation
-    unindent: !mod.isEmbeddedInterpolationContext(ctx),
-  })`
+  return mod.SQL(ctx.engine, state)`
     -- TODO: add custom type for semantic version management
     -- TODO: add table to manage DCP functions/procs/versions for lifecycle management
 
