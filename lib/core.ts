@@ -1,4 +1,4 @@
-import { colors, fmt, path, safety, textWhitespace as tw } from "./deps.ts";
+import { fmt, path, safety, textWhitespace as tw } from "./deps.ts";
 import * as interp from "./interpolate.ts";
 
 export type TextValue = string;
@@ -12,6 +12,21 @@ export type PostgreSqlSchemaName = string;
 export type PostgreSqlStoredRoutineName = string;
 export type AffinityGroupName = PostgreSqlSchemaName;
 
+export interface PostgreSqlStatementSupplier {
+  (ctx: DcpInterpolationContext): PostgreSqlStatement;
+}
+
+export interface PostgreSqlStoredRoutineNameSupplier {
+  (ctx: DcpInterpolationContext): PostgreSqlStoredRoutineName;
+}
+
+export interface PostgreSqlStoredRoutineNameDecorator {
+  (
+    ctx: DcpInterpolationContext,
+    suggested: string,
+  ): PostgreSqlStoredRoutineName;
+}
+
 export interface PostgreSqlSchemaAffinityGroup {
   readonly schema: PostgreSqlSchema;
   readonly name: AffinityGroupName;
@@ -21,15 +36,9 @@ export interface PostgreSqlSchemaAffinityGroup {
     readonly schemas?: PostgreSqlSchema[];
   };
   readonly functionNames: {
-    readonly construct: (
-      ctx: DcpInterpolationContext,
-    ) => PostgreSqlStoredRoutineName;
-    readonly destroy: (
-      ctx: DcpInterpolationContext,
-    ) => PostgreSqlStoredRoutineName;
-    readonly unitTest: (
-      ctx: DcpInterpolationContext,
-    ) => PostgreSqlStoredRoutineName;
+    readonly construct: PostgreSqlStoredRoutineNameSupplier;
+    readonly destroy: PostgreSqlStoredRoutineNameSupplier;
+    readonly unitTest: PostgreSqlStoredRoutineNameSupplier;
   };
 }
 
@@ -48,28 +57,16 @@ export interface PostgreSqlSchema {
   readonly name: PostgreSqlSchemaName;
   readonly dependencies?: PostgreSqlSchema[];
   readonly qualifiedReference: (qualify: string) => string;
-  readonly createSchemaSql: (
-    ctx: DcpInterpolationContext,
-  ) => PostgreSqlStatement;
-  readonly dropSchemaSql: (
-    ctx: DcpInterpolationContext,
-  ) => PostgreSqlStatement;
-  readonly setSearchPathSql: (
-    ctx: DcpInterpolationContext,
-  ) => PostgreSqlStatement;
+  readonly createSchemaSql: PostgreSqlStatementSupplier;
+  readonly dropSchemaSql: PostgreSqlStatementSupplier;
+  readonly setSearchPathSql: PostgreSqlStatementSupplier;
   readonly affinityGroups: (
     ctx: DcpInterpolationContext,
   ) => PostgreSqlSchemaAffinityGroups;
   readonly functionNames: {
-    readonly construct: (
-      ctx: DcpInterpolationContext,
-    ) => PostgreSqlStoredRoutineName;
-    readonly destroy: (
-      ctx: DcpInterpolationContext,
-    ) => PostgreSqlStoredRoutineName;
-    readonly unitTest: (
-      ctx: DcpInterpolationContext,
-    ) => PostgreSqlStoredRoutineName;
+    readonly construct: PostgreSqlStoredRoutineNameSupplier;
+    readonly destroy: PostgreSqlStoredRoutineNameSupplier;
+    readonly unitTest: PostgreSqlStoredRoutineNameSupplier;
   };
 }
 
@@ -105,18 +102,9 @@ export interface DcpSqlSchemaSupplier {
 }
 
 export interface DcpSqlFunctionNameSupplier {
-  readonly construct: (
-    ctx: DcpInterpolationContext,
-    suggested: PostgreSqlStoredRoutineName,
-  ) => PostgreSqlStoredRoutineName;
-  readonly destroy: (
-    ctx: DcpInterpolationContext,
-    suggested: PostgreSqlStoredRoutineName,
-  ) => PostgreSqlStoredRoutineName;
-  readonly unitTest: (
-    ctx: DcpInterpolationContext,
-    suggested: PostgreSqlStoredRoutineName,
-  ) => PostgreSqlStoredRoutineName;
+  readonly construct: PostgreSqlStoredRoutineNameDecorator;
+  readonly destroy: PostgreSqlStoredRoutineNameDecorator;
+  readonly unitTest: PostgreSqlStoredRoutineNameDecorator;
 }
 
 export interface DataComputingPlatformSqlSupplier {
