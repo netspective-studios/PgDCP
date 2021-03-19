@@ -172,6 +172,7 @@ Engineers writing SQL-first code should use the following tools:
 Engineers needing to instrument PostgreSQL:
 
 * Deno [Postgres SQL parser](https://github.com/oguimbal/pgsql-ast-parser)
+* [pg\_query 2\.0: The easiest way to parse Postgres queries](https://pganalyze.com/blog/pg-query-2-0-postgres-query-parser)
 
 Machine Learning without leaving PostgreSQL:
 
