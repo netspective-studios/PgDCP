@@ -5,11 +5,11 @@ export function SQL(
 ): mod.InterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    { schema: ctx.sql.schemaName.lib },
+    { schema: ctx.sql.schemas.lib },
   );
-  const { schemaName: schema, functionName: fn } = ctx.sql;
+  const { functionNames: fn } = ctx.sql;
   return mod.SQL(ctx.engine, state)`
-    CREATE OR REPLACE FUNCTION media_type_objects_construction_sql(schemaName text, tableName text) RETURNS text AS $$
+    CREATE OR REPLACE FUNCTION media_type_objects_construction_sql(schemas text, tableName text) RETURNS text AS $$
     BEGIN
         return format($execBody$
             CREATE TABLE %2$s(
@@ -258,18 +258,20 @@ export function SQL(
 
             CREATE OR REPLACE PROCEDURE media_type_objects_destroy_all() AS $genBody$
             BEGIN
-                DROP FUNCTION IF EXISTS ${schema.assurance}.test_%2$s();
+                DROP FUNCTION IF EXISTS ${fn.unitTest(ctx, "%2$s")}();
                 DROP TABLE IF NOT EXISTS %2$s;
             END;
             $genBody$ LANGUAGE plpgsql;
 
-            CREATE OR REPLACE FUNCTION ${schema.assurance}.test_%2$s() RETURNS SETOF TEXT AS $genBody$
+            CREATE OR REPLACE FUNCTION ${
+    fn.unitTest(ctx, "%2$s")
+  }() RETURNS SETOF TEXT AS $genBody$
             BEGIN
                 RETURN NEXT has_table('%2$s');
                 RETURN NEXT ok(((select count(*) from %2$I) > 0), 'Should have content in %2$s');
             END;
             $genBody$ LANGUAGE plpgsql;
-        $execBody$, schemaName, tableName);
+        $execBody$, schemas, tableName);
     END;
     $$ LANGUAGE PLPGSQL;`;
 }

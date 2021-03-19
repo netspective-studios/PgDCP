@@ -3,7 +3,7 @@ import * as mod from "../mod.ts";
 export function SQL(ctx: mod.DcpInterpolationContext): mod.InterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    { schema: ctx.sql.schemaName.lifecycle },
+    { schema: ctx.sql.schemas.lifecycle },
   );
   return mod.SQL(ctx.engine, state)`
     CREATE EXTENSION IF NOT EXISTS ltree;
@@ -145,7 +145,11 @@ export function SQL(ctx: mod.DcpInterpolationContext): mod.InterpolationResult {
             instead of insert on %1$s.%2$s_xml
             for each row execute function %1$s.insert_%2$s_xml();
 
-            CREATE OR REPLACE PROCEDURE ${ctx.sql.schemaName.lifecycle}.%2$s_destroy_all_objects() AS $genBody$
+            CREATE OR REPLACE PROCEDURE ${
+    ctx.sql.schemas.lifecycle.qualifiedReference(
+      "variant_%1$s_%2$s_destroy_all_objects",
+    )
+  }() AS $genBody$
             BEGIN
                 -- TODO: also remove the triggers and other related items
                 -- TODO: add cascades as necessary

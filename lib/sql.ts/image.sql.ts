@@ -5,9 +5,9 @@ export function SQL(
 ): mod.InterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    { schema: ctx.sql.schemaName.lib },
+    { schema: ctx.sql.schemas.lib, affinityGroup: "image" },
   );
-  const { schemaName: schema, functionName: fn } = ctx.sql;
+  const { functionNames: fn } = state.affinityGroup;
   return mod.SQL(ctx.engine, state)`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
@@ -34,7 +34,7 @@ export function SQL(
     END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE PROCEDURE ${fn.lifecycle.construct("image")}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.construct(ctx)}() AS $$
     BEGIN
         CALL safe_create_image_meta_data_type();
         
@@ -57,7 +57,9 @@ export function SQL(
         $innerFn$ LANGUAGE plpython3u;
         comment on function inspect_image_meta_data(provenance text, image bytea) is 'Given a binary image, detect its format and size';
 
-        CREATE OR REPLACE FUNCTION ${schema.assurance}.test_image() RETURNS SETOF TEXT LANGUAGE plpgsql AS $unitTestFn$
+        CREATE OR REPLACE FUNCTION ${
+    fn.unitTest(ctx)
+  }() RETURNS SETOF TEXT LANGUAGE plpgsql AS $unitTestFn$
         DECLARE
             imgMD image_meta_data;
         BEGIN 
@@ -89,9 +91,9 @@ export function SQL(
         $unitTestFn$;    END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE PROCEDURE ${fn.lifecycle.destroy("image")}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroy(ctx)}() AS $$
     BEGIN
-        DROP FUNCTION IF EXISTS ${schema.assurance}.test_image();
+        DROP FUNCTION IF EXISTS ${fn.unitTest(ctx)}();
         DROP FUNCTION IF EXISTS image_format_size(bytea);
         DROP TYPE IF EXISTS image_format_size_type;
     END;

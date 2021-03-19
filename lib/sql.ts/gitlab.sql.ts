@@ -5,9 +5,9 @@ export function SQL(
 ): mod.InterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    { schema: ctx.sql.schemaName.lib },
+    { schema: ctx.sql.schemas.lib, affinityGroup: "gitlab" },
   );
-  const { schemaName: schema, functionName: fn } = ctx.sql;
+  const { functionNames: fn } = state.affinityGroup;
   return mod.SQL(ctx.engine, state)`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
@@ -38,21 +38,21 @@ export function SQL(
     $$ LANGUAGE plpython3u;
     comment on function gitlab_project_asset_content_xml(text, text, integer, text) is 'Retrieve a GitLab Project repo file as XML';
 
-    CREATE OR REPLACE PROCEDURE ${fn.lifecycle.destroy("git")}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroy(ctx)}() AS $$
     BEGIN
-        DROP FUNCTION IF EXISTS ${schema.assurance}.test_git();
+        DROP FUNCTION IF EXISTS ${fn.unitTest(ctx)}();
         DROP FUNCTION GITLAB_PROJECT_ASSET_CONTENT_TEXT(TEXT, TEXT, INTEGER, TEXT);
         DROP FUNCTION GITLAB_PROJECT_ASSET_CONTENT_JSON(TEXT, TEXT, INTEGER, TEXT);
         DROP FUNCTION GITLAB_PROJECT_ASSET_CONTENT_XML(TEXT, TEXT, INTEGER, TEXT);
     END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE FUNCTION ${schema.assurance}.test_git() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
+    CREATE OR REPLACE FUNCTION ${fn.unitTest(ctx)}() RETURNS SETOF TEXT AS $$
     BEGIN 
         RETURN NEXT has_extension('plpython3u');
         RETURN NEXT has_function('gitlab_project_asset_content_text');
         RETURN NEXT has_function('gitlab_project_asset_content_json');
         RETURN NEXT has_function('gitlab_project_asset_content_xml');
     END;
-    $$;`;
+    $$ LANGUAGE plpgsql;`;
 }

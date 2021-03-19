@@ -6,31 +6,122 @@ export interface TextValueSupplier {
   (...args: string[]): string;
 }
 
-export interface DcpSqlSchemaNameSupplier {
-  readonly prefix: TextValue;
-  readonly lifecycle: TextValue;
-  readonly assurance: TextValue;
-  readonly experimental: TextValue;
-  readonly lib: TextValue;
-  readonly typical: TextValueSupplier;
-  readonly stateless: TextValueSupplier;
+export type SqlStatement = string;
+export type PostgreSqlStatement = SqlStatement;
+export type PostgreSqlSchemaName = string;
+export type PostgreSqlStoredRoutineName = string;
+export type AffinityGroupName = PostgreSqlSchemaName;
+
+export interface PostgreSqlSchemaAffinityGroup {
+  readonly schema: PostgreSqlSchema;
+  readonly name: AffinityGroupName;
+  readonly qualifiedReference: (qualify: string) => string;
+  readonly dependencies?: {
+    readonly groups?: PostgreSqlSchemaAffinityGroup[];
+    readonly schemas?: PostgreSqlSchema[];
+  };
+  readonly functionNames: {
+    readonly construct: (
+      ctx: DcpInterpolationContext,
+    ) => PostgreSqlStoredRoutineName;
+    readonly destroy: (
+      ctx: DcpInterpolationContext,
+    ) => PostgreSqlStoredRoutineName;
+    readonly unitTest: (
+      ctx: DcpInterpolationContext,
+    ) => PostgreSqlStoredRoutineName;
+  };
 }
 
-export interface DcpSqlDeploymentLifecycleFunctionCriterionSupplier {
-  readonly prefix: TextValue;
-  readonly construct: TextValueSupplier;
-  readonly destroy: TextValueSupplier;
+export interface PostgreSqlSchemaAffinityGroups {
+  readonly typical: (
+    name: AffinityGroupName,
+    dependencies?: {
+      readonly groups?: PostgreSqlSchemaAffinityGroup[];
+      readonly schemas?: PostgreSqlSchema[];
+    },
+    ...args: string[]
+  ) => PostgreSqlSchemaAffinityGroup;
+}
+
+export interface PostgreSqlSchema {
+  readonly name: PostgreSqlSchemaName;
+  readonly dependencies?: PostgreSqlSchema[];
+  readonly qualifiedReference: (qualify: string) => string;
+  readonly createSchemaSql: (
+    ctx: DcpInterpolationContext,
+  ) => PostgreSqlStatement;
+  readonly dropSchemaSql: (
+    ctx: DcpInterpolationContext,
+  ) => PostgreSqlStatement;
+  readonly setSearchPathSql: (
+    ctx: DcpInterpolationContext,
+  ) => PostgreSqlStatement;
+  readonly affinityGroups: (
+    ctx: DcpInterpolationContext,
+  ) => PostgreSqlSchemaAffinityGroups;
+  readonly functionNames: {
+    readonly construct: (
+      ctx: DcpInterpolationContext,
+    ) => PostgreSqlStoredRoutineName;
+    readonly destroy: (
+      ctx: DcpInterpolationContext,
+    ) => PostgreSqlStoredRoutineName;
+    readonly unitTest: (
+      ctx: DcpInterpolationContext,
+    ) => PostgreSqlStoredRoutineName;
+  };
+}
+
+export interface PostgreSqlSchemaSupplier {
+  (
+    name: PostgreSqlSchemaName,
+    dependencies?: PostgreSqlSchema[],
+    ...args: string[]
+  ): PostgreSqlSchema;
+}
+
+export interface DcpSqlSchemaSupplier {
+  readonly lifecycle: PostgreSqlSchema;
+  readonly assurance: PostgreSqlSchema;
+  readonly experimental: PostgreSqlSchema;
+  readonly lib: PostgreSqlSchema;
+  readonly typical: PostgreSqlSchemaSupplier;
+  readonly sensitive: {
+    readonly compliance: (
+      name: PostgreSqlSchemaName,
+      dependencies?: PostgreSqlSchema[],
+      ...regulations: string[]
+    ) => PostgreSqlSchema;
+  };
+  readonly stateless: {
+    readonly typical: PostgreSqlSchemaSupplier;
+    readonly enhance: PostgreSqlSchemaSupplier;
+  };
+  readonly stateful: {
+    readonly typical: PostgreSqlSchemaSupplier;
+    readonly enhance: PostgreSqlSchemaSupplier;
+  };
 }
 
 export interface DcpSqlFunctionNameSupplier {
-  readonly prefix: TextValue;
-  readonly administrative: TextValueSupplier;
-  readonly lifecycle: DcpSqlDeploymentLifecycleFunctionCriterionSupplier;
+  readonly construct: (
+    ctx: DcpInterpolationContext,
+    suggested: PostgreSqlStoredRoutineName,
+  ) => PostgreSqlStoredRoutineName;
+  readonly destroy: (
+    ctx: DcpInterpolationContext,
+    suggested: PostgreSqlStoredRoutineName,
+  ) => PostgreSqlStoredRoutineName;
+  readonly unitTest: (
+    ctx: DcpInterpolationContext,
+    suggested: PostgreSqlStoredRoutineName,
+  ) => PostgreSqlStoredRoutineName;
 }
 
 export interface DataComputingPlatformSqlSupplier {
-  readonly schemaName: DcpSqlSchemaNameSupplier;
-  readonly functionName: DcpSqlFunctionNameSupplier;
+  readonly schemas: DcpSqlSchemaSupplier;
+  readonly functionNames: DcpSqlFunctionNameSupplier;
 }
 
 export interface DcpSqlDecorationOptions {
@@ -46,8 +137,9 @@ export const noDcpSqlDecorationOptions: DcpSqlDecorationOptions = {
 };
 
 export interface DcpTemplateState extends interp.InterpolationState {
-  readonly schema: string;
+  readonly schema: PostgreSqlSchema;
   readonly isSchemaDefaulted: boolean;
+  readonly affinityGroup: PostgreSqlSchemaAffinityGroup | PostgreSqlSchema;
   readonly searchPath: string[];
   readonly decorations?: DcpSqlDecorationOptions;
 }
@@ -59,7 +151,8 @@ export const isDcpTemplateState = safety.typeGuard<DcpTemplateState>(
 );
 
 export interface InterpolationContextStateOptions {
-  readonly schema?: string;
+  readonly schema?: PostgreSqlSchema;
+  readonly affinityGroup?: AffinityGroupName | PostgreSqlSchemaAffinityGroup;
   readonly searchPath?: string[];
   readonly decorations?: DcpSqlDecorationOptions;
 }
@@ -91,34 +184,131 @@ export const isEmbeddedInterpolationContext = safety.typeGuard<
   DcpEmbeddedInterpolationContext
 >("parent");
 
-export function typicalDcpSqlSupplier(): DataComputingPlatformSqlSupplier {
-  const ic: DataComputingPlatformSqlSupplier = {
-    schemaName: {
-      prefix: "dcp_",
-      lifecycle: "dcp_lifecycle",
-      assurance: "dcp_assurance_engineering",
-      experimental: "dcp_experimental",
-      lib: "dcp_lib",
-      typical: (name: string) => {
-        return `${ic.schemaName.prefix}${name}`;
+export function typicalPostgreSqlSchemaAffinityGroups(
+  schema: PostgreSqlSchema,
+): PostgreSqlSchemaAffinityGroups {
+  const groups: PostgreSqlSchemaAffinityGroups = {
+    typical: (name, dependencies?) => {
+      const group: PostgreSqlSchemaAffinityGroup = {
+        schema,
+        name,
+        qualifiedReference: (qualify: string) => {
+          return `${name}_${qualify}`;
+        },
+        dependencies,
+        functionNames: {
+          construct: (ctx) => {
+            return ctx.sql.functionNames.construct(ctx, name);
+          },
+          destroy: (ctx) => {
+            return ctx.sql.functionNames.destroy(ctx, name);
+          },
+          unitTest: (ctx) => {
+            return ctx.sql.functionNames.unitTest(ctx, name);
+          },
+        },
+      };
+      return group;
+    },
+  };
+  return groups;
+}
+
+export function typicalPostgreSqlSchema(
+  name: PostgreSqlSchemaName,
+  dependencies?: PostgreSqlSchema[],
+): PostgreSqlSchema {
+  const searchPath: string[] = [name];
+  if (dependencies) {
+    dependencies.forEach((s) => searchPath.push(s.name));
+  }
+  const result: PostgreSqlSchema = {
+    name,
+    dependencies,
+    qualifiedReference: (qualify: string) => {
+      return `${name}.${qualify}`;
+    },
+    createSchemaSql: () => {
+      return `CREATE SCHEMA IF NOT EXISTS ${name}`;
+    },
+    dropSchemaSql: () => {
+      return `DROP SCHEMA IF EXISTS ${name} CASCADE`;
+    },
+    setSearchPathSql: () => {
+      return `SET search_path TO ${searchPath.join(", ")}`;
+    },
+    functionNames: {
+      construct: (ctx) => {
+        return ctx.sql.functionNames.construct(ctx, name);
       },
-      stateless: (name: string) => {
-        return `${ic.schemaName.prefix}stateless_${name}`;
+      destroy: (ctx) => {
+        return ctx.sql.functionNames.destroy(ctx, name);
+      },
+      unitTest: (ctx) => {
+        return ctx.sql.functionNames.unitTest(ctx, name);
       },
     },
-    functionName: {
-      prefix: "dcp_",
-      administrative: (name: string) => {
-        return `${ic.schemaName.lifecycle}.${ic.functionName.prefix}admin_${name}`;
+    affinityGroups: () => {
+      return typicalPostgreSqlSchemaAffinityGroups(result);
+    },
+  };
+  return result;
+}
+
+export function typicalDcpSqlSupplier(): DataComputingPlatformSqlSupplier {
+  const ic: DataComputingPlatformSqlSupplier = {
+    schemas: {
+      lifecycle: typicalPostgreSqlSchema("dcp_lifecycle"),
+      assurance: typicalPostgreSqlSchema("dcp_assurance_engineering"),
+      experimental: typicalPostgreSqlSchema("dcp_experimental"),
+      lib: typicalPostgreSqlSchema("dcp_lib"),
+      typical: (name, dependencies) => {
+        return typicalPostgreSqlSchema(`dcp_${name}`, dependencies);
       },
-      lifecycle: {
-        prefix: "dcp_lc_",
-        construct: (name: string) => {
-          return `${ic.schemaName.lifecycle}.${ic.functionName.lifecycle.prefix}${name}_construct`;
+      sensitive: {
+        compliance: (name, dependencies?, ...regulations) => {
+          return typicalPostgreSqlSchema(
+            `dcp_sensitive_${regulations.join("_")}_${name}`,
+            dependencies,
+          );
         },
-        destroy: (name: string) => {
-          return `${ic.schemaName.lifecycle}.${ic.functionName.lifecycle.prefix}${name}_destroy`;
+      },
+      stateless: {
+        typical: (name, dependencies) => {
+          return typicalPostgreSqlSchema(`dcp_stateless_${name}`, dependencies);
         },
+        enhance: (name, dependencies) => {
+          return typicalPostgreSqlSchema(
+            `dcp_stateless_enhance_${name}`,
+            dependencies,
+          );
+        },
+      },
+      stateful: {
+        typical: (name, dependencies) => {
+          return typicalPostgreSqlSchema(`dcp_stateful_${name}`, dependencies);
+        },
+        enhance: (name, dependencies) => {
+          return typicalPostgreSqlSchema(
+            `dcp_stateful_${name}_enhance`,
+            dependencies,
+          );
+        },
+      },
+    },
+    functionNames: {
+      construct: (ctx, suggested) => {
+        return ic.schemas.lifecycle.qualifiedReference(
+          `dcp_lc_${suggested}_construct`,
+        );
+      },
+      destroy: (ctx, suggested) => {
+        return ic.schemas.lifecycle.qualifiedReference(
+          `dcp_lc_${suggested}_destroy`,
+        );
+      },
+      unitTest: (ctx, suggested) => {
+        return ic.schemas.assurance.qualifiedReference(`test_${suggested}`);
       },
     },
   };
@@ -162,19 +352,27 @@ export function typicalDcpInterpolationContext(
     prepareState: (
       ie: interp.InterpolationExecution,
       options: InterpolationContextStateOptions = {
-        schema: sql.schemaName.experimental,
+        schema: sql.schemas.experimental,
         decorations: defaultDecorations,
       },
     ): DcpTemplateState => {
-      const schema = options.schema || sql.schemaName.experimental;
+      const schema = options.schema || sql.schemas.experimental;
       const isSchemaDefaulted = options.schema ? false : true;
-      const searchPath = options.searchPath ? options.searchPath : [schema];
+      const affinityGroup = options.affinityGroup
+        ? (typeof options.affinityGroup === "string"
+          ? schema.affinityGroups(result).typical(options.affinityGroup)
+          : options.affinityGroup)
+        : schema;
+      const searchPath = options.searchPath
+        ? options.searchPath
+        : [schema.name];
       if (isEmbeddedInterpolationContext(result)) {
         const eis: interp.EmbeddedInterpolationState & DcpTemplateState = {
           ie,
           parent: result.parent,
           schema,
           isSchemaDefaulted,
+          affinityGroup,
           searchPath,
           decorations: options.decorations || defaultDecorations,
         };
@@ -184,6 +382,7 @@ export function typicalDcpInterpolationContext(
           ie,
           schema,
           isSchemaDefaulted,
+          affinityGroup,
           searchPath,
           decorations: options.decorations || defaultDecorations,
         };
@@ -269,13 +468,13 @@ export class PostgreSqlInterpolationEngine
       decorated = indent(
         state.searchPath
           ? `SET search_path TO ${[state.searchPath].join(", ")};`
-          : `SET search_path TO ${this.dcpSS.schemaName.experimental}; -- ${this.dcpSS.schemaName.experimental} is used because no searchPath provided`,
+          : `SET search_path TO ${this.dcpSS.schemas.experimental}; -- ${this.dcpSS.schemas.experimental} is used because no searchPath provided`,
       ) +
         "\n" + decorated;
     }
     if (state.decorations?.schemaDecoration) {
       decorated = indent(
-        `CREATE SCHEMA IF NOT EXISTS ${state.schema}; ${
+        `CREATE SCHEMA IF NOT EXISTS ${state.schema.name}; ${
           state.isSchemaDefaulted
             ? "-- no InterpolationSchemaSupplier.schema supplied"
             : ""

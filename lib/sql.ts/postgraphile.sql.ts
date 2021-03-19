@@ -6,7 +6,7 @@ export function SQL(
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
   );
-  const { schemaName: schema, functionName: fn } = ctx.sql;
+  const { functionNames: fn } = state.affinityGroup;
   return mod.SQL(ctx.engine, state)`
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -56,7 +56,7 @@ export function SQL(
 
     COMMENT ON FUNCTION authenticate_postgraphile_pg_native("text","text") IS 'Authenticate a user and provide a Postgraphile JWT payload';
 
-    CREATE OR REPLACE FUNCTION ${schema.assurance}.test_auth_postgraphile() RETURNS SETOF TEXT AS $$
+    CREATE OR REPLACE FUNCTION ${fn.unitTest(ctx)}() RETURNS SETOF TEXT AS $$
     BEGIN 
         RETURN NEXT has_extension('pgcrypto');
         RETURN NEXT has_type('jwt_token_postgraphile');

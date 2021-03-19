@@ -5,9 +5,9 @@ export function SQL(
 ): mod.InterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    { schema: ctx.sql.schemaName.lib },
+    { schema: ctx.sql.schemas.lib, affinityGroup: "auth" },
   );
-  const { assurance: assuranceSchemaName } = ctx.sql.schemaName;
+  const { functionNames: fn } = state.affinityGroup;
   return mod.SQL(ctx.engine, state)`
     -- PostgreSQL treats users and roles as synonyms. We treat roles as permissions
     -- policies and users as authenticatable entities. It's just nomenclature but
@@ -87,7 +87,9 @@ export function SQL(
     $$ LANGUAGE plpgsql;
     comment on procedure drop_role_and_user_if_exists(role_name TEXT, user_name NAME) IS 'Drop the role_name/user_name if it exists after clearing dependencies';
 
-    CREATE OR REPLACE FUNCTION ${assuranceSchemaName}.test_auth() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
+    CREATE OR REPLACE FUNCTION ${
+    fn.unitTest(ctx)
+  }() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
     BEGIN 
         RETURN NEXT has_function('create_role_if_not_exists');
         RETURN NEXT has_function('create_all_privileges_dcp_schema_role');
@@ -113,7 +115,9 @@ export function SQL(
         'assurancetmp1', 'assurance_user1', ARRAY['USAGE'],
         'assurance_user1 should be granted USAGE on schema "assurancetmp1"');
         --RETURN NEXT table_privs_are ( 'assurancetmp1','assuranceView', 'assurance_role1', ARRAY['SELECT','INSERT', 'UPDATE','DELETE'], 'assurance_role1 should be able to SELECT, INSERT, UPDATE and DELETE on table assuranceView' ); 
-        CALL ${state.schema}.revoke_all_privileges_dcp_schema_role ('assurancetmp1','assurance_role1');
+        CALL ${
+    state.schema.qualifiedReference("revoke_all_privileges_dcp_schema_role")
+  } ('assurancetmp1','assurance_role1');
         -- RETURN NEXT schema_privs_are(
         -- 'assurancetmp1', 'assurance_user1', ARRAY['USAGE'],
         -- 'assurance_user1 should be granted USAGE on schema "assurancetmp1"');

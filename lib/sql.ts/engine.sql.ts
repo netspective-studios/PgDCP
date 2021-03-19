@@ -10,44 +10,49 @@ export function SQL(ctx: mod.DcpInterpolationContext): mod.InterpolationResult {
           ...mod.noDcpSqlDecorationOptions,
           frontmatterDecoration: true,
         },
+        affinityGroup: "engine",
       },
     ),
   };
-  const { schemaName: schema, functionName: fn } = ctx.sql;
+  const { schemas } = ctx.sql;
+  const { functionNames: fn } = state.affinityGroup;
   return mod.SQL(ctx.engine, state)`
     -- TODO: add custom type for semantic version management
-    -- TODO: add table to manage DCP functions/procs/versions for lifecycle management
+    -- TODO: add table to manage DCP functionNames/procs/versions for lifecycle management
 
     CREATE EXTENSION IF NOT EXISTS pgtap;
     CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
     CREATE EXTENSION IF NOT EXISTS ltree;
-    CREATE SCHEMA IF NOT EXISTS ${schema.lifecycle};     -- manages all PgDCP construction/destruction
-    CREATE SCHEMA IF NOT EXISTS ${schema.assurance};     -- unit tests
-    CREATE SCHEMA IF NOT EXISTS ${schema.experimental};  -- the default schema, useful for experimentation
-    CREATE SCHEMA IF NOT EXISTS ${schema.lib};           -- PgDCP utility library (e.g. /lib)
+    ${schemas.lifecycle.createSchemaSql(ctx)};
+    ${schemas.assurance.createSchemaSql(ctx)};
+    ${schemas.experimental.createSchemaSql(ctx)};
+    ${schemas.lib.createSchemaSql(ctx)};
 
     -- TODO: add, a common etc variant into dcp_lifecycle to store all common configs such as
     --       * context - prod, test, devl, etc. 
-    -- TODO: add, to all *_construct() and *_destroy() functions the requirement that
+    -- TODO: add, to all *_construct() and *_destroy() functionNames the requirement that
     --       all activities are logged into a lifecycle table
-    CREATE OR REPLACE PROCEDURE ${fn.lifecycle.construct("engine")}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.construct(ctx)}() AS $$
     BEGIN
-        CREATE SCHEMA IF NOT EXISTS ${schema.assurance};
-        CREATE SCHEMA IF NOT EXISTS ${schema.experimental};
-        CREATE SCHEMA IF NOT EXISTS ${schema.lib};
-        CALL ${schema.lifecycle}.variant_construct('${schema.lifecycle}', 'etc', 'common', 'root');
+        ${schemas.assurance.createSchemaSql(ctx)};
+        ${schemas.experimental.createSchemaSql(ctx)};
+        ${schemas.lib.createSchemaSql(ctx)};
+        CALL ${
+    schemas.lifecycle.qualifiedReference("variant_construct")
+  }('${schemas.lifecycle.name}', 'etc', 'common', 'root');
     END;
     $$ LANGUAGE PLPGSQL;
 
-    -- TODO: add, to all *_destroy() functions the requirement that it be a specific
+    -- TODO: add, to all *_destroy() functionNames the requirement that it be a specific
     --       user that is calling the destruction (e.g. "dcp_destroyer") and that
     --       user is highly restricted.
-    CREATE OR REPLACE PROCEDURE ${fn.lifecycle.destroy("engine")}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroy(ctx)}() AS $$
     BEGIN
         -- TODO: if user = 'dcp_destroyer' ... else raise exception invalid user trying to destroy
-        DROP SCHEMA ${schema.assurance} CASCADE;
-        DROP SCHEMA ${schema.experimental} CASCADE;
-        DROP SCHEMA ${schema.lib} CASCADE;
+        ${schemas.assurance.dropSchemaSql(ctx)};
+        ${schemas.experimental.dropSchemaSql(ctx)};
+        ${schemas.lib.dropSchemaSql(ctx)};
+        call variant_dcp_lifecycle_etc_destroy_all_objects();
     END;
     $$ LANGUAGE PLPGSQL;
 
@@ -55,7 +60,7 @@ export function SQL(ctx: mod.DcpInterpolationContext): mod.InterpolationResult {
     -- source: https://stackoverflow.com/questions/7622908/drop-function-without-knowing-the-number-type-of-parameters
     --
     CREATE OR REPLACE FUNCTION ${
-    fn.administrative("drop_all_functions_with_name")
+    schemas.lifecycle.qualifiedReference("drop_all_functions_with_name")
   }(function_name text) RETURNS text AS $$
     DECLARE
         funcrow RECORD;
@@ -87,11 +92,13 @@ export function SQL(ctx: mod.DcpInterpolationContext): mod.InterpolationResult {
             numfunctions = numfunctions + 1;
 
         END LOOP;
-    RETURN 'Dropped ' || numfunctions || ' functions';
+    RETURN 'Dropped ' || numfunctions || ' functionNames';
     END;
     $$ LANGUAGE plpgsql VOLATILE COST 100;
 
-    CREATE OR REPLACE FUNCTION ${schema.assurance}.test_engine_version() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
+    CREATE OR REPLACE FUNCTION ${
+    schemas.lifecycle.qualifiedReference("test_engine_version")
+  }() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
     BEGIN 
         RETURN NEXT ok(pg_version_num() > 13000, 
                     format('PostgreSQL engine instance versions should be at least 13000 [%s]', pg_version()));

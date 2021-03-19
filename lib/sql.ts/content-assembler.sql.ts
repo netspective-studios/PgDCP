@@ -5,10 +5,13 @@ export function SQL(
 ): mod.InterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    { schema: ctx.sql.schemaName.lib },
+    {
+      schema: ctx.sql.schemas.lib,
+      affinityGroup: "text_manipulation",
+      searchPath: [ctx.sql.schemas.lib.name, "public"],
+    },
   );
-  const { schemaName: schema, functionName: fn } = ctx.sql;
-  const unitTestFn = `test_${state.schema}_text_manipulation`;
+  const { functionNames: fn } = state.affinityGroup;
   return mod.SQL(ctx.engine, state)`
     create extension if not exists unaccent;
     
@@ -67,16 +70,18 @@ export function SQL(
     $$ LANGUAGE plpgsql STRICT IMMUTABLE ;
     comment on function url_brand(url TEXT) IS 'Given a URL, return the hostname only without "www." prefix';
     
-    CREATE OR REPLACE PROCEDURE ${fn.lifecycle.destroy(state.schema)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroy(ctx)}() AS $$
     BEGIN
-        DROP FUNCTION IF EXISTS ${schema.assurance}.${unitTestFn}();
+        DROP FUNCTION IF EXISTS ${fn.unitTest(ctx)}();
         DROP FUNCTION IF EXISTS slugify(text);
         DROP FUNCTION IF EXISTS prepare_file_name(text, text);
         DROP FUNCTION IF EXISTS url_brand(text);
     END;
     $$ LANGUAGE PLPGSQL;
     
-    CREATE OR REPLACE FUNCTION ${schema.assurance}.${unitTestFn}() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
+    CREATE OR REPLACE FUNCTION ${
+    fn.unitTest(ctx)
+  }() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
     BEGIN 
         RETURN NEXT has_extension('unaccent');
         RETURN NEXT has_function('slugify');

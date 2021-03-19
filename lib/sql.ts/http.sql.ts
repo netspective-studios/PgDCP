@@ -5,8 +5,9 @@ export function SQL(
 ): mod.InterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
+    { schema: ctx.sql.schemas.lib, affinityGroup: "http_client_common" },
   );
-  const { schemaName: schema, functionName: fn } = ctx.sql;
+  const { functionNames: fn } = state.affinityGroup;
   return mod.SQL(ctx.engine, state)`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
@@ -35,13 +36,13 @@ export function SQL(
     $$ LANGUAGE plpython3u;
     comment on function http_client_fetch_content_text(text) is 'Retrieve a URL endpoint payload as text';
 
-    CREATE OR REPLACE FUNCTION ${schema.lifecycle}.destroy_http_client_graphql() RETURNS SETOF TEXT AS $$
+    CREATE OR REPLACE FUNCTION ${fn.destroy(ctx)}() RETURNS SETOF TEXT AS $$
     BEGIN
-        DROP FUNCTION IF EXISTS ${schema.assurance}.test_http_client();
+        DROP FUNCTION IF EXISTS ${fn.unitTest(ctx)}();
         DROP FUNCTION IF EXISTS http_client_fetch_content_text(text);
     END;$$ LANGUAGE plpgsql;
 
-    CREATE OR REPLACE FUNCTION ${schema.assurance}.test_http_client() RETURNS SETOF TEXT AS $$
+    CREATE OR REPLACE FUNCTION ${fn.unitTest(ctx)}() RETURNS SETOF TEXT AS $$
     BEGIN 
         RETURN NEXT has_extension('plpython3u');
         RETURN NEXT has_function('http_client_fetch_content_text');    
