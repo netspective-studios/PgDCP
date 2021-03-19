@@ -39,6 +39,8 @@ export interface PostgreSqlSchemaAffinityGroup {
     readonly construct: PostgreSqlStoredRoutineNameSupplier;
     readonly destroy: PostgreSqlStoredRoutineNameSupplier;
     readonly unitTest: PostgreSqlStoredRoutineNameSupplier;
+    readonly populateSecrets: PostgreSqlStoredRoutineNameSupplier;
+    readonly populateData: PostgreSqlStoredRoutineNameSupplier;
   };
 }
 
@@ -67,6 +69,8 @@ export interface PostgreSqlSchema {
     readonly construct: PostgreSqlStoredRoutineNameSupplier;
     readonly destroy: PostgreSqlStoredRoutineNameSupplier;
     readonly unitTest: PostgreSqlStoredRoutineNameSupplier;
+    readonly populateSecrets: PostgreSqlStoredRoutineNameSupplier;
+    readonly populateData: PostgreSqlStoredRoutineNameSupplier;
   };
 }
 
@@ -105,6 +109,8 @@ export interface DcpSqlFunctionNameSupplier {
   readonly construct: PostgreSqlStoredRoutineNameDecorator;
   readonly destroy: PostgreSqlStoredRoutineNameDecorator;
   readonly unitTest: PostgreSqlStoredRoutineNameDecorator;
+  readonly populateSecrets: PostgreSqlStoredRoutineNameDecorator;
+  readonly populateData: PostgreSqlStoredRoutineNameDecorator;
 }
 
 export interface DataComputingPlatformSqlSupplier {
@@ -194,6 +200,12 @@ export function typicalPostgreSqlSchemaAffinityGroups(
           unitTest: (ctx) => {
             return ctx.sql.functionNames.unitTest(ctx, name);
           },
+          populateSecrets: (ctx) => {
+            return ctx.sql.functionNames.populateSecrets(ctx, name);
+          },
+          populateData: (ctx) => {
+            return ctx.sql.functionNames.populateData(ctx, name);
+          },
         },
       };
       return group;
@@ -234,6 +246,12 @@ export function typicalPostgreSqlSchema(
       },
       unitTest: (ctx) => {
         return ctx.sql.functionNames.unitTest(ctx, name);
+      },
+      populateSecrets: (ctx) => {
+        return ctx.sql.functionNames.populateSecrets(ctx, name);
+      },
+      populateData: (ctx) => {
+        return ctx.sql.functionNames.populateData(ctx, name);
       },
     },
     affinityGroups: () => {
@@ -297,6 +315,16 @@ export function typicalDcpSqlSupplier(): DataComputingPlatformSqlSupplier {
       },
       unitTest: (ctx, suggested) => {
         return ic.schemas.assurance.qualifiedReference(`test_${suggested}`);
+      },
+      populateSecrets: (ctx, suggested) => {
+        return ic.schemas.lifecycle.qualifiedReference(
+          `dcp_lc_${suggested}_populateSecrets`,
+        );
+      },
+      populateData: (ctx, suggested) => {
+        return ic.schemas.lifecycle.qualifiedReference(
+          `dcp_lc_${suggested}_populateData`,
+        );
       },
     },
   };
