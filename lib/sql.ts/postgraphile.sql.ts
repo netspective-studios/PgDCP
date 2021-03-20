@@ -2,11 +2,13 @@ import * as mod from "../mod.ts";
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
+  options?: mod.InterpolationContextStateOptions,
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
+    options,
   );
-  const { functionNames: fn } = state.affinityGroup;
+  const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -56,7 +58,7 @@ export function SQL(
 
     COMMENT ON FUNCTION authenticate_postgraphile_pg_native("text","text") IS 'Authenticate a user and provide a Postgraphile JWT payload';
 
-    CREATE OR REPLACE FUNCTION ${fn.unitTest(ctx)}() RETURNS SETOF TEXT AS $$
+    CREATE OR REPLACE FUNCTION ${fn.unitTest(state)}() RETURNS SETOF TEXT AS $$
     BEGIN 
         RETURN NEXT has_extension('pgcrypto');
         RETURN NEXT has_type('jwt_token_postgraphile');

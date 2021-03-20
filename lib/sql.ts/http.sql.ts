@@ -1,13 +1,19 @@
 import * as mod from "../mod.ts";
+import * as schemas from "../schemas.ts";
+
+export const affinityGroup = new schemas.TypicalAffinityGroup(
+  "http_client_common",
+);
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
+  options?: mod.InterpolationContextStateOptions,
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    { schema: ctx.sql.schemas.lib, affinityGroup: "http_client_common" },
+    { schema: schemas.lib, affinityGroup },
   );
-  const { functionNames: fn } = state.affinityGroup;
+  const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
@@ -36,13 +42,13 @@ export function SQL(
     $$ LANGUAGE plpython3u;
     comment on function http_client_fetch_content_text(text) is 'Retrieve a URL endpoint payload as text';
 
-    CREATE OR REPLACE FUNCTION ${fn.destroy(ctx)}() RETURNS SETOF TEXT AS $$
+    CREATE OR REPLACE FUNCTION ${fn.destroy(state)}() RETURNS SETOF TEXT AS $$
     BEGIN
-        DROP FUNCTION IF EXISTS ${fn.unitTest(ctx)}();
+        DROP FUNCTION IF EXISTS ${fn.unitTest(state)}();
         DROP FUNCTION IF EXISTS http_client_fetch_content_text(text);
     END;$$ LANGUAGE plpgsql;
 
-    CREATE OR REPLACE FUNCTION ${fn.unitTest(ctx)}() RETURNS SETOF TEXT AS $$
+    CREATE OR REPLACE FUNCTION ${fn.unitTest(state)}() RETURNS SETOF TEXT AS $$
     BEGIN 
         RETURN NEXT has_extension('plpython3u');
         RETURN NEXT has_function('http_client_fetch_content_text');    

@@ -1,13 +1,15 @@
 import * as mod from "../mod.ts";
+import * as schemas from "../schemas.ts";
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
+  options?: mod.InterpolationContextStateOptions,
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    { schema: ctx.sql.schemas.lib },
+    options || { schema: schemas.lib },
   );
-  const { functionNames: fn } = ctx.sql;
+  const { lcFunctions: fn } = state.schema;
   return mod.SQL(ctx, state)`
     CREATE OR REPLACE FUNCTION media_type_objects_construction_sql(schemas text, tableName text) RETURNS text AS $$
     BEGIN
@@ -258,13 +260,13 @@ export function SQL(
 
             CREATE OR REPLACE PROCEDURE media_type_objects_destroy_all() AS $genBody$
             BEGIN
-                DROP FUNCTION IF EXISTS ${fn.unitTest(ctx, "%2$s")}();
+                DROP FUNCTION IF EXISTS ${fn.unitTest(state, "%2$s")}();
                 DROP TABLE IF NOT EXISTS %2$s;
             END;
             $genBody$ LANGUAGE plpgsql;
 
             CREATE OR REPLACE FUNCTION ${
-    fn.unitTest(ctx, "%2$s")
+    fn.unitTest(state, "%2$s")
   }() RETURNS SETOF TEXT AS $genBody$
             BEGIN
                 RETURN NEXT has_table('%2$s');

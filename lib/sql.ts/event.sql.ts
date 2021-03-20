@@ -1,27 +1,31 @@
 import * as mod from "../mod.ts";
+import * as schemas from "../schemas.ts";
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
+  options?: mod.InterpolationContextStateOptions,
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    {
-      schema: ctx.sql.schemas.lifecycle,
+    options || {
+      schema: schemas.lifecycle,
       searchPath: [
-        ctx.sql.schemas.lifecycle.name,
-        ctx.sql.schemas.lib.name,
+        schemas.lifecycle.name,
+        schemas.lib.name,
       ],
     },
   );
   return mod.SQL(ctx, state)`
-    ${ctx.sql.extensions.ltree.createSchemaSql(ctx)};
+    ${schemas.publicSchema.ltreeExtn.createSql(state)};
     CREATE OR REPLACE FUNCTION event_manager_sql(schemaName text, eventMgrName text, defaultCtx text) RETURNS text AS $$
     BEGIN
         -- changed "stream_name" to "provenance"
         -- changed "type" to "nature"
 
         return format($execBody$
-            SET search_path TO %1$s, ${ctx.sql.extensions.ltree.schema.name};
+            SET search_path TO ${
+    ["%1$s", ...schemas.publicSchema.ltreeExtn.searchPath].join(", ")
+  };
 
             CREATE TABLE IF NOT EXISTS %1$s.%2$s_store (
                 id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -88,7 +92,7 @@ export function SQL(
             for each row execute function %1$s.event_manager_insert_%2$s();
 
             CREATE OR REPLACE PROCEDURE ${
-    ctx.sql.schemas.lifecycle.qualifiedReference(
+    schemas.lifecycle.qualifiedReference(
       "event_manager_%1$s_%2$s_destroy_all_objects",
     )
   }() AS $genBody$

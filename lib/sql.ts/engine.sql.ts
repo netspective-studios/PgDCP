@@ -1,20 +1,26 @@
 import * as mod from "../mod.ts";
+import * as schemas from "../schemas.ts";
+import * as tmpl from "../templates.ts";
 import * as variant from "./variant.sql.ts";
+
+export const affinityGroup = new schemas.TypicalAffinityGroup(
+  "engine",
+);
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
+  options?: mod.InterpolationContextStateOptions,
 ): mod.DcpInterpolationResult {
   const state = {
     ...ctx.prepareState(
       ctx.prepareTsModuleExecution(import.meta.url),
-      {
-        affinityGroup: "engine",
-        headers: { standalone: [ctx.sql.templates.preface] }, // skip schema and search path
+      options || {
+        affinityGroup,
+        headers: { standalone: [tmpl.preface] }, // skip schema and search path
       },
     ),
   };
-  const { schemas } = ctx.sql;
-  const { functionNames: fn } = state.affinityGroup;
+  const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`
     -- TODO: add custom type for semantic version management
     -- TODO: add table to manage DCP functionNames/procs/versions for lifecycle management
@@ -22,20 +28,20 @@ export function SQL(
     CREATE EXTENSION IF NOT EXISTS pgtap;
     CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
     CREATE EXTENSION IF NOT EXISTS ltree;
-    ${schemas.lifecycle.createSchemaSql(ctx)};
-    ${schemas.assurance.createSchemaSql(ctx)};
-    ${schemas.experimental.createSchemaSql(ctx)};
-    ${schemas.lib.createSchemaSql(ctx)};
+    ${schemas.lifecycle.createSchemaSql(state)};
+    ${schemas.assurance.createSchemaSql(state)};
+    ${schemas.experimental.createSchemaSql(state)};
+    ${schemas.lib.createSchemaSql(state)};
 
     -- TODO: add, a common etc variant into dcp_lifecycle to store all common configs such as
     --       * context - prod, test, devl, etc. 
     -- TODO: add, to all *_construct() and *_destroy() functionNames the requirement that
     --       all activities are logged into a lifecycle table
-    CREATE OR REPLACE PROCEDURE ${fn.construct(ctx)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.construct(state)}() AS $$
     BEGIN
-        ${schemas.assurance.createSchemaSql(ctx)};
-        ${schemas.experimental.createSchemaSql(ctx)};
-        ${schemas.lib.createSchemaSql(ctx)};
+        ${schemas.assurance.createSchemaSql(state)};
+        ${schemas.experimental.createSchemaSql(state)};
+        ${schemas.lib.createSchemaSql(state)};
         CALL ${
     schemas.lifecycle.qualifiedReference("variant_construct")
   }('${schemas.lifecycle.name}', 'etc', 'common', 'root');
@@ -48,12 +54,12 @@ export function SQL(
     -- TODO: add, to all *_destroy() functionNames the requirement that it be a specific
     --       user that is calling the destruction (e.g. "dcp_destroyer") and that
     --       user is highly restricted.
-    CREATE OR REPLACE PROCEDURE ${fn.destroy(ctx)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroy(state)}() AS $$
     BEGIN
         -- TODO: if user = 'dcp_destroyer' ... else raise exception invalid user trying to destroy
-        ${schemas.assurance.dropSchemaSql(ctx)};
-        ${schemas.experimental.dropSchemaSql(ctx)};
-        ${schemas.lib.dropSchemaSql(ctx)};
+        ${schemas.assurance.dropSchemaSql(state)};
+        ${schemas.experimental.dropSchemaSql(state)};
+        ${schemas.lib.dropSchemaSql(state)};
         call variant_dcp_lifecycle_etc_destroy_all_objects();
     END;
     $$ LANGUAGE PLPGSQL;

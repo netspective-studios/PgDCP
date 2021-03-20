@@ -1,17 +1,23 @@
 import * as mod from "../mod.ts";
+import * as schemas from "../schemas.ts";
+
+export const affinityGroup = new schemas.TypicalAffinityGroup(
+  "text_manipulation",
+);
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
+  options?: mod.InterpolationContextStateOptions,
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    {
-      schema: ctx.sql.schemas.lib,
-      affinityGroup: "text_manipulation",
-      searchPath: [ctx.sql.schemas.lib.name, "public"],
+    options || {
+      schema: schemas.lib,
+      affinityGroup,
+      searchPath: [schemas.lib.name, "public"],
     },
   );
-  const { functionNames: fn } = state.affinityGroup;
+  const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`
     create extension if not exists unaccent;
     
@@ -70,9 +76,9 @@ export function SQL(
     $$ LANGUAGE plpgsql STRICT IMMUTABLE ;
     comment on function url_brand(url TEXT) IS 'Given a URL, return the hostname only without "www." prefix';
     
-    CREATE OR REPLACE PROCEDURE ${fn.destroy(ctx)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroy(state)}() AS $$
     BEGIN
-        DROP FUNCTION IF EXISTS ${fn.unitTest(ctx)}();
+        DROP FUNCTION IF EXISTS ${fn.unitTest(state)}();
         DROP FUNCTION IF EXISTS slugify(text);
         DROP FUNCTION IF EXISTS prepare_file_name(text, text);
         DROP FUNCTION IF EXISTS url_brand(text);
@@ -80,7 +86,7 @@ export function SQL(
     $$ LANGUAGE PLPGSQL;
     
     CREATE OR REPLACE FUNCTION ${
-    fn.unitTest(ctx)
+    fn.unitTest(state)
   }() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
     BEGIN 
         RETURN NEXT has_extension('unaccent');

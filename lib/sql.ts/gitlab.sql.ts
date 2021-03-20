@@ -1,13 +1,19 @@
 import * as mod from "../mod.ts";
+import * as schemas from "../schemas.ts";
+
+export const affinityGroup = new schemas.TypicalAffinityGroup(
+  "gitlab",
+);
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
+  options?: mod.InterpolationContextStateOptions,
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    { schema: ctx.sql.schemas.lib, affinityGroup: "gitlab" },
+    options || { schema: schemas.lib, affinityGroup },
   );
-  const { functionNames: fn } = state.affinityGroup;
+  const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
@@ -38,16 +44,16 @@ export function SQL(
     $$ LANGUAGE plpython3u;
     comment on function gitlab_project_asset_content_xml(text, text, integer, text) is 'Retrieve a GitLab Project repo file as XML';
 
-    CREATE OR REPLACE PROCEDURE ${fn.destroy(ctx)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroy(state)}() AS $$
     BEGIN
-        DROP FUNCTION IF EXISTS ${fn.unitTest(ctx)}();
+        DROP FUNCTION IF EXISTS ${fn.unitTest(state)}();
         DROP FUNCTION GITLAB_PROJECT_ASSET_CONTENT_TEXT(TEXT, TEXT, INTEGER, TEXT);
         DROP FUNCTION GITLAB_PROJECT_ASSET_CONTENT_JSON(TEXT, TEXT, INTEGER, TEXT);
         DROP FUNCTION GITLAB_PROJECT_ASSET_CONTENT_XML(TEXT, TEXT, INTEGER, TEXT);
     END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE FUNCTION ${fn.unitTest(ctx)}() RETURNS SETOF TEXT AS $$
+    CREATE OR REPLACE FUNCTION ${fn.unitTest(state)}() RETURNS SETOF TEXT AS $$
     BEGIN 
         RETURN NEXT has_extension('plpython3u');
         RETURN NEXT has_function('gitlab_project_asset_content_text');

@@ -1,13 +1,17 @@
 import * as mod from "../mod.ts";
+import * as schemas from "../schemas.ts";
+
+export const affinityGroup = new schemas.TypicalAffinityGroup("image");
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
+  options?: mod.InterpolationContextStateOptions,
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    { schema: ctx.sql.schemas.lib, affinityGroup: "image" },
+    options || { schema: schemas.lib, affinityGroup },
   );
-  const { functionNames: fn } = state.affinityGroup;
+  const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
@@ -34,7 +38,7 @@ export function SQL(
     END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE PROCEDURE ${fn.construct(ctx)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.construct(state)}() AS $$
     BEGIN
         CALL safe_create_image_meta_data_type();
         
@@ -58,7 +62,7 @@ export function SQL(
         comment on function inspect_image_meta_data(provenance text, image bytea) is 'Given a binary image, detect its format and size';
 
         CREATE OR REPLACE FUNCTION ${
-    fn.unitTest(ctx)
+    fn.unitTest(state)
   }() RETURNS SETOF TEXT LANGUAGE plpgsql AS $unitTestFn$
         DECLARE
             imgMD image_meta_data;
@@ -91,9 +95,9 @@ export function SQL(
         $unitTestFn$;    END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE PROCEDURE ${fn.destroy(ctx)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroy(state)}() AS $$
     BEGIN
-        DROP FUNCTION IF EXISTS ${fn.unitTest(ctx)}();
+        DROP FUNCTION IF EXISTS ${fn.unitTest(state)}();
         DROP FUNCTION IF EXISTS image_format_size(bytea);
         DROP TYPE IF EXISTS image_format_size_type;
     END;
