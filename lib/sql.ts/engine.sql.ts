@@ -6,11 +6,8 @@ export function SQL(ctx: mod.DcpInterpolationContext): mod.InterpolationResult {
     ...ctx.prepareState(
       ctx.prepareTsModuleExecution(import.meta.url),
       {
-        decorations: {
-          ...mod.noDcpSqlDecorationOptions,
-          frontmatterDecoration: true,
-        },
         affinityGroup: "engine",
+        headers: { standalone: [ctx.sql.templates.preface] }, // skip schema and search path
       },
     ),
   };

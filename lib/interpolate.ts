@@ -38,6 +38,7 @@ export const isTypeScriptModuleProvenance = safety.typeGuard<
 >("importMetaURL");
 
 export interface InterpolationExecution {
+  readonly engine: InterpolationEngine;
   readonly provenance: TemplateProvenance;
 }
 
@@ -72,7 +73,6 @@ export interface InterpolationOptions {
 }
 
 export interface InterpolationResult {
-  readonly engine: InterpolationEngine;
   readonly state: InterpolationState;
   readonly options: InterpolationOptions;
   readonly interpolated: string;
@@ -83,13 +83,6 @@ export interface TemplateLiteral {
     literals: TemplateStringsArray,
     ...expressions: unknown[]
   ): InterpolationResult;
-}
-
-export interface TemplateSupplier {
-  (
-    ctx: InterpolationEngine,
-    state: InterpolationState,
-  ): TemplateLiteral;
 }
 
 /**

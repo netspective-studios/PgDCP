@@ -33,7 +33,7 @@ export interface ControllerOptions {
   readonly isDryRun: boolean;
   readonly buildHostID: string;
 
-  readonly interpolate: () => core.PostgreSqlInterpolationEngineOptions;
+  readonly interpolate: () => core.PostgreSqlInterpolationPersistOptions;
   readonly mkDirs: (dirs: string) => void;
 }
 
@@ -81,7 +81,7 @@ export function cliControllerOptions(
         "--driver": driverFileName,
         "--git-status": showGitStatus,
       } = ec.cliArgs;
-      const interpOptions: core.PostgreSqlInterpolationEngineOptions = {
+      const interpOptions: core.PostgreSqlInterpolationPersistOptions = {
         destHome: destHome ? destHome as string : undefined,
         driverFileName: driverFileName ? driverFileName as string : undefined,
         includeInDriver: (pir) => {
@@ -127,19 +127,14 @@ export abstract class Controller {
   ) {
   }
 
-  async interpolationEngine(
-    interpOptions: core.PostgreSqlInterpolationEngineOptions,
-    dcpSS: core.DataComputingPlatformSqlSupplier,
-  ): Promise<core.PostgreSqlInterpolationEngine> {
+  async interpolationEngine(): Promise<core.PostgreSqlInterpolationEngine> {
     return new core.PostgreSqlInterpolationEngine(
       await this.determineVersion(),
-      interpOptions,
-      dcpSS,
     );
   }
 
   abstract interpolate(
-    interpOptions: core.PostgreSqlInterpolationEngineOptions,
+    interpOptions: core.PostgreSqlInterpolationPersistOptions,
   ): Promise<void>;
 
   async handleCLI(): Promise<void> {
