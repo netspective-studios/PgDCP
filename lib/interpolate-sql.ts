@@ -1,6 +1,9 @@
 import { fmt, path, safety, textWhitespace as tw } from "./deps.ts";
 import * as interp from "./interpolate.ts";
 
+// TODO: add typesafe SQL 'create comment' statements for Postgraphile configuration
+// e.g.: comment on table periodical_nature is E'@name periodical_nature\\n@omit update,delete\\nThis is to avoid mutations through Postgraphile.';
+
 export interface DcpTemplateLiteral {
   (
     literals: TemplateStringsArray,
@@ -24,7 +27,7 @@ export interface DcpInterpolationOptions extends interp.InterpolationOptions {
  */
 export function SQL(
   ctx: DcpInterpolationContext,
-  state: interp.InterpolationState,
+  state: DcpTemplateState,
   options: DcpInterpolationOptions = { prependHeaders: true },
 ): DcpTemplateLiteral {
   return (literals: TemplateStringsArray, ...expressions: unknown[]) => {
@@ -48,11 +51,6 @@ export function SQL(
       ctx,
     };
   };
-}
-
-export type TextValue = string;
-export interface TextValueSupplier {
-  (...args: string[]): string;
 }
 
 export type SqlStatement = string;
@@ -210,6 +208,7 @@ export interface InterpolationContextStateOptions {
 
 export interface DcpInterpolationResult extends interp.InterpolationResult {
   readonly ctx: DcpInterpolationContext;
+  readonly state: DcpTemplateState;
 }
 
 export interface DcpInterpolationEngine extends interp.InterpolationEngine {
@@ -446,6 +445,11 @@ export function typicalDcpInterpolationContext(
         state: interp.InterpolationState,
         options: interp.InterpolationOptions,
       ): DcpInterpolationResult {
+        if (!isDcpTemplateState(state)) {
+          throw Error(
+            `prepareResult(): state is expected to be of type DcpTemplateState not ${typeof state}`,
+          );
+        }
         return {
           ctx: dcpIC,
           state,
@@ -566,11 +570,33 @@ export interface PersistableSqlInterpolationResult
   extends DcpInterpolationResult {
   readonly index: number;
   readonly original: interp.InterpolatedContent;
-  readonly indexedFileName: string;
+  readonly fileName: string;
   readonly includeInDriver: boolean;
 }
 
+export interface PostgreSqlInterpolationPersistenceFileNameSupplier {
+  (
+    provenanceNoExtn: string,
+    index: number,
+    ir: DcpInterpolationResult,
+  ): string;
+}
+
 export class PostgreSqlInterpolationPersistence {
+  readonly unindexedFileName:
+    PostgreSqlInterpolationPersistenceFileNameSupplier = (
+      provenanceNoExtn: string,
+    ): string => {
+      return fmt.sprintf("%s.auto.sql", provenanceNoExtn);
+    };
+  readonly indexedFileName: PostgreSqlInterpolationPersistenceFileNameSupplier =
+    (
+      provenanceNoExtn: string,
+      index: number,
+    ): string => {
+      return fmt.sprintf("%03d_%s.auto.sql", index, provenanceNoExtn);
+    };
+
   readonly persistable: PersistableSqlInterpolationResult[] = [];
 
   constructor(
@@ -580,31 +606,26 @@ export class PostgreSqlInterpolationPersistence {
 
   registerPersistableResult(
     ir: DcpInterpolationResult,
-    options: { index?: number; includeInDriver?: boolean } = {},
+    options: {
+      fileName?: PostgreSqlInterpolationPersistenceFileNameSupplier;
+      index?: number;
+      includeInDriver?: boolean;
+    } = {},
   ): PersistableSqlInterpolationResult {
-    if (!isDcpTemplateState(ir.state)) {
-      throw Error(
-        `preparePersistable(ir): ir.state is expected to be of type DcpTemplateState not ${typeof ir
-          .state}`,
-      );
-    }
-
     const { state } = ir;
     const lastIndex = this.persistable.length > 0
       ? this.persistable[this.persistable.length - 1].index
       : -1;
     const index = options.index ? options.index : lastIndex + 1;
-    const indexedFileName = fmt.sprintf(
-      path.join("%03d_%s.auto.sql"),
-      index,
-      state.ie.provenance.identity.replace(/\..+$/, ""),
-    );
+    const fnNoExtn = state.ie.provenance.identity.replace(/\..+$/, "");
     const result: PersistableSqlInterpolationResult = {
       ...ir,
       index,
       interpolated: state.indentation.unindent(ir.interpolated),
       original: ir.interpolated,
-      indexedFileName,
+      fileName: options.fileName
+        ? options.fileName(fnNoExtn, index, ir)
+        : this.indexedFileName(fnNoExtn, index, ir),
       includeInDriver: typeof options.includeInDriver === "boolean"
         ? options.includeInDriver
         : true,
@@ -617,7 +638,7 @@ export class PostgreSqlInterpolationPersistence {
     if (this.interpOptions.destHome) {
       const fileName = path.join(
         this.interpOptions.destHome,
-        result.indexedFileName,
+        result.fileName,
       );
       await this.interpOptions.persist(fileName, result.interpolated);
     } else {
@@ -634,7 +655,7 @@ export class PostgreSqlInterpolationPersistence {
       );
       const driver = this.persistable.filter((pir) => pir.includeInDriver)
         .map((pir) => {
-          return tw.unindentWhitespace(`\\ir ${pir.indexedFileName}`);
+          return tw.unindentWhitespace(`\\ir ${pir.fileName}`);
         }).join("\n");
       await this.interpOptions.persist(fileName, driver);
     }

@@ -12,21 +12,37 @@ import {
 import * as iSQL from "./interpolate-sql.ts";
 import * as git from "./git.ts";
 
+export type ExecutionContextID = string;
+
 export interface ExecutionContext {
+  readonly identity: ExecutionContextID;
+  readonly isExperimental: boolean;
+}
+
+export const execContexts: ExecutionContext[] = [
+  { identity: "sandbox", isExperimental: true },
+  { identity: "devl", isExperimental: true },
+  { identity: "test", isExperimental: false },
+  { identity: "production", isExperimental: false },
+];
+
+export interface CallerOptions {
   readonly calledFromMetaURL: string;
   readonly version?: string;
   readonly projectHome?: string;
+  readonly context?: ExecutionContext;
 }
 
-export interface CliExecutionContext extends ExecutionContext {
+export interface CliCallerOptions extends CallerOptions {
   readonly cliArgs: docopt.DocOptions;
 }
 
-export const isCliExecutionContext = safety.typeGuard<CliExecutionContext>(
+export const isCliExecutionContext = safety.typeGuard<CliCallerOptions>(
   "cliArgs",
 );
 
 export interface ControllerOptions {
+  readonly context: ExecutionContext;
   readonly projectHome: string;
   readonly transactionID: string;
   readonly isVerbose: boolean;
@@ -38,14 +54,27 @@ export interface ControllerOptions {
 }
 
 export function cliControllerOptions(
-  ec: CliExecutionContext,
+  ec: CliCallerOptions,
 ): ControllerOptions {
   const {
+    "--context": contextArg,
     "--project": projectArg,
     "--verbose": verboseArg,
     "--dry-run": dryRunArg,
     "--tx-id": transactionIdArg,
   } = ec.cliArgs;
+  // context is required, let's make sure it's typed properly
+  const context = execContexts.find((ec) =>
+    ec.identity == (contextArg as string)
+  );
+  if (!context) {
+    throw Error(
+      `--context=${contextArg} must be one of [${
+        execContexts.map((ec) => ec.identity).join(", ")
+      }]`,
+    );
+  }
+
   const projectHomeDefault = projectArg
     ? projectArg as string
     : (ec.projectHome || Deno.cwd());
@@ -60,6 +89,7 @@ export function cliControllerOptions(
     : uuid.v4.generate();
 
   const ctlOptions: ControllerOptions = {
+    context,
     projectHome: projectHomeAbs,
     transactionID,
     isDryRun,
@@ -122,7 +152,7 @@ export function cliControllerOptions(
 
 export abstract class Controller {
   constructor(
-    readonly ec: ExecutionContext,
+    readonly ec: CallerOptions,
     readonly options: ControllerOptions,
   ) {
   }
@@ -169,16 +199,17 @@ export abstract class Controller {
   }
 }
 
-export function cliArgs(caller: ExecutionContext): CliExecutionContext {
+export function cliArgs(caller: CallerOptions): CliCallerOptions {
   const docOptSpec = tw.unindentWhitespace(`
     PgDCP Controller ${caller.version}.
 
     Usage:
-    dcpctl interpolate [--dest=<dest-home>] [--driver=<driver-file>] [--dry-run] [--verbose] [--git-status]
+    dcpctl interpolate --context=<context> [--dest=<dest-home>] [--driver=<driver-file>] [--dry-run] [--verbose] [--git-status]
     dcpctl version
     dcpctl -h | --help
 
     Options:
+    --context=<context>     The execution context we're operating in (sandbox, prod, etc.)
     --dest=<dest-home>      Path where destination file(s) should be stored (STDOUT otherwise)
     --driver=<driver-file>  The name of the PostgreSQL driver file to create [default: driver.auto.psql]
     --git-status            When showing files, color output using Git label porcelain parser [default: false]
