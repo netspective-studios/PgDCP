@@ -54,7 +54,9 @@ export function SQL(
 }
 
 export type SqlStatement = string;
+export type SqlTableName = string;
 export type PostgreSqlStatement = SqlStatement;
+export type PostgreSqlExtensionName = string;
 export type PostgreSqlSchemaName = string;
 export type PostgreSqlStoredRoutineName = string;
 export type AffinityGroupName = PostgreSqlSchemaName;
@@ -72,6 +74,18 @@ export interface PostgreSqlStoredRoutineNameDecorator {
     ctx: DcpInterpolationContext,
     suggested: string,
   ): PostgreSqlStoredRoutineName;
+}
+
+export interface PostgreSqlExtension {
+  readonly name: PostgreSqlExtensionName;
+  readonly schema: PostgreSqlSchema;
+  readonly createSchemaSql: PostgreSqlStatementSupplier;
+  readonly dropSchemaSql: PostgreSqlStatementSupplier;
+}
+
+export interface SqlTable {
+  readonly name: SqlTableName;
+  readonly schema: PostgreSqlSchema;
 }
 
 export interface PostgreSqlSchemaAffinityGroup {
@@ -102,6 +116,10 @@ export interface PostgreSqlSchemaAffinityGroups {
   ) => PostgreSqlSchemaAffinityGroup;
 }
 
+export interface DcpSqlTableSupplier {
+  [identity: string]: SqlTable;
+}
+
 export interface PostgreSqlSchema {
   readonly name: PostgreSqlSchemaName;
   readonly dependencies?: PostgreSqlSchema[];
@@ -121,12 +139,20 @@ export interface PostgreSqlSchema {
   };
 }
 
+export interface PostgreSqlSchemaTables<T> extends PostgreSqlSchema {
+  readonly tables: T;
+}
+
 export interface PostgreSqlSchemaSupplier {
   (
     name: PostgreSqlSchemaName,
     dependencies?: PostgreSqlSchema[],
     ...args: string[]
   ): PostgreSqlSchema;
+}
+
+export interface DcpSqlExtensionSupplier {
+  readonly ltree: PostgreSqlExtension;
 }
 
 export interface DcpSqlSchemaSupplier {
@@ -176,6 +202,7 @@ export interface DcpStateTemplatesSupplier {
 }
 
 export interface DataComputingPlatformSqlSupplier {
+  readonly extensions: DcpSqlExtensionSupplier;
   readonly schemas: DcpSqlSchemaSupplier;
   readonly functionNames: DcpSqlFunctionNameSupplier;
   readonly templates: DcpStateTemplatesSupplier;
@@ -248,6 +275,32 @@ export interface DcpEmbeddedInterpolationContext
 export const isEmbeddedInterpolationContext = safety.typeGuard<
   DcpEmbeddedInterpolationContext
 >("parent");
+
+export function typicalSqlTable(
+  name: string,
+  schema: PostgreSqlSchema,
+): SqlTable {
+  return {
+    name,
+    schema,
+  };
+}
+
+export function typicalPostgreSqlExtension(
+  name: string,
+  schema: PostgreSqlSchema,
+): PostgreSqlExtension {
+  return {
+    name,
+    schema,
+    createSchemaSql: () => {
+      return `CREATE EXTENSION IF NOT EXISTS ${name}`;
+    },
+    dropSchemaSql: () => {
+      return `DROP EXTENSION IF EXISTS ${name}`;
+    },
+  };
+}
 
 export function typicalPostgreSqlSchemaAffinityGroups(
   schema: PostgreSqlSchema,
@@ -334,6 +387,12 @@ export function typicalPostgreSqlSchema(
 
 export function typicalDcpSqlSupplier(): DataComputingPlatformSqlSupplier {
   const ic: DataComputingPlatformSqlSupplier = {
+    extensions: {
+      ltree: typicalPostgreSqlExtension(
+        "ltree",
+        typicalPostgreSqlSchema("public"),
+      ),
+    },
     schemas: {
       lifecycle: typicalPostgreSqlSchema("dcp_lifecycle"),
       assurance: typicalPostgreSqlSchema("dcp_assurance_engineering"),

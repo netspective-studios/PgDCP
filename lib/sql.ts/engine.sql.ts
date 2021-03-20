@@ -39,6 +39,9 @@ export function SQL(
         CALL ${
     schemas.lifecycle.qualifiedReference("variant_construct")
   }('${schemas.lifecycle.name}', 'etc', 'common', 'root');
+        CALL ${
+    schemas.lifecycle.qualifiedReference("event_manager_construct")
+  }('${schemas.lifecycle.name}', 'dcp_lc_event', 'lifecycle');
     END;
     $$ LANGUAGE PLPGSQL;
 

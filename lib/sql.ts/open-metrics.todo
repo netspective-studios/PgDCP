@@ -1,5 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS plpython3u;
 
+-- https://github.com/chop-dbhi/prometheus-sql
 -- https://github.com/free/sql_exporter
 -- https://github.com/justwatchcom/sql_exporter
 -- https://pypi.org/project/query-exporter/

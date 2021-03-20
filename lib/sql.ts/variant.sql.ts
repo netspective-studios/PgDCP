@@ -14,12 +14,13 @@ export function SQL(
     },
   );
   return mod.SQL(ctx, state)`
-    CREATE EXTENSION IF NOT EXISTS ltree;
+    ${ctx.sql.extensions.ltree.createSchemaSql(ctx)};
     CREATE OR REPLACE FUNCTION variant_sql(schemaName text, variantName text, defaultCtx text, defaultPath text) RETURNS text AS $$
     BEGIN
         -- TODO: add qualified schema everywhere
         return format($execBody$
-            SET search_path TO %1$s, public; -- ltree is in public
+            SET search_path TO %1$s, ${ctx.sql.extensions.ltree.schema.name};
+
             CREATE TABLE %1$s.%2$s(
                 -- TODO: add checksums if importing files
                 -- TODO: track provenance if importing files
@@ -99,6 +100,7 @@ export function SQL(
                 from %1$s.%2$s, %1$s.%2$s_value_text
                 where %2$s.id = %2$s_value_text.%2$s_id 
                 and active = true;
+            
             create or replace function %1$s.insert_%2$s_text() returns trigger as $genBody$
             declare
                 %2$sId integer;
@@ -114,6 +116,7 @@ export function SQL(
                 return NEW;
             end;
             $genBody$ language plpgsql;
+            
             create trigger insert_%2$s_text_trigger
             instead of insert on %1$s.%2$s_text
             for each row execute function %1$s.insert_%2$s_text();
@@ -206,6 +209,7 @@ export function SQL(
             create trigger insert_%2$s_xml_trigger
             instead of insert on %1$s.%2$s_xml
             for each row execute function %1$s.insert_%2$s_xml();
+
             CREATE OR REPLACE PROCEDURE ${
     ctx.sql.schemas.lifecycle.qualifiedReference(
       "variant_%1$s_%2$s_destroy_all_objects",
