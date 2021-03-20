@@ -402,7 +402,7 @@ export function typicalDcpInterpolationContext(
       },
     ): DcpTemplateState => {
       const schema = options.schema || sql.schemas.experimental;
-      const state: DcpTemplateState = {
+      const dcpTS: DcpTemplateState = {
         ie,
         schema,
         isSchemaDefaulted: options.schema ? false : true,
@@ -424,16 +424,19 @@ export function typicalDcpInterpolationContext(
           : (options.headers?.standalone || []),
         interpolated: (ir) => {
           let interpolated = ir.interpolated;
-          if (state.headers.length > 0) {
-            const { indent } = state.indentation;
-            interpolated = state.headers.map((h) => {
-              return indent(h(dcpIC, state));
-            }).join("\n") + "\n" + interpolated;
+          if (isDcpTemplateState(ir.state)) {
+            const { state } = ir;
+            if (state.headers.length > 0) {
+              const { indent } = state.indentation;
+              interpolated = state.headers.map((h) => {
+                return indent(h(dcpIC, state));
+              }).join("\n") + "\n" + interpolated;
+            }
           }
           return interpolated;
         },
       };
-      return state;
+      return dcpTS;
     },
     embed: (
       ic: DcpInterpolationContext,
@@ -472,7 +475,7 @@ export function typicalDcpInterpolationContext(
         );
       }
       // When embedding, we first add the indented headers expected then
-      // unident the embedded interpolation dcpIC and finally indent it
+      // unident the embedded interpolation result and finally indent it
       // at the parent's indentation level so that everything aligns
       const { state } = eir;
       return parent.indentation.indent(
