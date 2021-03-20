@@ -2,12 +2,12 @@ import * as mod from "../mod.ts";
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
-): mod.InterpolationResult {
+): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
   );
   const { functionNames: fn } = state.affinityGroup;
-  return mod.SQL(ctx.engine, state)`
+  return mod.SQL(ctx, state)`
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
     -- We want all our object creations to be idempotent whenever possible

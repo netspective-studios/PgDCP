@@ -1,6 +1,8 @@
 import * as mod from "../mod.ts";
 
-export function SQL(ctx: mod.DcpInterpolationContext): mod.InterpolationResult {
+export function SQL(
+  ctx: mod.DcpInterpolationContext,
+): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
     {
@@ -11,7 +13,7 @@ export function SQL(ctx: mod.DcpInterpolationContext): mod.InterpolationResult {
       ],
     },
   );
-  return mod.SQL(ctx.engine, state)`
+  return mod.SQL(ctx, state)`
     CREATE EXTENSION IF NOT EXISTS ltree;
     CREATE OR REPLACE FUNCTION variant_sql(schemaName text, variantName text, defaultCtx text, defaultPath text) RETURNS text AS $$
     BEGIN

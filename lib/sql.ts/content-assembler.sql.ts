@@ -2,7 +2,7 @@ import * as mod from "../mod.ts";
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
-): mod.InterpolationResult {
+): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
     {
@@ -12,7 +12,7 @@ export function SQL(
     },
   );
   const { functionNames: fn } = state.affinityGroup;
-  return mod.SQL(ctx.engine, state)`
+  return mod.SQL(ctx, state)`
     create extension if not exists unaccent;
     
     CREATE OR REPLACE FUNCTION slugify("value" TEXT) RETURNS TEXT AS $$ 

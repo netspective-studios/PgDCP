@@ -2,13 +2,13 @@ import * as mod from "../mod.ts";
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
-): mod.InterpolationResult {
+): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
     { schema: ctx.sql.schemas.lib, affinityGroup: "auth" },
   );
   const { functionNames: fn } = state.affinityGroup;
-  return mod.SQL(ctx.engine, state)`
+  return mod.SQL(ctx, state)`
     -- PostgreSQL treats users and roles as synonyms. We treat roles as permissions
     -- policies and users as authenticatable entities. It's just nomenclature but
     -- important for consistency.

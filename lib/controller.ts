@@ -9,7 +9,7 @@ import {
   textWhitespace as tw,
   uuid,
 } from "./deps.ts";
-import * as core from "./core.ts";
+import * as iSQL from "./interpolate-sql.ts";
 import * as git from "./git.ts";
 
 export interface ExecutionContext {
@@ -33,7 +33,7 @@ export interface ControllerOptions {
   readonly isDryRun: boolean;
   readonly buildHostID: string;
 
-  readonly interpolate: () => core.PostgreSqlInterpolationPersistOptions;
+  readonly interpolate: () => iSQL.PostgreSqlInterpolationPersistOptions;
   readonly mkDirs: (dirs: string) => void;
 }
 
@@ -81,7 +81,7 @@ export function cliControllerOptions(
         "--driver": driverFileName,
         "--git-status": showGitStatus,
       } = ec.cliArgs;
-      const interpOptions: core.PostgreSqlInterpolationPersistOptions = {
+      const interpOptions: iSQL.PostgreSqlInterpolationPersistOptions = {
         destHome: destHome ? destHome as string : undefined,
         driverFileName: driverFileName ? driverFileName as string : undefined,
         includeInDriver: (pir) => {
@@ -127,14 +127,8 @@ export abstract class Controller {
   ) {
   }
 
-  async interpolationEngine(): Promise<core.PostgreSqlInterpolationEngine> {
-    return new core.PostgreSqlInterpolationEngine(
-      await this.determineVersion(),
-    );
-  }
-
   abstract interpolate(
-    interpOptions: core.PostgreSqlInterpolationPersistOptions,
+    interpOptions: iSQL.PostgreSqlInterpolationPersistOptions,
   ): Promise<void>;
 
   async handleCLI(): Promise<void> {

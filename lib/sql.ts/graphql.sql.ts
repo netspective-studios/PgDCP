@@ -2,13 +2,13 @@ import * as mod from "../mod.ts";
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
-): mod.InterpolationResult {
+): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
     { schema: ctx.sql.schemas.lib, affinityGroup: "http_client_graphql" },
   );
   const { functionNames: fn } = state.affinityGroup;
-  return mod.SQL(ctx.engine, state)`
+  return mod.SQL(ctx, state)`
     CREATE EXTENSION IF NOT EXISTS plpython3u;
 
     CREATE OR REPLACE FUNCTION http_client_graphql_anonymous_query_result(endpoint_url text, query text) returns JSON AS $$

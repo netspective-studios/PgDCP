@@ -2,13 +2,13 @@ import * as mod from "../mod.ts";
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
-): mod.InterpolationResult {
+): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
     { schema: ctx.sql.schemas.lib },
   );
   const { functionNames: fn } = ctx.sql;
-  return mod.SQL(ctx.engine, state)`
+  return mod.SQL(ctx, state)`
     CREATE OR REPLACE FUNCTION media_type_objects_construction_sql(schemas text, tableName text) RETURNS text AS $$
     BEGIN
         return format($execBody$

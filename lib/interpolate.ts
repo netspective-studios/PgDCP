@@ -1,4 +1,4 @@
-import { safety, textWhitespace as tw } from "./deps.ts";
+import { safety } from "./deps.ts";
 
 export interface TemplateProvenance {
   readonly identity: string;
@@ -38,7 +38,6 @@ export const isTypeScriptModuleProvenance = safety.typeGuard<
 >("importMetaURL");
 
 export interface InterpolationExecution {
-  readonly engine: InterpolationEngine;
   readonly provenance: TemplateProvenance;
 }
 
@@ -106,22 +105,4 @@ export function executeTemplate(
     interpolated += literals[literals.length - 1];
     return engine.prepareResult(interpolated, state, options);
   };
-}
-
-/**
- * Creates a SQL template tag which can be "executed" in the given context 
- * with a local state. The special 'SQL' name is used by some Visual Studio
- * Code extensions to do code highlighting and error detection inside template
- * literal so it's worth creating a wrapper around executeTemplate which is
- * generic.
- * @param engine is the context that all templates can use across invocations
- * @param state is the "local" state of a single interpolation
- * @returns the interpolated template text
- */
-export function SQL(
-  engine: InterpolationEngine,
-  state: InterpolationState,
-  options: InterpolationOptions = {},
-): TemplateLiteral {
-  return executeTemplate(engine, state, options);
 }

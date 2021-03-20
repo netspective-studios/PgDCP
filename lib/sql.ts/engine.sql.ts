@@ -1,7 +1,9 @@
 import * as mod from "../mod.ts";
 import * as variant from "./variant.sql.ts";
 
-export function SQL(ctx: mod.DcpInterpolationContext): mod.InterpolationResult {
+export function SQL(
+  ctx: mod.DcpInterpolationContext,
+): mod.DcpInterpolationResult {
   const state = {
     ...ctx.prepareState(
       ctx.prepareTsModuleExecution(import.meta.url),
@@ -13,7 +15,7 @@ export function SQL(ctx: mod.DcpInterpolationContext): mod.InterpolationResult {
   };
   const { schemas } = ctx.sql;
   const { functionNames: fn } = state.affinityGroup;
-  return mod.SQL(ctx.engine, state)`
+  return mod.SQL(ctx, state)`
     -- TODO: add custom type for semantic version management
     -- TODO: add table to manage DCP functionNames/procs/versions for lifecycle management
 
