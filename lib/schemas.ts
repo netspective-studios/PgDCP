@@ -18,65 +18,85 @@ export class TypicalSchemaExtension implements iSQL.PostgreSqlSchemaExtension {
   readonly searchPath = [this.schema.name];
 }
 
-export class TypicalSchemaFunctions
-  implements iSQL.PostgreSqlLifecycleFunctions {
+export class TypicalPostgreSqlSchemaStoredRoutine
+  implements iSQL.PostgreSqlStoredRoutine {
   constructor(
     readonly ag: iSQL.SqlAffinityGroup,
+    readonly name: string,
   ) {
   }
 
-  readonly construct: iSQL.PostgreSqlSchemaFunctionNameSupplier = (
+  readonly qName = this.ag.qualifiedReference(this.name);
+}
+
+export class TypicalSqlLifecycleFunctions
+  implements iSQL.PostgreSqlLifecycleFunctions {
+  constructor(
+    readonly ag: iSQL.SqlAffinityGroup,
+    readonly prefix = "dcp_lc_",
+  ) {
+  }
+
+  readonly construct: iSQL.PostgreSqlStoredRoutineSupplier = (
     _,
     override?,
   ) => {
-    return lifecycle.qualifiedReference(
-      `dcp_lc_${override || this.ag.name}_construct`,
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      lifecycle,
+      `${this.prefix}${override || this.ag.name}_construct`,
     );
   };
 
-  readonly destroy: iSQL.PostgreSqlSchemaFunctionNameSupplier = (
+  readonly destroy: iSQL.PostgreSqlStoredRoutineSupplier = (
     _,
     override?,
   ) => {
-    return lifecycle.qualifiedReference(
-      `dcp_lc_${override || this.ag.name}_destroy`,
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      lifecycle,
+      `${this.prefix}${override || this.ag.name}_destroy`,
     );
   };
 
-  readonly unitTest: iSQL.PostgreSqlSchemaFunctionNameSupplier = (
+  readonly unitTest: iSQL.PostgreSqlStoredRoutineSupplier = (
     _,
     override?,
   ) => {
-    return assurance.qualifiedReference(`test_${override || this.ag.name}`);
-  };
-
-  readonly populateSecrets: iSQL.PostgreSqlSchemaFunctionNameSupplier = (
-    _,
-    override?,
-  ) => {
-    return lifecycle.qualifiedReference(
-      `dcp_lc_${override || this.ag.name}_populate_secrets`,
+    // we don't add ${this.prefix} because PgTAP has its own convention
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      assurance,
+      `test_${override || this.ag.name}`,
     );
   };
 
-  readonly populateSeedData: iSQL.PostgreSqlSchemaFunctionNameSupplier = (
+  readonly populateSecrets: iSQL.PostgreSqlStoredRoutineSupplier = (
     _,
     override?,
   ) => {
-    return lifecycle.qualifiedReference(
-      `dcp_lc_${override || this.ag.name}_populate_seed_data`,
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      lifecycle,
+      `${this.prefix}${override || this.ag.name}_populate_secrets`,
     );
   };
 
-  readonly populateExperimentalData: iSQL.PostgreSqlSchemaFunctionNameSupplier =
-    (
-      _,
-      override?,
-    ) => {
-      return lifecycle.qualifiedReference(
-        `dcp_lc_${override || this.ag.name}_populate_experimental_data`,
-      );
-    };
+  readonly populateSeedData: iSQL.PostgreSqlStoredRoutineSupplier = (
+    _,
+    override?,
+  ) => {
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      lifecycle,
+      `${this.prefix}${override || this.ag.name}_populate_seed_data`,
+    );
+  };
+
+  readonly populateExperimentalData: iSQL.PostgreSqlStoredRoutineSupplier = (
+    _,
+    override?,
+  ) => {
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      lifecycle,
+      `${this.prefix}${override || this.ag.name}_populate_experimental_data`,
+    );
+  };
 }
 
 export class TypicalAffinityGroup implements iSQL.SqlAffinityGroup {
@@ -85,7 +105,7 @@ export class TypicalAffinityGroup implements iSQL.SqlAffinityGroup {
   constructor(
     readonly name: iSQL.PostgreSqlSchemaName,
   ) {
-    this.lcFunctions = new TypicalSchemaFunctions(this);
+    this.lcFunctions = new TypicalSqlLifecycleFunctions(this);
   }
 
   readonly qualifiedReference = (qualify: string) => {
@@ -103,7 +123,7 @@ export class TypicalSchema implements iSQL.PostgreSqlSchema {
   constructor(
     readonly name: iSQL.PostgreSqlSchemaName,
   ) {
-    this.lcFunctions = new TypicalSchemaFunctions(this);
+    this.lcFunctions = new TypicalSqlLifecycleFunctions(this);
   }
 
   readonly qualifiedReference = (qualify: string) => {
@@ -122,11 +142,11 @@ export class TypicalSchema implements iSQL.PostgreSqlSchema {
     return `SET search_path TO 'TypicalSchema.TODO'`;
   };
 
-  typicalExtension(
+  readonly extension = (
     name: iSQL.PostgreSqlExtensionName,
-  ): iSQL.PostgreSqlSchemaExtension {
+  ): iSQL.PostgreSqlSchemaExtension => {
     return new TypicalSchemaExtension(name, this);
-  }
+  };
 }
 
 export class PublicSchema extends TypicalSchema {
@@ -134,7 +154,7 @@ export class PublicSchema extends TypicalSchema {
 
   constructor() {
     super("public");
-    this.ltreeExtn = this.typicalExtension("ltree");
+    this.ltreeExtn = this.extension("ltree");
   }
 }
 

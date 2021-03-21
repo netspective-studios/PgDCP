@@ -38,7 +38,7 @@ export function SQL(
     END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE PROCEDURE ${fn.construct(state)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.construct(state).qName}() AS $$
     BEGIN
         CALL safe_create_image_meta_data_type();
         
@@ -62,7 +62,7 @@ export function SQL(
         comment on function inspect_image_meta_data(provenance text, image bytea) is 'Given a binary image, detect its format and size';
 
         CREATE OR REPLACE FUNCTION ${
-    fn.unitTest(state)
+    fn.unitTest(state).qName
   }() RETURNS SETOF TEXT LANGUAGE plpgsql AS $unitTestFn$
         DECLARE
             imgMD image_meta_data;
@@ -95,9 +95,9 @@ export function SQL(
         $unitTestFn$;    END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE PROCEDURE ${fn.destroy(state)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroy(state).qName}() AS $$
     BEGIN
-        DROP FUNCTION IF EXISTS ${fn.unitTest(state)}();
+        DROP FUNCTION IF EXISTS ${fn.unitTest(state).qName}();
         DROP FUNCTION IF EXISTS image_format_size(bytea);
         DROP TYPE IF EXISTS image_format_size_type;
     END;

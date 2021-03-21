@@ -1,30 +1,36 @@
 import * as mod from "../mod.ts";
 import * as schemas from "../schemas.ts";
 
+export const affinityGroup = new schemas.TypicalAffinityGroup("media_type");
+
 export function SQL(
   ctx: mod.DcpInterpolationContext,
   options?: mod.InterpolationContextStateOptions,
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    options || { schema: schemas.lib },
+    options || { schema: schemas.lib, affinityGroup },
   );
-  const { lcFunctions: fn } = state.schema;
+  const { lcFunctions: lcf } = state.affinityGroup;
   return mod.SQL(ctx, state)`
-    CREATE OR REPLACE FUNCTION media_type_objects_construction_sql(schemas text, tableName text) RETURNS text AS $$
+    CREATE OR REPLACE FUNCTION ${
+    lcf.construct(state).qName
+  }_sql(schemaName text, tableName text) RETURNS text AS $$
     BEGIN
         return format($execBody$
-            CREATE TABLE %2$s(
+            CREATE TABLE %1$s.%2$s(
                 mime_type TEXT,
                 file_extn TEXT,
                 label TEXT,
                 CONSTRAINT %2$s_unq_row UNIQUE(mime_type, file_extn, label)
             );
 
-            CREATE OR REPLACE PROCEDURE media_type_populate() AS $genBody$
+            CREATE OR REPLACE PROCEDURE ${
+    lcf.populateSeedData(state).qName
+  }() AS $genBody$
             BEGIN
                 -- used https://konbert.com/convert/csv/to/postgres for converting orignal CSV
-                INSERT INTO %2$s VALUES
+                INSERT INTO %1$s.%2$s VALUES
                 ('*/*','unknown','Unknown'),
                 ('application/acad','dwg','AutoCAD drawing files'),
                 ('application/andrew-inset','ez','Andrew data stream'),
@@ -258,22 +264,33 @@ export function SQL(
             END;
             $genBody$ LANGUAGE plpgsql;
 
-            CREATE OR REPLACE PROCEDURE media_type_objects_destroy_all() AS $genBody$
+            CREATE OR REPLACE PROCEDURE ${
+    lcf.destroy(state).qName
+  }() AS $genBody$
             BEGIN
-                DROP FUNCTION IF EXISTS ${fn.unitTest(state, "%2$s")}();
-                DROP TABLE IF NOT EXISTS %2$s;
+                DROP FUNCTION IF EXISTS ${lcf.unitTest(state, "%2$s").qName}();
+                DROP TABLE IF EXISTS %1$s.%2$s;
             END;
             $genBody$ LANGUAGE plpgsql;
 
             CREATE OR REPLACE FUNCTION ${
-    fn.unitTest(state, "%2$s")
+    lcf.unitTest(state, "%2$s").qName
   }() RETURNS SETOF TEXT AS $genBody$
             BEGIN
-                RETURN NEXT has_table('%2$s');
-                RETURN NEXT ok(((select count(*) from %2$I) > 0), 'Should have content in %2$s');
+                RETURN NEXT has_table('%1$s', '%2$s');
+                RETURN NEXT ok(((select count(*) from %1$s.%2$s) > 0), 'Should have content in %1$s.%2$s');
             END;
             $genBody$ LANGUAGE plpgsql;
-        $execBody$, schemas, tableName);
+        $execBody$, schemaName, tableName);
+    END;
+    $$ LANGUAGE PLPGSQL;
+    
+    CREATE OR REPLACE PROCEDURE ${
+    lcf.construct(state).qName
+  }(schemaName text, tableName text) AS $$
+    BEGIN
+        -- TODO: register execution in DCP Lifecyle log table
+        EXECUTE(${lcf.construct(state).qName}_sql(schemaName, tableName));
     END;
     $$ LANGUAGE PLPGSQL;`;
 }

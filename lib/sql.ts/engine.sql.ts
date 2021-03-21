@@ -33,18 +33,16 @@ export function SQL(
     ${schemas.experimental.createSchemaSql(state)};
     ${schemas.lib.createSchemaSql(state)};
 
-    -- TODO: add, a common etc variant into dcp_lifecycle to store all common configs such as
-    --       * context - prod, test, devl, etc. 
     -- TODO: add, to all *_construct() and *_destroy() functionNames the requirement that
     --       all activities are logged into a lifecycle table
-    CREATE OR REPLACE PROCEDURE ${fn.construct(state)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.construct(state).qName}() AS $$
     BEGIN
         ${schemas.assurance.createSchemaSql(state)};
         ${schemas.experimental.createSchemaSql(state)};
         ${schemas.lib.createSchemaSql(state)};
         CALL ${
     schemas.lifecycle.qualifiedReference("variant_construct")
-  }('${schemas.lifecycle.name}', 'etc', 'common', 'root');
+  }('${schemas.lifecycle.name}', 'dcp_lc_config', 'lifecycle', 'main');
         CALL ${
     schemas.lifecycle.qualifiedReference("event_manager_construct")
   }('${schemas.lifecycle.name}', 'dcp_lc_event', 'lifecycle');
@@ -54,7 +52,7 @@ export function SQL(
     -- TODO: add, to all *_destroy() functionNames the requirement that it be a specific
     --       user that is calling the destruction (e.g. "dcp_destroyer") and that
     --       user is highly restricted.
-    CREATE OR REPLACE PROCEDURE ${fn.destroy(state)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroy(state).qName}() AS $$
     BEGIN
         -- TODO: if user = 'dcp_destroyer' ... else raise exception invalid user trying to destroy
         ${schemas.assurance.dropSchemaSql(state)};

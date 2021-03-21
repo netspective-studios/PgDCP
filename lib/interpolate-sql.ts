@@ -60,6 +60,7 @@ export type SqlTableName = string;
 export type SqlTableQualifiedName = string;
 export type PostgreSqlStatement = SqlStatement;
 export type PostgreSqlStoredRoutineName = string;
+export type PostgreSqlStoredRoutineQualifiedName = string;
 export type PostgreSqlSchemaName = string;
 export type PostgreSqlExtensionName = string;
 
@@ -78,23 +79,30 @@ export interface PostgreSqlSchemaExtension {
   readonly searchPath: PostgreSqlSchemaName[];
 }
 
-export interface PostgreSqlSchemaFunctionNameSupplier {
-  (state: DcpTemplateState, override?: string): PostgreSqlStoredRoutineName;
-}
-
 export interface SqlTable {
   readonly name: SqlTableName;
-  readonly qualifiedName: SqlTableQualifiedName;
-  readonly schema: PostgreSqlSchema;
+  readonly qName: SqlTableQualifiedName;
+}
+
+export interface PostgreSqlStoredRoutine {
+  readonly name: PostgreSqlStoredRoutineName;
+  readonly qName: PostgreSqlStoredRoutineQualifiedName;
+}
+
+export interface PostgreSqlStoredRoutineSupplier {
+  (
+    state: DcpTemplateState,
+    override?: PostgreSqlStoredRoutineName,
+  ): PostgreSqlStoredRoutine;
 }
 
 export interface PostgreSqlLifecycleFunctions {
-  readonly construct: PostgreSqlSchemaFunctionNameSupplier;
-  readonly destroy: PostgreSqlSchemaFunctionNameSupplier;
-  readonly unitTest: PostgreSqlSchemaFunctionNameSupplier;
-  readonly populateSecrets: PostgreSqlSchemaFunctionNameSupplier;
-  readonly populateSeedData: PostgreSqlSchemaFunctionNameSupplier;
-  readonly populateExperimentalData: PostgreSqlSchemaFunctionNameSupplier;
+  readonly construct: PostgreSqlStoredRoutineSupplier;
+  readonly destroy: PostgreSqlStoredRoutineSupplier;
+  readonly unitTest: PostgreSqlStoredRoutineSupplier;
+  readonly populateSecrets: PostgreSqlStoredRoutineSupplier;
+  readonly populateSeedData: PostgreSqlStoredRoutineSupplier;
+  readonly populateExperimentalData: PostgreSqlStoredRoutineSupplier;
 }
 
 export interface SqlAffinityGroup {
@@ -109,6 +117,9 @@ export interface PostgreSqlSchema extends SqlAffinityGroup {
   readonly dependencies?: PostgreSqlSchema[];
   readonly createSchemaSql: PostgreSqlStatementSupplier;
   readonly dropSchemaSql: PostgreSqlStatementSupplier;
+  readonly extension: (
+    name: PostgreSqlExtensionName,
+  ) => PostgreSqlSchemaExtension;
 }
 
 export interface DcpTemplateState extends interp.InterpolationState {

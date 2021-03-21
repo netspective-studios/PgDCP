@@ -44,16 +44,18 @@ export function SQL(
     $$ LANGUAGE plpython3u;
     comment on function gitlab_project_asset_content_xml(text, text, integer, text) is 'Retrieve a GitLab Project repo file as XML';
 
-    CREATE OR REPLACE PROCEDURE ${fn.destroy(state)}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroy(state).qName}() AS $$
     BEGIN
-        DROP FUNCTION IF EXISTS ${fn.unitTest(state)}();
+        DROP FUNCTION IF EXISTS ${fn.unitTest(state).qName}();
         DROP FUNCTION GITLAB_PROJECT_ASSET_CONTENT_TEXT(TEXT, TEXT, INTEGER, TEXT);
         DROP FUNCTION GITLAB_PROJECT_ASSET_CONTENT_JSON(TEXT, TEXT, INTEGER, TEXT);
         DROP FUNCTION GITLAB_PROJECT_ASSET_CONTENT_XML(TEXT, TEXT, INTEGER, TEXT);
     END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE FUNCTION ${fn.unitTest(state)}() RETURNS SETOF TEXT AS $$
+    CREATE OR REPLACE FUNCTION ${
+    fn.unitTest(state).qName
+  }() RETURNS SETOF TEXT AS $$
     BEGIN 
         RETURN NEXT has_extension('plpython3u');
         RETURN NEXT has_function('gitlab_project_asset_content_text');

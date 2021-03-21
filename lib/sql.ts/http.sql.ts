@@ -42,13 +42,17 @@ export function SQL(
     $$ LANGUAGE plpython3u;
     comment on function http_client_fetch_content_text(text) is 'Retrieve a URL endpoint payload as text';
 
-    CREATE OR REPLACE FUNCTION ${fn.destroy(state)}() RETURNS SETOF TEXT AS $$
+    CREATE OR REPLACE FUNCTION ${
+    fn.destroy(state).qName
+  }() RETURNS SETOF TEXT AS $$
     BEGIN
-        DROP FUNCTION IF EXISTS ${fn.unitTest(state)}();
+        DROP FUNCTION IF EXISTS ${fn.unitTest(state).qName}();
         DROP FUNCTION IF EXISTS http_client_fetch_content_text(text);
     END;$$ LANGUAGE plpgsql;
 
-    CREATE OR REPLACE FUNCTION ${fn.unitTest(state)}() RETURNS SETOF TEXT AS $$
+    CREATE OR REPLACE FUNCTION ${
+    fn.unitTest(state).qName
+  }() RETURNS SETOF TEXT AS $$
     BEGIN 
         RETURN NEXT has_extension('plpython3u');
         RETURN NEXT has_function('http_client_fetch_content_text');    

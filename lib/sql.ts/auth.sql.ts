@@ -92,7 +92,7 @@ export function SQL(
     comment on procedure drop_role_and_user_if_exists(role_name TEXT, user_name NAME) IS 'Drop the role_name/user_name if it exists after clearing dependencies';
 
     CREATE OR REPLACE FUNCTION ${
-    fn.unitTest(state)
+    fn.unitTest(state).qName
   }() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
     BEGIN 
         RETURN NEXT has_function('create_role_if_not_exists');

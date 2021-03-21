@@ -235,6 +235,7 @@ export function SQL(
         $execBody$, schemaName, variantName, defaultCtx, defaultPath);
     END;
     $$ LANGUAGE PLPGSQL;
+    
     CREATE OR REPLACE PROCEDURE variant_construct(schemaName text, variantName text, defaultCtx text, defaultPath text) AS $$
     BEGIN
         -- TODO: register execution in DCP Lifecyle log table
