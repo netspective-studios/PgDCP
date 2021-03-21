@@ -33,7 +33,6 @@ export class TypicalSqlLifecycleFunctions
   implements iSQL.PostgreSqlLifecycleFunctions {
   constructor(
     readonly ag: iSQL.SqlAffinityGroup,
-    readonly prefix = "dcp_lc_",
   ) {
   }
 
@@ -43,7 +42,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
-      `${this.prefix}${override || this.ag.name}_construct`,
+      `${override || this.ag.name}_construct`,
     );
   };
 
@@ -53,7 +52,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
-      `${this.prefix}${override || this.ag.name}_destroy`,
+      `${override || this.ag.name}_destroy`,
     );
   };
 
@@ -61,7 +60,6 @@ export class TypicalSqlLifecycleFunctions
     _,
     override?,
   ) => {
-    // we don't add ${this.prefix} because PgTAP has its own convention
     return new TypicalPostgreSqlSchemaStoredRoutine(
       assurance,
       `test_${override || this.ag.name}`,
@@ -74,7 +72,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
-      `${this.prefix}${override || this.ag.name}_populate_secrets`,
+      `${override || this.ag.name}_populate_secrets`,
     );
   };
 
@@ -84,7 +82,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
-      `${this.prefix}${override || this.ag.name}_populate_seed_data`,
+      `${override || this.ag.name}_populate_seed_data`,
     );
   };
 
@@ -94,7 +92,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
-      `${this.prefix}${override || this.ag.name}_populate_experimental_data`,
+      `${override || this.ag.name}_populate_experimental_data`,
     );
   };
 }
@@ -166,12 +164,12 @@ export const lib = new TypicalSchema("dcp_lib");
 
 export const stateless = (name: string, enhancing?: boolean) => {
   return new TypicalSchema(
-    `dcp_stateless${enhancing ? "_enhance" : ""}_${name}`,
+    `stateless${enhancing ? "_enhance" : ""}_${name}`,
   );
 };
 
 export const stateful = (name: string, enhancing?: boolean) => {
   return new TypicalSchema(
-    `dcp_stateful_${enhancing ? "_enhance" : ""}_${name}`,
+    `stateful${enhancing ? "_enhance" : ""}_${name}`,
   );
 };

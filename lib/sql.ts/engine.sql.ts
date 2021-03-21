@@ -42,10 +42,10 @@ export function SQL(
         ${schemas.lib.createSchemaSql(state)};
         CALL ${
     schemas.lifecycle.qualifiedReference("variant_construct")
-  }('${schemas.lifecycle.name}', 'dcp_lc_config', 'lifecycle', 'main');
+  }('${schemas.lifecycle.name}', 'configuration', 'lifecycle', 'main');
         CALL ${
     schemas.lifecycle.qualifiedReference("event_manager_construct")
-  }('${schemas.lifecycle.name}', 'dcp_lc_event', 'lifecycle');
+  }('${schemas.lifecycle.name}', 'activity', 'lifecycle');
     END;
     $$ LANGUAGE PLPGSQL;
 
