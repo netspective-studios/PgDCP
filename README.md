@@ -133,6 +133,7 @@ Engineers writing applications should consider these PostgreSQL-native libraries
 * [simplified auditing based on SQL logging and FDWs to import logs](https://mydbanotebook.org/post/auditing/) instead of writing triggers
   * [Audit Trigger 91plus](https://wiki.postgresql.org/wiki/Audit_trigger_91plus) generic trigger function used for recording changes to tables into an audit log table
   * [pgMemento](https://github.com/pgMemento/pgMemento) provides an audit trail for your data inside a PostgreSQL database using triggers and server\-side functions written in PL/pgSQL
+  * [Temporal Tables PostgreSQL Extension](https://github.com/arkhipov/temporal_tables)
 * [pg_cron](https://github.com/citusdata/pg_cron) to run periodic jobs in PostgreSQL
 * [shortkey](https://github.com/turbo/pg-shortkey) for YouTube-like Short IDs as Postgres Primary Keys
 * [dexter](https://github.com/ankane/dexter) automatic indexer
