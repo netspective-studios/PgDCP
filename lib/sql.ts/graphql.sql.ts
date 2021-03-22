@@ -36,7 +36,7 @@ export function SQL(
     $$ LANGUAGE plpython3u;
     comment on function http_client_graphql_authn_header_query_result(text, text, text, text) is 'Execute a GraphQL query that requires authentication header and return result as JSON';
 
-    CREATE OR REPLACE PROCEDURE ${fn.destroy(state).qName}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroyIdempotent(state).qName}() AS $$
     BEGIN
         DROP FUNCTION IF EXISTS ${fn.unitTest(state).qName}();
         DROP FUNCTION IF EXISTS http_client_graphql_anonymous_query_result(text, text);

@@ -35,26 +35,35 @@ export function SQL(
 
     -- TODO: add, to all *_construct() and *_destroy() functionNames the requirement that
     --       all activities are logged into a lifecycle table
-    CREATE OR REPLACE PROCEDURE ${fn.construct(state).qName}() AS $$
+    -- TODO: separate constructIdempotent into constructStorage/constructIdempotent
+    -- TODO: separate destroyIdempotent into destroyStorage/destroyIdempotent
+    CREATE OR REPLACE PROCEDURE ${fn.constructIdempotent(state).qName}() AS $$
     BEGIN
         ${schemas.assurance.createSchemaSql(state)};
         ${schemas.experimental.createSchemaSql(state)};
         ${schemas.lib.createSchemaSql(state)};
         CALL ${
+    schemas.lifecycle.qualifiedReference("version_construct")
+  }('${schemas.lifecycle.name}', 'asset_version', 'asset', NULL);
+        insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_store', '1.0.0');
+        insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_label_store', '1.0.0');
+        insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_history', '1.0.0');
+
+        CALL ${
     schemas.lifecycle.qualifiedReference("variant_construct")
   }('${schemas.lifecycle.name}', 'configuration', 'lifecycle', 'main');
         CALL ${
     schemas.lifecycle.qualifiedReference("event_manager_construct")
-  }('${schemas.lifecycle.name}', 'activity', 'lifecycle');
+  }('${schemas.lifecycle.name}', 'activity', 'event', 'lifecycle');
     END;
     $$ LANGUAGE PLPGSQL;
 
     -- TODO: add, to all *_destroy() functionNames the requirement that it be a specific
     --       user that is calling the destruction (e.g. "dcp_destroyer") and that
     --       user is highly restricted.
-    CREATE OR REPLACE PROCEDURE ${fn.destroy(state).qName}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroyIdempotent(state).qName}() AS $$
     BEGIN
-        -- TODO: if user = 'dcp_destroyer' ... else raise exception invalid user trying to destroy
+        -- TODO: if user = 'dcp_destroyer' ... else raise exception invalid user trying to destroyIdempotent
         ${schemas.assurance.dropSchemaSql(state)};
         ${schemas.experimental.dropSchemaSql(state)};
         ${schemas.lib.dropSchemaSql(state)};

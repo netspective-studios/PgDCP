@@ -97,8 +97,10 @@ export interface PostgreSqlStoredRoutineSupplier {
 }
 
 export interface PostgreSqlLifecycleFunctions {
-  readonly construct: PostgreSqlStoredRoutineSupplier;
-  readonly destroy: PostgreSqlStoredRoutineSupplier;
+  readonly constructStorage: PostgreSqlStoredRoutineSupplier;
+  readonly constructIdempotent: PostgreSqlStoredRoutineSupplier;
+  readonly destroyStorage: PostgreSqlStoredRoutineSupplier;
+  readonly destroyIdempotent: PostgreSqlStoredRoutineSupplier;
   readonly unitTest: PostgreSqlStoredRoutineSupplier;
   readonly populateSecrets: PostgreSqlStoredRoutineSupplier;
   readonly populateSeedData: PostgreSqlStoredRoutineSupplier;
@@ -193,6 +195,7 @@ export const isEmbeddedInterpolationContext = safety.typeGuard<
 export function typicalDcpInterpolationContext(
   version: DcpInterpolationContextVersion,
   defaultSchema: PostgreSqlSchema,
+  hrSrcSupplier: interp.TemplateProvenanceHumanReadableSourceSupplier,
 ): DcpInterpolationContext {
   const dcpIC: DcpInterpolationContext = {
     version,
@@ -234,6 +237,7 @@ export function typicalDcpInterpolationContext(
           identity: defaultP?.identity || importMetaURL.split("/").pop() ||
             importMetaURL,
           version: defaultP?.version || "0.0.0",
+          humanReadableSource: defaultP?.humanReadableSource || hrSrcSupplier,
           indent: (text) => {
             return text.replace(/^/gm, "    ");
           },

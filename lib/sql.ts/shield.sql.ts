@@ -1,7 +1,7 @@
 import * as mod from "../mod.ts";
 import * as schemas from "../schemas.ts";
 
-export const affinityGroup = new schemas.TypicalAffinityGroup("auth");
+export const affinityGroup = new schemas.TypicalAffinityGroup("shield");
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
@@ -16,6 +16,8 @@ export function SQL(
     -- PostgreSQL treats users and roles as synonyms. We treat roles as permissions
     -- policies and users as authenticatable entities. It's just nomenclature but
     -- important for consistency.
+
+    -- TODO: prefix all procedure names with affinity group
 
     CREATE OR REPLACE PROCEDURE create_role_if_not_exists(role_name text) AS $$ 
     BEGIN

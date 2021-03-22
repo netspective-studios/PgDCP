@@ -36,23 +36,43 @@ export class TypicalSqlLifecycleFunctions
   ) {
   }
 
-  readonly construct: iSQL.PostgreSqlStoredRoutineSupplier = (
+  readonly constructStorage: iSQL.PostgreSqlStoredRoutineSupplier = (
     _,
     override?,
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
-      `${override || this.ag.name}_construct`,
+      `${override || this.ag.name}_construct_storage`,
     );
   };
 
-  readonly destroy: iSQL.PostgreSqlStoredRoutineSupplier = (
+  readonly constructIdempotent: iSQL.PostgreSqlStoredRoutineSupplier = (
     _,
     override?,
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
-      `${override || this.ag.name}_destroy`,
+      `${override || this.ag.name}_construct_idempotent`,
+    );
+  };
+
+  readonly destroyStorage: iSQL.PostgreSqlStoredRoutineSupplier = (
+    _,
+    override?,
+  ) => {
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      lifecycle,
+      `${override || this.ag.name}_destroy_storage`,
+    );
+  };
+
+  readonly destroyIdempotent: iSQL.PostgreSqlStoredRoutineSupplier = (
+    _,
+    override?,
+  ) => {
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      lifecycle,
+      `${override || this.ag.name}_destroy_idempotent`,
     );
   };
 
@@ -91,7 +111,7 @@ export class TypicalSqlLifecycleFunctions
     override?,
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
-      lifecycle,
+      experimental,
       `${override || this.ag.name}_populate_experimental_data`,
     );
   };

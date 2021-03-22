@@ -13,8 +13,10 @@ export function SQL(
   );
   const { lcFunctions: lcf } = state.affinityGroup;
   return mod.SQL(ctx, state)`
+    -- TODO: separate constructIdempotent into constructStorage/constructIdempotent
+    -- TODO: separate destroyIdempotent into destroyStorage/destroyIdempotent
     CREATE OR REPLACE FUNCTION ${
-    lcf.construct(state).qName
+    lcf.constructIdempotent(state).qName
   }_sql(schemaName text, tableName text) RETURNS text AS $$
     BEGIN
         return format($execBody$
@@ -265,7 +267,7 @@ export function SQL(
             $genBody$ LANGUAGE plpgsql;
 
             CREATE OR REPLACE PROCEDURE ${
-    lcf.destroy(state).qName
+    lcf.destroyIdempotent(state).qName
   }() AS $genBody$
             BEGIN
                 DROP FUNCTION IF EXISTS ${lcf.unitTest(state, "%2$s").qName}();
@@ -286,11 +288,13 @@ export function SQL(
     $$ LANGUAGE PLPGSQL;
     
     CREATE OR REPLACE PROCEDURE ${
-    lcf.construct(state).qName
+    lcf.constructIdempotent(state).qName
   }(schemaName text, tableName text) AS $$
     BEGIN
         -- TODO: register execution in DCP Lifecyle log table
-        EXECUTE(${lcf.construct(state).qName}_sql(schemaName, tableName));
+        EXECUTE(${
+    lcf.constructIdempotent(state).qName
+  }_sql(schemaName, tableName));
     END;
     $$ LANGUAGE PLPGSQL;`;
 }

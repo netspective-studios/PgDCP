@@ -76,7 +76,7 @@ export function SQL(
     $$ LANGUAGE plpgsql STRICT IMMUTABLE ;
     comment on function url_brand(url TEXT) IS 'Given a URL, return the hostname only without "www." prefix';
     
-    CREATE OR REPLACE PROCEDURE ${fn.destroy(state).qName}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroyIdempotent(state).qName}() AS $$
     BEGIN
         DROP FUNCTION IF EXISTS ${fn.unitTest(state).qName}();
         DROP FUNCTION IF EXISTS slugify(text);

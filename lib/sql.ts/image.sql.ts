@@ -38,7 +38,9 @@ export function SQL(
     END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE PROCEDURE ${fn.construct(state).qName}() AS $$
+    -- TODO: separate constructIdempotent into constructStorage/constructIdempotent
+    -- TODO: separate destroyIdempotent into destroyStorage/destroyIdempotent
+    CREATE OR REPLACE PROCEDURE ${fn.constructIdempotent(state).qName}() AS $$
     BEGIN
         CALL safe_create_image_meta_data_type();
         
@@ -95,7 +97,7 @@ export function SQL(
         $unitTestFn$;    END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE PROCEDURE ${fn.destroy(state).qName}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroyIdempotent(state).qName}() AS $$
     BEGIN
         DROP FUNCTION IF EXISTS ${fn.unitTest(state).qName}();
         DROP FUNCTION IF EXISTS image_format_size(bytea);

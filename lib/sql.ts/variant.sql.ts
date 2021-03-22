@@ -19,12 +19,12 @@ export function SQL(
     ${schemas.publicSchema.ltreeExtn.createSql(state)};
     CREATE OR REPLACE FUNCTION variant_sql(schemaName text, variantName text, defaultCtx text, defaultPath text) RETURNS text AS $$
     BEGIN
-        -- TODO: add qualified schema everywhere
         return format($execBody$
             SET search_path TO ${
     ["%1$s", ...schemas.publicSchema.ltreeExtn.searchPath].join(", ")
   };
 
+            -- TODO: switch to new style of using *_store for storage, non-_store for views
             CREATE TABLE %1$s.%2$s(
                 -- TODO: add checksums if importing files
                 -- TODO: track provenance if importing files
@@ -37,8 +37,11 @@ export function SQL(
                 sym_link_%2$s_id integer REFERENCES %2$s(id),
                 active boolean NOT NULL DEFAULT TRUE,
                 created_at timestamp with time zone NOT NULL default current_date,
+                created_by name NOT NULL default current_user,
                 updated_at timestamp with time zone,
+                updated_by name,
                 deleted_at timestamp with time zone,
+                deleted_by name,
                 CONSTRAINT %2$s_pk UNIQUE(id),
                 CONSTRAINT %2$s_unq_row UNIQUE(context, path, name)
             );
@@ -47,6 +50,8 @@ export function SQL(
             CREATE INDEX %2$s_path_idx ON %1$s.%2$s USING gist (path);
             CREATE INDEX %2$s_name_idx ON %1$s.%2$s (path);
 
+            -- TODO: remove *_secret table and use new variant instance to create custom secrets
+            -- TODO: when creating secrets, pass in optional encryption requirements?
             CREATE TABLE %1$s.%2$s_secret(
                 -- TODO: add checksums if importing files
                 -- TODO: track provenance if importing files
@@ -60,7 +65,9 @@ export function SQL(
                 active boolean NOT NULL DEFAULT TRUE,
                 created_at timestamp with time zone NOT NULL default current_date,
                 updated_at timestamp with time zone,
+                updated_by name,
                 deleted_at timestamp with time zone,
+                deleted_by name,
                 CONSTRAINT %2$s_secret_pk UNIQUE (id),
                 CONSTRAINT %2$s_secret_unq_row UNIQUE (context, path, name),
                 CONSTRAINT %2$s_secret_sym_link1_%2$s_secret_id_fkey FOREIGN KEY (sym_link_%2$s_secret_id) 

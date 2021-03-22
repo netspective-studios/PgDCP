@@ -43,7 +43,7 @@ export function SQL(
     comment on function http_client_fetch_content_text(text) is 'Retrieve a URL endpoint payload as text';
 
     CREATE OR REPLACE FUNCTION ${
-    fn.destroy(state).qName
+    fn.destroyIdempotent(state).qName
   }() RETURNS SETOF TEXT AS $$
     BEGIN
         DROP FUNCTION IF EXISTS ${fn.unitTest(state).qName}();

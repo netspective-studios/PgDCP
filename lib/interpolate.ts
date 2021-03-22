@@ -1,9 +1,14 @@
 import { safety } from "./deps.ts";
 
+export interface TemplateProvenanceHumanReadableSourceSupplier {
+  (p: TemplateProvenance): string;
+}
+
 export interface TemplateProvenance {
   readonly identity: string;
   readonly version: string;
   readonly source: string;
+  readonly humanReadableSource: TemplateProvenanceHumanReadableSourceSupplier;
 }
 
 export interface TextTransformer {

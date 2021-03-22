@@ -44,7 +44,7 @@ export function SQL(
     $$ LANGUAGE plpython3u;
     comment on function gitlab_project_asset_content_xml(text, text, integer, text) is 'Retrieve a GitLab Project repo file as XML';
 
-    CREATE OR REPLACE PROCEDURE ${fn.destroy(state).qName}() AS $$
+    CREATE OR REPLACE PROCEDURE ${fn.destroyIdempotent(state).qName}() AS $$
     BEGIN
         DROP FUNCTION IF EXISTS ${fn.unitTest(state).qName}();
         DROP FUNCTION GITLAB_PROJECT_ASSET_CONTENT_TEXT(TEXT, TEXT, INTEGER, TEXT);

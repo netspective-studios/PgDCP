@@ -1,4 +1,9 @@
 import * as mod from "../mod.ts";
+import * as schemas from "../schemas.ts";
+
+export const affinityGroup = new schemas.TypicalAffinityGroup(
+  "postgraphile",
+);
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
@@ -6,7 +11,7 @@ export function SQL(
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    options,
+    options || { schema: schemas.lib, affinityGroup },
   );
   const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`
@@ -38,16 +43,17 @@ export function SQL(
         username_password text;
     BEGIN
         select a.* into account
-        from pg_catalog.pg_authid as a
-        where a.rolname = username;
-        username_password:=(select concat(password,username));
+          from pg_catalog.pg_authid as a
+         where a.rolname = username;
+       
+        username_password := (select concat(password,username));
         
         IF account.rolname IS NOT NULL and account.rolpassword = concat('md5',md5(username_password)) THEN
         RETURN (
-        account.rolname,
-        extract(epoch from now() + interval '7 days'),
-        account.oid,
-        account.rolname
+          account.rolname,
+          extract(epoch from now() + interval '7 days'),
+          account.oid,
+          account.rolname
         )::jwt_token_postgraphile;
         ELSE
         RETURN NULL;
