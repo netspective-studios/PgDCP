@@ -11,12 +11,14 @@ export function SQL(
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    { schema: schemas.lib, affinityGroup },
+    options || {
+      schema: schemas.lib,
+      affinityGroup,
+      extensions: [schemas.publicSchema.plPythonExtn],
+    },
   );
   const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`
-    CREATE EXTENSION IF NOT EXISTS plpython3u;
-
     -- TODO: create a custom HTTP Client result which would give back a complete, 
     -- structured, response
     -- CREATE TYPE http_client_fetch_result AS (

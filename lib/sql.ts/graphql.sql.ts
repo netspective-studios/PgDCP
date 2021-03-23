@@ -11,12 +11,15 @@ export function SQL(
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    options || { schema: schemas.lib, affinityGroup },
+    options ||
+      {
+        schema: schemas.lib,
+        affinityGroup,
+        extensions: [schemas.publicSchema.plPythonExtn],
+      },
   );
   const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`
-    CREATE EXTENSION IF NOT EXISTS plpython3u;
-
     CREATE OR REPLACE FUNCTION http_client_graphql_anonymous_query_result(endpoint_url text, query text) returns JSON AS $$
     import urllib.request, json
     req = urllib.request.Request(endpoint_url)

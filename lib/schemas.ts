@@ -170,6 +170,9 @@ export class TypicalSchema implements iSQL.PostgreSqlSchema {
 export class PublicSchema extends TypicalSchema {
   readonly pgTapExtn: iSQL.PostgreSqlExtension;
   readonly pgStatStatementsExtn: iSQL.PostgreSqlExtension;
+  readonly plPythonExtn: iSQL.PostgreSqlExtension;
+  readonly pgCryptoExtn: iSQL.PostgreSqlExtension;
+  readonly unaccentExtn: iSQL.PostgreSqlExtension;
   readonly ltreeExtn: iSQL.PostgreSqlExtension;
   readonly semverExtn: iSQL.PostgreSqlExtension;
 
@@ -177,8 +180,11 @@ export class PublicSchema extends TypicalSchema {
     super("public");
     this.pgTapExtn = this.extension("pgtap");
     this.pgStatStatementsExtn = this.extension("pg_stat_statements");
+    this.unaccentExtn = this.extension("unaccent");
+    this.plPythonExtn = this.extension("plpython3u");
     this.ltreeExtn = this.extension("ltree");
     this.semverExtn = this.extension("semver");
+    this.pgCryptoExtn = this.extension("pgcrypto");
   }
 }
 

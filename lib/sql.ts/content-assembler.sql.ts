@@ -14,13 +14,12 @@ export function SQL(
     options || {
       schema: schemas.lib,
       affinityGroup,
-      searchPath: [schemas.lib.name, "public"],
+      searchPath: [schemas.lib.name],
+      extensions: [schemas.publicSchema.unaccentExtn],
     },
   );
   const { lcFunctions: fn } = state.affinityGroup;
-  return mod.SQL(ctx, state)`
-    create extension if not exists unaccent;
-    
+  return mod.SQL(ctx, state)`    
     CREATE OR REPLACE FUNCTION slugify("value" TEXT) RETURNS TEXT AS $$ 
         -- removes accents (diacritic signs) from a given string --
         WITH "unaccented" AS (

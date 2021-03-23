@@ -11,12 +11,15 @@ export function SQL(
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    options || { schema: schemas.lib, affinityGroup },
+    options ||
+      {
+        schema: schemas.lib,
+        affinityGroup,
+        extensions: [schemas.publicSchema.plPythonExtn],
+      },
   );
   const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`
-    CREATE EXTENSION IF NOT EXISTS plpython3u;
-
     CREATE OR REPLACE FUNCTION gitlab_project_asset_content_text(gl_api_base_url text, gl_auth_token text, project_id integer, asset_file_name text) returns TEXT AS $$
     import urllib.request
     req = urllib.request.Request('{}/projects/{}/repository/files/{}/raw?ref=master'.format(gl_api_base_url, project_id, asset_file_name))

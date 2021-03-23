@@ -9,12 +9,15 @@ export function SQL(
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    options || { schema: schemas.lib, affinityGroup },
+    options ||
+      {
+        schema: schemas.lib,
+        affinityGroup,
+        extensions: [schemas.publicSchema.plPythonExtn],
+      },
   );
   const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`
-    CREATE EXTENSION IF NOT EXISTS plpython3u;
-
     -- TODO: perform pip install or upgrade of required packages via an anonymous code block
     -- DO $$
     -- import pip3

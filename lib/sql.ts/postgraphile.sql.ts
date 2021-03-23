@@ -11,12 +11,15 @@ export function SQL(
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    options || { schema: schemas.lib, affinityGroup },
+    options ||
+      {
+        schema: schemas.lib,
+        affinityGroup,
+        extensions: [schemas.publicSchema.pgCryptoExtn],
+      },
   );
   const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`
-    CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
     -- We want all our object creations to be idempotent whenever possible
     DO $$
     BEGIN
