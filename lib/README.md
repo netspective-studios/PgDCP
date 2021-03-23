@@ -38,9 +38,7 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 
 # TODOs
 
-* Move extension requirements from simple templates to `state` Options so that we can auto-generate health checks.
 * Add `plpgsql_check` into all PgTAP unit tests; consider adding a new AG lifecycle function call `lint_*` which would be called by `select * from runlint()`.
-* Use [semver](https://pgxn.org/dist/semver/doc/semver.html) data type for `version.sql.ts` `version` column.
 * Add ability to automatically segregate views that consumers can use from tables ("stores") that should be considered private and not used by consumers/developers.
   * Make the views all updatable in accessible schemas while tables' schemas would be inaccessible and might even have [create rule](https://www.postgresql.org/docs/13/sql-createrule.html) based notices.
 * Create auto-generated SQL to enforce immutability of tables -- e.g. the version tables, events tables, should allow insert but not update/delete. See [this conversation](https://www.tek-tips.com/viewthread.cfm?qid=1116256).
@@ -52,6 +50,11 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 * In Variant, add *sensitivity* ltree[] to allow confidentiality to be specified in provenance as well as prime; base on *sensitivity* we may want to store encrypted text/JSON/XML.
 
 ## Activity Log
+
+### March 23, 2021
+
+* Move extension requirements from simple templates to `state` Options so that we can auto-generate health checks.
+* Use [semver](https://pgxn.org/dist/semver/doc/semver.html) data type for `version.sql.ts` `version` column.
 
 ### March 22, 2021
 * [SNS] Separated `[AGorS]_construct` into individual `[AGorS]_construct_storage` and `[AGorS]_construct_idempotent`, which should be callable indepdently.
