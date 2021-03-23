@@ -17,11 +17,16 @@ export function SQL(
   );
   return mod.SQL(ctx, state)`
     ${schemas.publicSchema.ltreeExtn.createSql(state)};
+    ${schemas.publicSchema.semverExtn.createSql(state)};
     CREATE OR REPLACE FUNCTION version_sql(schemaName text, versionTableName text, versionedItemColName text, defaultCtx text) RETURNS text AS $$
     BEGIN
         return format($execBody$
             SET search_path TO ${
-    ["%1$s", ...schemas.publicSchema.ltreeExtn.searchPath].join(", ")
+    [
+      "%1$s",
+      ...schemas.publicSchema.ltreeExtn.searchPath,
+      ...schemas.publicSchema.semverExtn.searchPath,
+    ].join(", ")
   };
 
             CREATE TABLE IF NOT EXISTS %1$s.%2$s_store(
@@ -30,7 +35,7 @@ export function SQL(
                 context ltree,
                 %3$s_path ltree NOT NULL,
                 %3$s text NOT NULL,
-                version ltree NOT NULL,
+                version semver NOT NULL,
                 description text,
                 labels text[],
                 %3$s_elaboration jsonb,
@@ -44,14 +49,14 @@ export function SQL(
             CREATE INDEX IF NOT EXISTS %2$s_store_context_idx ON %1$s.%2$s_store USING gist (context);
             CREATE INDEX IF NOT EXISTS %2$s_store_%3$s_path_idx ON %1$s.%2$s_store USING gist (%3$s_path);
             CREATE INDEX IF NOT EXISTS %2$s_store_%3$s_idx ON %1$s.%2$s_store (%3$s);
-            CREATE INDEX IF NOT EXISTS %2$s_store_version_idx ON %1$s.%2$s_store USING gist (version);
+            CREATE INDEX IF NOT EXISTS %2$s_store_version_idx ON %1$s.%2$s_store USING hash (version);
             CREATE INDEX IF NOT EXISTS %2$s_store_labels_idx ON %1$s.%2$s_store USING gin (labels);
 
             -- TODO: add, optionally, %1$s.%2$s_pg_relationship table to connect %1$s.%2$s_store record
             --       to PostgreSQL object catalogs; that way, we can tie the official catalog to specific
             --       versions as well
             -- TODO: add, optionally, %1$s.%2$s_event_relationship table to connect %1$s.%2$s_store record
-            --       to an existing event manager row; that way, we can tie an event to a version
+            --       to an existing event manager row; that way, we can tie an event to a version of something
 
             CREATE OR REPLACE VIEW %1$s.%2$s AS
                 select *

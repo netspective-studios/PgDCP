@@ -168,11 +168,13 @@ export class TypicalSchema implements iSQL.PostgreSqlSchema {
 }
 
 export class PublicSchema extends TypicalSchema {
-  ltreeExtn: iSQL.PostgreSqlSchemaExtension;
+  readonly ltreeExtn: iSQL.PostgreSqlSchemaExtension;
+  readonly semverExtn: iSQL.PostgreSqlSchemaExtension;
 
   constructor() {
     super("public");
     this.ltreeExtn = this.extension("ltree");
+    this.semverExtn = this.extension("semver");
   }
 }
 
