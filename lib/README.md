@@ -40,6 +40,8 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 
 * Go through all `[AGorS]_construct_storage` and `[AGorS]_construct_idempotent` procedures in all `*.sql.ts` templates to ensure storage is properly separated from idempotent functionality.
 * Go through all `[AGorS]_destroy_storage` and `[AGorS]_destroy_idempotent` procedures in all `*.sql.ts` templates to ensure storage is properly separated from idempotent functionality.
+* In Variant, add updatable views to retrieve / store provenance
+* In Variant, add pg_cron-based auto-update capability (which and automatically retire old versions and refresh views)
 
 ## Activity Log
 
