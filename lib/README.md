@@ -21,6 +21,7 @@ By convention, all SQL is created within the following *types* of stored procedu
 * `[AGorS]_destroy_storage`. Responsible for the destruction of all storage assets created by `[AGorS]_construct_storage`.
 * `[AGorS]_destroy_idempotent`. Responsible for the destruction of all non-storage, idempotent, assets created by `[AGorS]_construct_idempotent`.
 * `[AGorS]_test_*`. pgTAP unit tests for objects related to a schema or AG.
+* `[AGorS]_lint_*`. `plpgsql_check` lint results for objects related to a schema or AG.
 * `[AGorS]_populate_secrets`. Responsbile for populating confidential data related to the objects.
 * `[AGorS]_populate_seed_data`. Responsbile for populating seed data used across all contexts.
 * `[AGorS]_populate_[context]_data`. Responsbile for populating context-specific data that is not transactional in nature.
@@ -45,6 +46,7 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 * Create auto-generated SQL to validate data before it goes into tables -- we want to allow UIs to call validation functions/views that return error messages that would be identical to what would happen if constraints are violated, before those constraints are actually violoated when data is inserted/updated.
 * Go through all `[AGorS]_construct_storage` and `[AGorS]_construct_idempotent` procedures in all `*.sql.ts` templates to ensure storage is properly separated from idempotent functionality.
 * Go through all `[AGorS]_destroy_storage` and `[AGorS]_destroy_idempotent` procedures in all `*.sql.ts` templates to ensure storage is properly separated from idempotent functionality.
+  * Add, to all *_destroy() functions the requirement that it be a specific user that is calling the destruction (e.g. "dcp_destroyer") and that user is highly restricted.
 * In Variant, add updatable views to retrieve / store provenance.
 * In Variant, add pg_cron-based auto-update capability (which and automatically retire old versions and refresh views).
 * In Variant, add *sensitivity* ltree[] to allow confidentiality to be specified in provenance as well as prime; base on *sensitivity* we may want to store encrypted text/JSON/XML.

@@ -102,6 +102,7 @@ export interface PostgreSqlLifecycleFunctions {
   readonly destroyStorage: PostgreSqlStoredRoutineSupplier;
   readonly destroyIdempotent: PostgreSqlStoredRoutineSupplier;
   readonly unitTest: PostgreSqlStoredRoutineSupplier;
+  readonly lint: PostgreSqlStoredRoutineSupplier;
   readonly populateSecrets: PostgreSqlStoredRoutineSupplier;
   readonly populateSeedData: PostgreSqlStoredRoutineSupplier;
   readonly populateExperimentalData: PostgreSqlStoredRoutineSupplier;

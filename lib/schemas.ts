@@ -86,6 +86,16 @@ export class TypicalSqlLifecycleFunctions
     );
   };
 
+  readonly lint: iSQL.PostgreSqlStoredRoutineSupplier = (
+    _,
+    override?,
+  ) => {
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      assurance,
+      `lint_${override || this.ag.name}`,
+    );
+  };
+
   readonly populateSecrets: iSQL.PostgreSqlStoredRoutineSupplier = (
     _,
     override?,
