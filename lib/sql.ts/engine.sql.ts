@@ -27,18 +27,11 @@ export function SQL(
   };
   const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`
-    -- TODO: add custom type for semantic version management
-    -- TODO: add table to manage DCP functionNames/procs/versions for lifecycle management
-
     ${schemas.lifecycle.createSchemaSql(state)};
     ${schemas.assurance.createSchemaSql(state)};
     ${schemas.experimental.createSchemaSql(state)};
     ${schemas.lib.createSchemaSql(state)};
 
-    -- TODO: add, to all *_construct() and *_destroy() functionNames the requirement that
-    --       all activities are logged into a lifecycle table
-    -- TODO: separate constructIdempotent into constructStorage/constructIdempotent
-    -- TODO: separate destroyIdempotent into destroyStorage/destroyIdempotent
     CREATE OR REPLACE PROCEDURE ${fn.constructIdempotent(state).qName}() AS $$
     BEGIN
         ${schemas.assurance.createSchemaSql(state)};
@@ -60,9 +53,6 @@ export function SQL(
     END;
     $$ LANGUAGE PLPGSQL;
 
-    -- TODO: add, to all *_destroy() functionNames the requirement that it be a specific
-    --       user that is calling the destruction (e.g. "dcp_destroyer") and that
-    --       user is highly restricted.
     CREATE OR REPLACE PROCEDURE ${fn.destroyIdempotent(state).qName}() AS $$
     BEGIN
         -- TODO: if user = 'dcp_destroyer' ... else raise exception invalid user trying to destroyIdempotent
