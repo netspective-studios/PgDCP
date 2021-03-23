@@ -72,7 +72,7 @@ export interface DcpTemplateSupplier {
   (state: DcpTemplateState): string;
 }
 
-export interface PostgreSqlSchemaExtension {
+export interface PostgreSqlExtension {
   readonly name: PostgreSqlExtensionName;
   readonly createSql: PostgreSqlStatementSupplier;
   readonly dropSql: PostgreSqlStatementSupplier;
@@ -121,7 +121,7 @@ export interface PostgreSqlSchema extends SqlAffinityGroup {
   readonly dropSchemaSql: PostgreSqlStatementSupplier;
   readonly extension: (
     name: PostgreSqlExtensionName,
-  ) => PostgreSqlSchemaExtension;
+  ) => PostgreSqlExtension;
 }
 
 export interface DcpTemplateState extends interp.InterpolationState {
@@ -132,6 +132,7 @@ export interface DcpTemplateState extends interp.InterpolationState {
   readonly searchPath: string[];
   readonly indentation: interp.Indentable;
   readonly headers: DcpTemplateSupplier[];
+  readonly extensions?: PostgreSqlExtension[];
 }
 
 export const isDcpTemplateState = safety.typeGuard<DcpTemplateState>(
@@ -144,6 +145,7 @@ export interface InterpolationContextStateOptions {
   readonly schema?: PostgreSqlSchema;
   readonly affinityGroup?: SqlAffinityGroup;
   readonly searchPath?: string[];
+  readonly extensions?: PostgreSqlExtension[];
   readonly headers?: {
     readonly standalone?: DcpTemplateSupplier[];
     readonly embedded?: DcpTemplateSupplier[];
@@ -256,13 +258,21 @@ export function typicalDcpInterpolationContext(
       },
     ): DcpTemplateState => {
       const schema = options.schema || defaultSchema;
+      const stateSearchPath = options.searchPath
+        ? options.searchPath
+        : [schema.name];
+      if (options.extensions) {
+        options.extensions.forEach((e) =>
+          e.searchPath.forEach((p) => stateSearchPath.push(p))
+        );
+      }
       const dcpTS: DcpTemplateState = {
         ic: dcpIC,
         ie,
         schema,
         isSchemaDefaulted: options.schema ? false : true,
         affinityGroup: options.affinityGroup ? options.affinityGroup : schema,
-        searchPath: options.searchPath ? options.searchPath : [schema.name],
+        searchPath: stateSearchPath,
         indentation: interp.isIndentable(ie.provenance)
           ? ie.provenance
           : interp.noIndentation,
@@ -271,8 +281,10 @@ export function typicalDcpInterpolationContext(
             tmpl.preface,
             tmpl.schema,
             tmpl.searchPath,
+            tmpl.extensions,
           ]
           : (options.headers?.standalone || []),
+        extensions: options.extensions,
       };
       return dcpTS;
     },
@@ -301,6 +313,7 @@ export function typicalDcpInterpolationContext(
               tmpl.embeddedPreface,
               tmpl.schema,
               tmpl.searchPath,
+              tmpl.extensions,
             ],
           };
         },

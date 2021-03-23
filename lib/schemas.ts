@@ -1,6 +1,6 @@
 import * as iSQL from "./interpolate-sql.ts";
 
-export class TypicalSchemaExtension implements iSQL.PostgreSqlSchemaExtension {
+export class TypicalSchemaExtension implements iSQL.PostgreSqlExtension {
   constructor(
     readonly name: iSQL.PostgreSqlExtensionName,
     readonly schema: iSQL.PostgreSqlSchema,
@@ -162,17 +162,21 @@ export class TypicalSchema implements iSQL.PostgreSqlSchema {
 
   readonly extension = (
     name: iSQL.PostgreSqlExtensionName,
-  ): iSQL.PostgreSqlSchemaExtension => {
+  ): iSQL.PostgreSqlExtension => {
     return new TypicalSchemaExtension(name, this);
   };
 }
 
 export class PublicSchema extends TypicalSchema {
-  readonly ltreeExtn: iSQL.PostgreSqlSchemaExtension;
-  readonly semverExtn: iSQL.PostgreSqlSchemaExtension;
+  readonly pgTapExtn: iSQL.PostgreSqlExtension;
+  readonly pgStatStatementsExtn: iSQL.PostgreSqlExtension;
+  readonly ltreeExtn: iSQL.PostgreSqlExtension;
+  readonly semverExtn: iSQL.PostgreSqlExtension;
 
   constructor() {
     super("public");
+    this.pgTapExtn = this.extension("pgtap");
+    this.pgStatStatementsExtn = this.extension("pg_stat_statements");
     this.ltreeExtn = this.extension("ltree");
     this.semverExtn = this.extension("semver");
   }

@@ -16,7 +16,12 @@ export function SQL(
       ctx.prepareTsModuleExecution(import.meta.url),
       options || {
         affinityGroup,
-        headers: { standalone: [tmpl.preface] }, // skip schema and search path
+        headers: { standalone: [tmpl.preface, tmpl.extensions] }, // skip schema and search path
+        extensions: [
+          schemas.publicSchema.pgTapExtn,
+          schemas.publicSchema.pgStatStatementsExtn,
+          schemas.publicSchema.ltreeExtn,
+        ],
       },
     ),
   };
@@ -25,9 +30,6 @@ export function SQL(
     -- TODO: add custom type for semantic version management
     -- TODO: add table to manage DCP functionNames/procs/versions for lifecycle management
 
-    CREATE EXTENSION IF NOT EXISTS pgtap;
-    CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-    CREATE EXTENSION IF NOT EXISTS ltree;
     ${schemas.lifecycle.createSchemaSql(state)};
     ${schemas.assurance.createSchemaSql(state)};
     ${schemas.experimental.createSchemaSql(state)};

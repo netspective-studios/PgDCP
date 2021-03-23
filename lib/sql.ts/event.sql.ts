@@ -13,19 +13,19 @@ export function SQL(
         schemas.lifecycle.name,
         schemas.lib.name,
       ],
+      extensions: [
+        schemas.publicSchema.ltreeExtn,
+      ],
     },
   );
   return mod.SQL(ctx, state)`
-    ${schemas.publicSchema.ltreeExtn.createSql(state)};
     CREATE OR REPLACE FUNCTION event_manager_sql(schemaName text, eventTableName text, eventColName text, defaultCtx text) RETURNS text AS $$
     BEGIN
         -- changed "stream_name" to "provenance"
         -- changed "type" to "nature"
 
         return format($execBody$
-            SET search_path TO ${
-    ["%1$s", ...schemas.publicSchema.ltreeExtn.searchPath].join(", ")
-  };
+            SET search_path TO ${["%1$s", ...state.searchPath].join(", ")};
 
             CREATE TABLE IF NOT EXISTS %1$s.%2$s_store (
                 id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,

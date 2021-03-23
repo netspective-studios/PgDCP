@@ -23,8 +23,14 @@ export const schema: iSQL.DcpTemplateSupplier = (state) => {
   return `${state.schema.createSchemaSql(state)};`;
 };
 
+export const extensions: iSQL.DcpTemplateSupplier = (state) => {
+  return state.extensions
+    ? (state.extensions.map((e) => `${e.createSql(state)};`).join("\n"))
+    : "-- no extensions required";
+};
+
 export const searchPath: iSQL.DcpTemplateSupplier = (state) => {
   return state.searchPath
-    ? `SET search_path TO ${state.searchPath.join(", ")};`
+    ? `SET search_path TO ${[...new Set(state.searchPath)].join(", ")};` // only unique schemas in search path
     : `SET search_path TO ${schemas.experimental}; -- ${schemas.experimental} is used because no searchPath provided`;
 };
