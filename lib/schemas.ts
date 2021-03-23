@@ -210,8 +210,26 @@ export const stateless = (name: string, enhancing?: boolean) => {
   );
 };
 
+export const statelessFDW = (name: string, enhancing?: boolean) => {
+  return new TypicalSchema(
+    `fdw_stateless${enhancing ? "_enhance" : ""}_${name}`,
+  );
+};
+
 export const stateful = (name: string, enhancing?: boolean) => {
   return new TypicalSchema(
     `stateful${enhancing ? "_enhance" : ""}_${name}`,
+  );
+};
+
+export const statefulUnrecoverable = (name: string, enhancing?: boolean) => {
+  return new TypicalSchema(
+    `stateful_unrecoverable${enhancing ? "_enhance" : ""}_${name}`,
+  );
+};
+
+export const statefulFDW = (name: string, enhancing?: boolean) => {
+  return new TypicalSchema(
+    `fdw_stateful${enhancing ? "_enhance" : ""}_${name}`,
   );
 };
