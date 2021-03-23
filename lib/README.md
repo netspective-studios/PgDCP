@@ -31,7 +31,7 @@ By convention, all SQL is created within the following *types* of stored procedu
 
 ## Versioning
 
-PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by providing version-management infrastructure. All versions start at 1.0.0 and incremented based on:
+PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by providing version-management infrastructure using [semver](https://pgxn.org/dist/semver/doc/semver.html) extension's custom `semver` data type. All versions of every database object/asset starts at 1.0.0 and incremented based on:
 
 * Major. The major version should be incremented if any structural changes occur that might lose data (e.g. dropping a column).
 * Minor. The minor version should be incremented if any structural changes occur but no data would be lost (e.g. adding a column, adding constraints).
@@ -45,6 +45,7 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 * Create auto-generated SQL to enforce immutability of tables -- e.g. the version tables, events tables, should allow insert but not update/delete. See [this conversation](https://www.tek-tips.com/viewthread.cfm?qid=1116256).
 * Create auto-generated SQL to validate data before it goes into tables -- we want to allow UIs to call validation functions/views that return error messages that would be identical to what would happen if constraints are violated, before those constraints are actually violoated when data is inserted/updated.
 * Go through all `[AGorS]_construct_storage` and `[AGorS]_construct_idempotent` procedures in all `*.sql.ts` templates to ensure storage is properly separated from idempotent functionality.
+  * Add, to all `*_construct_*` functions, a call to record its creation version and event log.
 * Go through all `[AGorS]_destroy_storage` and `[AGorS]_destroy_idempotent` procedures in all `*.sql.ts` templates to ensure storage is properly separated from idempotent functionality.
   * Add, to all *_destroy() functions the requirement that it be a specific user that is calling the destruction (e.g. "dcp_destroyer") and that user is highly restricted.
 * In Variant, add updatable views to retrieve / store provenance.
@@ -57,6 +58,7 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 
 * Move extension requirements from simple templates to `state` Options so that we can auto-generate health checks.
 * Use [semver](https://pgxn.org/dist/semver/doc/semver.html) data type for `version.sql.ts` `version` column.
+* Added `lint` standard function to `schema.lcFunctions` to prepare infrastructure for `plpgsql_check` calls.
 
 ### March 22, 2021
 * [SNS] Separated `[AGorS]_construct` into individual `[AGorS]_construct_storage` and `[AGorS]_construct_idempotent`, which should be callable indepdently.
