@@ -15,7 +15,9 @@ export const preface: iSQL.DcpTemplateSupplier = (state) => {
 export const embeddedPreface: iSQL.DcpTemplateSupplier = (state) => {
   const { provenance } = state.ie;
   return tw.unindentWhitespace(`
-      -- embedded from: ${provenance.identity} (${provenance.source})
+      -- embedded from: ${provenance.identity} (${
+    provenance.humanReadableSource(provenance)
+  })
       -- version: ${provenance.version}`);
 };
 
