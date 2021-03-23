@@ -42,6 +42,7 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 * Go through all `[AGorS]_destroy_storage` and `[AGorS]_destroy_idempotent` procedures in all `*.sql.ts` templates to ensure storage is properly separated from idempotent functionality.
 * In Variant, add updatable views to retrieve / store provenance
 * In Variant, add pg_cron-based auto-update capability (which and automatically retire old versions and refresh views)
+* In Variant, add *sensitivity* ltree[] to allow confidentiality to be specified in provenance as well as prime; base on *sensitivity* we may want to store encrypted text/JSON/XML
 
 ## Activity Log
 
