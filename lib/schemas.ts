@@ -96,6 +96,16 @@ export class TypicalSqlLifecycleFunctions
     );
   };
 
+  readonly doctor: iSQL.PostgreSqlStoredRoutineSupplier = (
+    _,
+    override?,
+  ) => {
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      assurance,
+      `test_doctor_${override || this.ag.name}`,
+    );
+  };
+
   readonly populateSecrets: iSQL.PostgreSqlStoredRoutineSupplier = (
     _,
     override?,

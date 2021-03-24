@@ -103,6 +103,7 @@ export interface PostgreSqlLifecycleFunctions {
   readonly destroyIdempotent: PostgreSqlStoredRoutineSupplier;
   readonly unitTest: PostgreSqlStoredRoutineSupplier;
   readonly lint: PostgreSqlStoredRoutineSupplier;
+  readonly doctor: PostgreSqlStoredRoutineSupplier;
   readonly populateSecrets: PostgreSqlStoredRoutineSupplier;
   readonly populateSeedData: PostgreSqlStoredRoutineSupplier;
   readonly populateExperimentalData: PostgreSqlStoredRoutineSupplier;
@@ -381,6 +382,34 @@ export class PostgreSqlInterpolationPersistence {
   constructor(
     readonly interpOptions: PostgreSqlInterpolationPersistOptions,
   ) {
+  }
+
+  extensionsReferenced(): PostgreSqlExtension[] {
+    const uniqueExtns: PostgreSqlExtension[] = [];
+    this.persistable.forEach((p) => {
+      if (p.state.extensions) {
+        p.state.extensions.forEach((reqdExtn) => {
+          const found = uniqueExtns.find((e) =>
+            reqdExtn.name.toLowerCase() == e.name.toLowerCase()
+          );
+          if (!found) uniqueExtns.push(reqdExtn);
+        });
+      }
+    });
+    return uniqueExtns;
+  }
+
+  schemaNamesInSearchPaths(): PostgreSqlSchemaName[] {
+    const uniqueSchemaNamess: PostgreSqlSchemaName[] = [];
+    this.persistable.forEach((p) => {
+      p.state.searchPath.forEach((schemaName) => {
+        const found = uniqueSchemaNamess.find((sn) =>
+          schemaName.toLowerCase() == sn.toLowerCase()
+        );
+        if (!found) uniqueSchemaNamess.push(schemaName);
+      });
+    });
+    return uniqueSchemaNamess;
   }
 
   registerPersistableResult(
