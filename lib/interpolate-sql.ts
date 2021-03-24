@@ -76,7 +76,7 @@ export interface PostgreSqlExtension {
   readonly name: PostgreSqlExtensionName;
   readonly createSql: PostgreSqlStatementSupplier;
   readonly dropSql: PostgreSqlStatementSupplier;
-  readonly searchPath: PostgreSqlSchemaName[];
+  readonly searchPath: PostgreSqlSchema[];
 }
 
 export interface SqlTable {
@@ -131,10 +131,14 @@ export interface DcpTemplateState extends interp.InterpolationState {
   readonly schema: PostgreSqlSchema;
   readonly isSchemaDefaulted: boolean;
   readonly affinityGroup: SqlAffinityGroup | PostgreSqlSchema;
-  readonly searchPath: string[];
+  readonly searchPath: PostgreSqlSchema[];
   readonly indentation: interp.Indentable;
   readonly headers: DcpTemplateSupplier[];
   readonly extensions?: PostgreSqlExtension[];
+  readonly setSearchPathSql: (
+    prepend?: string | string[],
+    append?: string | string[],
+  ) => PostgreSqlStatement;
 }
 
 export const isDcpTemplateState = safety.typeGuard<DcpTemplateState>(
@@ -146,7 +150,7 @@ export const isDcpTemplateState = safety.typeGuard<DcpTemplateState>(
 export interface InterpolationContextStateOptions {
   readonly schema?: PostgreSqlSchema;
   readonly affinityGroup?: SqlAffinityGroup;
-  readonly searchPath?: string[];
+  readonly searchPath?: PostgreSqlSchema[];
   readonly extensions?: PostgreSqlExtension[];
   readonly headers?: {
     readonly standalone?: DcpTemplateSupplier[];
@@ -262,7 +266,7 @@ export function typicalDcpInterpolationContext(
       const schema = options.schema || defaultSchema;
       const stateSearchPath = options.searchPath
         ? options.searchPath
-        : [schema.name];
+        : [schema];
       if (options.extensions) {
         options.extensions.forEach((e) =>
           e.searchPath.forEach((p) => stateSearchPath.push(p))
@@ -287,6 +291,19 @@ export function typicalDcpInterpolationContext(
           ]
           : (options.headers?.standalone || []),
         extensions: options.extensions,
+        setSearchPathSql: (prepend?, append?) => {
+          const include = (elements?: string | string[]): string[] => {
+            return elements
+              ? (Array.isArray(elements) ? elements : [elements])
+              : [];
+          };
+          const sp: string[] = [
+            ...include(prepend),
+            ...stateSearchPath.map((s) => s.name),
+            ...include(append),
+          ];
+          return `SET search_path TO ${[...new Set(sp)].join(", ")}`;
+        },
       };
       return dcpTS;
     },
@@ -399,17 +416,17 @@ export class PostgreSqlInterpolationPersistence {
     return uniqueExtns;
   }
 
-  schemaNamesInSearchPaths(): PostgreSqlSchemaName[] {
-    const uniqueSchemaNamess: PostgreSqlSchemaName[] = [];
+  schemasReferenced(): PostgreSqlSchema[] {
+    const uniqueSchemaNames: PostgreSqlSchema[] = [];
     this.persistable.forEach((p) => {
-      p.state.searchPath.forEach((schemaName) => {
-        const found = uniqueSchemaNamess.find((sn) =>
-          schemaName.toLowerCase() == sn.toLowerCase()
+      p.state.searchPath.forEach((s) => {
+        const found = uniqueSchemaNames.find((us) =>
+          s.name.toLowerCase() == us.name.toLowerCase()
         );
-        if (!found) uniqueSchemaNamess.push(schemaName);
+        if (!found) uniqueSchemaNames.push(s);
       });
     });
-    return uniqueSchemaNamess;
+    return uniqueSchemaNames;
   }
 
   registerPersistableResult(

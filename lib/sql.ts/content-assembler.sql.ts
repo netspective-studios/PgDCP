@@ -14,7 +14,7 @@ export function SQL(
     options || {
       schema: schemas.lib,
       affinityGroup,
-      searchPath: [schemas.lib.name],
+      searchPath: [schemas.lib],
       extensions: [schemas.publicSchema.unaccentExtn],
     },
   );

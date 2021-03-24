@@ -33,6 +33,8 @@ export const extensions: iSQL.DcpTemplateSupplier = (state) => {
 
 export const searchPath: iSQL.DcpTemplateSupplier = (state) => {
   return state.searchPath
-    ? `SET search_path TO ${[...new Set(state.searchPath)].join(", ")};` // only unique schemas in search path
+    ? `SET search_path TO ${
+      [...new Set(state.searchPath.map((s) => s.name))].join(", ")
+    };` // only unique schemas in search path
     : `SET search_path TO ${schemas.experimental}; -- ${schemas.experimental} is used because no searchPath provided`;
 };

@@ -10,8 +10,8 @@ export function SQL(
     options || {
       schema: schemas.lifecycle,
       searchPath: [
-        schemas.lifecycle.name,
-        schemas.lib.name,
+        schemas.lifecycle,
+        schemas.lib,
       ],
       extensions: [
         schemas.publicSchema.ltreeExtn,
@@ -25,7 +25,7 @@ export function SQL(
         -- changed "type" to "nature"
 
         return format($execBody$
-            SET search_path TO ${["%1$s", ...state.searchPath].join(", ")};
+            ${state.setSearchPathSql("%1$s")};
 
             CREATE TABLE IF NOT EXISTS %1$s.%2$s_store (
                 id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,

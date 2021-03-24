@@ -15,7 +15,7 @@ export class TypicalSchemaExtension implements iSQL.PostgreSqlExtension {
     return `DROP EXTENSION IF EXISTS ${this.name}`;
   };
 
-  readonly searchPath = [this.schema.name];
+  readonly searchPath = [this.schema];
 }
 
 export class TypicalPostgreSqlSchemaStoredRoutine
