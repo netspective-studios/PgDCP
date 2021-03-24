@@ -185,6 +185,7 @@ export class PublicSchema extends TypicalSchema {
   readonly unaccentExtn: iSQL.PostgreSqlExtension;
   readonly ltreeExtn: iSQL.PostgreSqlExtension;
   readonly semverExtn: iSQL.PostgreSqlExtension;
+  readonly crossTabExtn: iSQL.PostgreSqlExtension;
 
   constructor() {
     super("public");
@@ -194,6 +195,7 @@ export class PublicSchema extends TypicalSchema {
     this.plPythonExtn = this.extension("plpython3u");
     this.ltreeExtn = this.extension("ltree");
     this.semverExtn = this.extension("semver");
+    this.crossTabExtn = this.extension("tablefunc");
     this.pgCryptoExtn = this.extension("pgcrypto");
   }
 }
