@@ -62,7 +62,7 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 * Add health checks standard functions that applications and service consumers can call to verify that runtime execution will not fail.
   * Example: *doctor* style functionality that will:
     * Test that all extensions required are installed and will not throw runtime exceptions
-    * Test that caller has permissions to all depenencies such as schemas, objects, and will not throw runtime exceptions
+    * Test that caller has permissions to all dependencies such as schemas, objects, and will not throw runtime exceptions
 
 ## Activity Log
 
