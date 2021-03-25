@@ -21,6 +21,7 @@ export function SQL(
           schemas.publicSchema.pgTapExtn,
           schemas.publicSchema.pgStatStatementsExtn,
           schemas.publicSchema.ltreeExtn,
+          schemas.publicSchema.semverExtn,
         ],
       },
     ),
@@ -39,10 +40,10 @@ export function SQL(
         ${schemas.lib.createSchemaSql(state)};
         CALL ${
     schemas.lifecycle.qualifiedReference("version_construct")
-  }('${schemas.lifecycle.name}', 'asset_version', 'asset', NULL);
-        insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_store', '1.0.0');
-        insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_label_store', '1.0.0');
-        insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_history', '1.0.0');
+  }('${schemas.lifecycle.name}', 'asset_version', 'asset', NULL, '1.0.0'::semver);
+        insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_store', ${schemas.lifecycle.name}.asset_version_initial_revision());
+        insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_label_store', ${schemas.lifecycle.name}.asset_version_initial_revision());
+        insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_history', ${schemas.lifecycle.name}.asset_version_initial_revision());
 
         CALL ${
     schemas.lifecycle.qualifiedReference("variant_construct")

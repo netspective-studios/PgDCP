@@ -15,15 +15,13 @@ export function SQL(
       ],
       extensions: [
         schemas.publicSchema.ltreeExtn,
+        schemas.publicSchema.semverExtn,
       ],
     },
   );
   return mod.SQL(ctx, state)`
     CREATE OR REPLACE FUNCTION event_manager_sql(schemaName text, eventTableName text, eventColName text, defaultCtx text) RETURNS text AS $$
     BEGIN
-        -- changed "stream_name" to "provenance"
-        -- changed "type" to "nature"
-
         return format($execBody$
             ${state.setSearchPathSql("%1$s")};
 
@@ -35,7 +33,9 @@ export function SQL(
                 %3$s jsonb, -- elaboration of the event
                 meta_data jsonb, -- elaboration of the context, nature, provanance or other meta data
                 aliases ltree[], -- symlinks
-                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'utc') NOT NULL
+                versions semver[], -- version meta data
+                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'utc') NOT NULL,
+                created_by name NOT NULL default current_user
             );
             CREATE INDEX %2$s_nature_idx ON %1$s.%2$s_store USING gist (nature);
             CREATE INDEX %2$s_context_idx ON %1$s.%2$s_store USING gist (context);
@@ -56,18 +56,22 @@ export function SQL(
 
             -- the event is stored in %1$s.%2$s_store but accessed through %1$s.%2$s
             CREATE OR REPLACE VIEW %1$s.%2$s AS 
-            SELECT * FROM %1$s.%2$s_store;
+            SELECT * 
+              FROM %1$s.%2$s_store
+            ORDER BY created_at desc;
 
             create or replace function %1$s.event_manager_insert_%2$s() returns trigger as $genBody$
             declare
                 %2$sId UUID;
             begin
-                insert into %1$s.%2$s_store (context, nature, provenance, %3$s, meta_data) select 
+                insert into %1$s.%2$s_store (context, nature, provenance, %3$s, meta_data, aliases, versions) select 
                     (CASE WHEN (NEW.context IS NULL) THEN '%4$s' ELSE NEW.context END),
                     NEW.nature,
                     NEW.provenance,
                     NEW.%3$s,
-                    NEW.meta_data
+                    NEW.meta_data,
+                    NEW.aliases,
+                    NEW.versions
                     returning id into %2$sId;
                 -- TODO: add any other inserts necessary
                 -- insert into %1$s.%2$s_sensitivity (%2$s_id, value) select %2$sId, NEW.value;

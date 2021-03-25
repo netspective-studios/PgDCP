@@ -20,7 +20,7 @@ export function SQL(
     },
   );
   return mod.SQL(ctx, state)`
-    CREATE OR REPLACE FUNCTION version_sql(schemaName text, versionTableName text, versionedItemColName text, defaultCtx text) RETURNS text AS $$
+    CREATE OR REPLACE FUNCTION version_sql(schemaName text, versionTableName text, versionedItemColName text, defaultCtx text, initVersion semver) RETURNS text AS $$
     BEGIN
         return format($execBody$
             ${state.setSearchPathSql("%1$s")};
@@ -54,16 +54,28 @@ export function SQL(
             -- TODO: add, optionally, %1$s.%2$s_event_relationship table to connect %1$s.%2$s_store record
             --       to an existing event manager row; that way, we can tie an event to a version of something
 
+            CREATE FUNCTION %1$s.%2$s_initial_revision() RETURNS semver LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''%5$s''::semver';
+
+            -- TODO: add %1$s.%2$s_next_major, %1$s.%2$s_next_minor, and %1$s.%2$s_next_patch
+            -- CREATE FUNCTION %1$s.%2$s_next_major(version semver) RETURNS semver LANGUAGE sql IMMUTABLE PARALLEL SAFE AS '(get_semver_major($1))';
+
             CREATE OR REPLACE VIEW %1$s.%2$s AS
                 select *
-                from %1$s.%2$s_store;
+                  from %1$s.%2$s_store
+                order by version, created_at desc;
+
+            CREATE OR REPLACE VIEW %1$s.%2$s_latest AS
+                select distinct on (nature, context, %3$s_path, %3$s, max(version)) version, created_at, nature, context, %3$s_path, %3$s
+                from %1$s.%2$s_store
+                group by version, created_at, nature, context, %3$s_path, %3$s 
+                order by nature, context, %3$s_path, %3$s, max(version), created_at desc;
 
             create or replace function %1$s.version_upsert_%2$s() returns trigger as $genBody$
             declare
                 %2$sId integer;
             begin
-                -- TODO: if nature, context, asset already exists in the table, move the existing
-                -- record to the history and just update the version instead of inserting
+                -- TODO: if nature, context, %3$s already exists in the table, get the most recent record
+                -- and increment it
                 insert into %1$s.%2$s_store (nature, context, %3$s_path, %3$s, version, description, labels, %3$s_elaboration, meta_data) select 
                     NEW.nature,
                     (CASE WHEN (NEW.context IS NULL) THEN '%4$s' ELSE NEW.context END),
@@ -92,14 +104,14 @@ export function SQL(
                 EXECUTE('drop table if exists %1$s.%2$s cascade');
             END;
             $genBody$ LANGUAGE PLPGSQL;
-        $execBody$, schemaName, versionTableName, versionedItemColName, defaultCtx);
+        $execBody$, schemaName, versionTableName, versionedItemColName, defaultCtx, initVersion);
     END;
     $$ LANGUAGE PLPGSQL;
     
-    CREATE OR REPLACE PROCEDURE version_construct(schemaName text, versionTableName text, versionedItemColName text, defaultCtx text) AS $$
+    CREATE OR REPLACE PROCEDURE version_construct(schemaName text, versionTableName text, versionedItemColName text, defaultCtx text, initVersion semver) AS $$
     BEGIN
         -- TODO: register execution in DCP Lifecyle event table
-        EXECUTE(version_sql(schemaName, versionTableName, versionedItemColName, defaultCtx));
+        EXECUTE(version_sql(schemaName, versionTableName, versionedItemColName, defaultCtx, initVersion));
     END;
     $$ LANGUAGE PLPGSQL;`;
 }
