@@ -217,6 +217,7 @@ export const lifecycle = new TypicalSchema("dcp_lifecycle");
 export const assurance = new TypicalSchema("dcp_assurance_engineering");
 export const experimental = new TypicalSchema("dcp_experimental");
 export const lib = new TypicalSchema("dcp_lib");
+export const cron = new TypicalSchema("cron");
 
 export const stateless = (name: string, enhancing?: boolean) => {
   return new TypicalSchema(
