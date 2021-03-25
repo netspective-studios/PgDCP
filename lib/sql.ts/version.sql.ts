@@ -45,7 +45,8 @@ export function SQL(
             CREATE INDEX IF NOT EXISTS %2$s_store_context_idx ON %1$s.%2$s_store USING gist (context);
             CREATE INDEX IF NOT EXISTS %2$s_store_%3$s_path_idx ON %1$s.%2$s_store USING gist (%3$s_path);
             CREATE INDEX IF NOT EXISTS %2$s_store_%3$s_idx ON %1$s.%2$s_store (%3$s);
-            CREATE INDEX IF NOT EXISTS %2$s_store_version_idx ON %1$s.%2$s_store USING hash (version);
+            CREATE INDEX IF NOT EXISTS %2$s_store_version_idx ON %1$s.%2$s_store (version);
+            CREATE INDEX IF NOT EXISTS %2$s_store_version_hash_idx ON %1$s.%2$s_store USING hash (version);
             CREATE INDEX IF NOT EXISTS %2$s_store_labels_idx ON %1$s.%2$s_store USING gin (labels);
 
             -- TODO: add, optionally, %1$s.%2$s_pg_relationship table to connect %1$s.%2$s_store record
