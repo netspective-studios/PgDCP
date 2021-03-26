@@ -197,6 +197,7 @@ export class PublicSchema extends TypicalSchema {
   readonly semverExtn: iSQL.PostgreSqlExtension;
   readonly crossTabExtn: iSQL.PostgreSqlExtension;
   readonly pgCronExtn: iSQL.PostgreSqlExtension;
+  readonly uuidExtn: iSQL.PostgreSqlExtension;
 
   constructor() {
     super("public");
@@ -209,6 +210,7 @@ export class PublicSchema extends TypicalSchema {
     this.crossTabExtn = this.extension("tablefunc");
     this.pgCronExtn = this.extension("pg_cron");
     this.pgCryptoExtn = this.extension("pgcrypto");
+    this.uuidExtn = this.extension('"uuid-ossp"');
   }
 }
 
