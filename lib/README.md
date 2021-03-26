@@ -45,6 +45,7 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 
 # TODOs
 
+* Create convention of a custom data type called `schema_configuration` in each schema and a single function `schema_config` which will return a constant of type `schema_configuration` for all settings.
 * Move FDWs from simple schema names to real objects provided in `state` Options. Add `PostgreSqlForeignDataWrapper` as new interface to track and verify FDWs. `PostgreSqlForeignDataWrapper` is probably just a subclass of Schema.
 * Add stateless, statful, enhance, unrecoverable, FDW, etc. as options for `PostgreSqlSchema` object which can be verified and tracked.
 * Add `plpgsql_check` into all PgTAP unit tests; consider adding a new AG lifecycle function call `lint_*` which would be called by `select * from runlint()`.
