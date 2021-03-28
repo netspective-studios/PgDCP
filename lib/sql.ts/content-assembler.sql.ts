@@ -18,12 +18,13 @@ export function SQL(
       extensions: [schemas.extensions.unaccentExtn],
     },
   );
+  const { qualifiedReference: eqr } = schemas.extensions;
   const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`    
     CREATE OR REPLACE FUNCTION slugify("value" TEXT) RETURNS TEXT AS $$ 
         -- removes accents (diacritic signs) from a given string --
         WITH "unaccented" AS (
-            SELECT unaccent("value") AS "value"
+            SELECT ${eqr("unaccent")}("value") AS "value"
         ),
         -- lowercases the string
         "lowercase" AS (
