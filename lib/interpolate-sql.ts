@@ -104,6 +104,7 @@ export interface PostgreSqlLifecycleFunctions {
   readonly unitTest: PostgreSqlStoredRoutineSupplier;
   readonly lint: PostgreSqlStoredRoutineSupplier;
   readonly doctor: PostgreSqlStoredRoutineSupplier;
+  readonly metrics: PostgreSqlStoredRoutineSupplier;
   readonly populateSecrets: PostgreSqlStoredRoutineSupplier;
   readonly populateSeedData: PostgreSqlStoredRoutineSupplier;
   readonly populateExperimentalData: PostgreSqlStoredRoutineSupplier;

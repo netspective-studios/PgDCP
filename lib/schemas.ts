@@ -106,6 +106,16 @@ export class TypicalSqlLifecycleFunctions
     );
   };
 
+  readonly metrics: iSQL.PostgreSqlStoredRoutineSupplier = (
+    _,
+    override?,
+  ) => {
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      assurance,
+      `observability_metrics_${override || this.ag.name}`,
+    );
+  };
+
   readonly populateSecrets: iSQL.PostgreSqlStoredRoutineSupplier = (
     _,
     override?,

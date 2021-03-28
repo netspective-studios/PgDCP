@@ -90,7 +90,8 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 
 * Migrated all extensions into new `dcp_extensions` schema instead of `public`.
 * Added type-safe `gitlab_provenance` instead of `etc_` and `etc_secret_*` tables.
-* Added `lifecycle.sql.ts` template with `execution_context` domain and `exec_context_production()` and other `exec_context_*()` functions as "constants"
+* Added `lifecycle.sql.ts` template with `execution_context` domain and `exec_context_production()` and other `exec_context_*()` functions as "constants".
+* Added standard `metrics` function to AffinityGroup lifecycle functions.
 
 ### March 24, 2021
 
