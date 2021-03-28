@@ -37,10 +37,12 @@ By convention, all SQL is created within the following *types* of stored procedu
   * Each function is responsible for logging info, warn, error, and exception logs into the event/activity storage system.
 * `[AGorS]_destroy_storage`. Responsible for the destruction of all storage assets created by `[AGorS]_construct_storage`.
 * `[AGorS]_destroy_idempotent`. Responsible for the destruction of all non-storage, idempotent, assets created by `[AGorS]_construct_idempotent`.
+* `[AGorS]_hook_*`. TODO: Responsible for responding to external requests from CI/CD or other webhook consumers. The job of the hook might be something as simple as refreshing a materialized view or something more complicated such as rebuilding all schema objects.
 * `[AGorS]_test_*`. pgTAP unit tests for objects related to a schema or AG.
 * `[AGorS]_lint_*`. `plpgsql_check` lint results for objects related to a schema or AG.
 * `[AGorS]_health_*`. TODO: Runtime health checks that applications and services can run to see if they have a connection and proper permissions (e.g. `ping` style).
 * `[AGorS]_doctor_*`. Runtime dependency checks that applications and services can run to see if all required dependencies are installed (e.g. extensions).
+* `[AGorS]_observability_metrics_*`. Responsible for generating OpenMetrics for the affinity group, when requested. Typically this will be a view which, when called by PostgREST or Postgraphile, will generate OpenMetrics format text output that can be scraped by Prometheus.
 * `[AGorS]_populate_secrets`. Responsbile for populating confidential data related to the objects.
 * `[AGorS]_populate_seed_data`. Responsbile for populating seed data used across all contexts.
   * Each function is responsible for logging info, warn, error, and exception logs into the event/activity storage system.
@@ -71,18 +73,19 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 * Add ability to automatically segregate views that consumers can use from tables ("stores") that should be considered private and not used by consumers/developers.
   * Make the views all updatable in accessible schemas while tables' schemas would be inaccessible and might even have [create rule](https://www.postgresql.org/docs/13/sql-createrule.html) based notices.
 * Create auto-generated SQL to enforce immutability of tables -- e.g. the version tables, events tables, should allow insert but not update/delete. See [this conversation](https://www.tek-tips.com/viewthread.cfm?qid=1116256).
-* Create auto-generated SQL to validate data before it goes into tables -- we want to allow UIs to call validation functions/views that return error messages that would be identical to what would happen if constraints are violated, before those constraints are actually violoated when data is inserted/updated.
+* Create auto-generated SQL to validate data before it goes into tables -- we want to allow UIs to call validation functions/views that return error messages that would be identical to what would happen if constraints are violated, before those constraints are actually violoated when data is inserted/updated. This should probably use `PLv8` so that the same code that runs in the UI can be run on the server, inside the database.
 * Go through all `[AGorS]_construct_storage` and `[AGorS]_construct_idempotent` procedures in all `*.sql.ts` templates to ensure storage is properly separated from idempotent functionality.
   * Add, to all `*_construct_*` functions, a call to record its creation version and event log.
 * Go through all `[AGorS]_destroy_storage` and `[AGorS]_destroy_idempotent` procedures in all `*.sql.ts` templates to ensure storage is properly separated from idempotent functionality.
   * Add, to all *_destroy() functions the requirement that it be a specific user that is calling the destruction (e.g. "dcp_destroyer") and that user is highly restricted.
-* In Variant, add updatable views to retrieve / store provenance.
-* In Variant, add pg_cron-based auto-update capability (which and automatically retire old versions and refresh views).
-* In Variant, add *sensitivity* ltree[] to allow confidentiality to be specified in provenance as well as prime; base on *sensitivity* we may want to store encrypted text/JSON/XML.
 * Add health checks standard functions that applications and service consumers can call to verify that runtime execution will not fail.
   * Example: *doctor* style functionality that will:
     * Test that all extensions required are installed and will not throw runtime exceptions
     * Test that caller has permissions to all dependencies such as schemas, objects, and will not throw runtime exceptions
+* Add `[AGorS]_hook_*` for responding to external requests from CI/CD or other webhook consumers. The job of the hook might be something as simple as refreshing a materialized view or something more complicated such as rebuilding all schema objects.
+* In Variant, add updatable views to retrieve / store provenance.
+* In Variant, add pg_cron-based auto-update capability (which and automatically retire old versions and refresh views).
+* In Variant, add *sensitivity* ltree[] to allow confidentiality to be specified in provenance as well as prime; base on *sensitivity* we may want to store encrypted text/JSON/XML.
 
 ## Activity Log
 
