@@ -36,6 +36,17 @@ export function SQL(
     ${schemas.experimental.createSchemaSql(state)};
     ${schemas.lib.createSchemaSql(state)};
 
+    -- make sure everybody can use everything in the extensions schema
+    grant usage on schema ${schemas.extensions.name} to public;
+    grant execute on all functions in schema ${schemas.extensions.name} to public;
+
+    -- include future extensions
+    alter default privileges in schema ${schemas.extensions.name}
+      grant execute on functions to public;
+
+    alter default privileges in schema ${schemas.extensions.name}
+      grant usage on types to public;
+
     CREATE OR REPLACE PROCEDURE ${fn.constructIdempotent(state).qName}() AS $$
     BEGIN
         CALL ${
