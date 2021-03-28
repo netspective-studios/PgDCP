@@ -187,6 +187,7 @@ Content engineers who need datasets:
 
 Precision Knowledge:
 
+* [Intuit’s Data Mesh Strategy](https://medium.com/intuit-engineering/intuits-data-mesh-strategy-778e3edaa017)
 * [Web development platform built entirely in PostgreSQL](https://github.com/aquametalabs/aquameta)
 * [Postgres Analytics \- Tips, best practices & extensions](https://github.com/swarm64/webinar-pg-analytics)
 * [OWASP API Security Project](https://owasp.org/www-project-api-security/)
