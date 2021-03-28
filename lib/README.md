@@ -11,10 +11,24 @@ Since the PostgreSQL Data Computing Platform (PgDCP) leverages SQL for its funct
   * `sandbox` and `devl` are considered *experimental* contexts and should only contain synthetic or generated data.
   * `test` may also be considered *experimental*, especially if all data is synthetic. If `test` databases include copies of production data that are not anonymized they are considered `confidential experimental` data.
 
+## Principles & Practices
+
+In general, we favor *stored procedures* (SPs) instead of *stored functions* (SFs) for object construction and destruction activities because SPs can participate in and be, themselves, transactions. We want to encapsulate all our scripts in SPs and execute them in the database. This way, every script is, at least, documented in the database if not fully reusable and idempotent.
+
+* Create *stored procedures* (SPs) for all object construction and destruction activities.
+* Each SP must be idempotent, versioned, and event storable whenever possible. Of course, object storage construction and destruction SPs are not idemponent (unless wrapped in appropriate IF clauses, [but that might be an anti-pattern](https://thedailywtf.com/articles/Database-Changes-Done-Right)).
+* Idempotency of *object storage* construction should be guaranteed by introspecting the structure whenever possible (rather than just version numbers). 
+  * Use PgTAP for introspection whenever possible, use PG catalog directly when PgTAP does not provide an introspection feature,
+* Idempotency of all other types of object construction (e.g. types, views, routines, etc.) should be guaranteed by taking versions as input and passing versions in output.
+* For transactions where *history* (change data capture) at the row level is important, include a `activity JSONB` column which will contain all changes as JSON. The JSON activity on a per-table basis can be included in each table as a column in the table or with an adjacent or related 1:1 normalized table in a separate tablespace / partition / schema. For example, if table is X then another table called X_activity can be created with `activity JSONB` column in the related adjacent table. [Auto-generated triggers](https://github.com/solidsnack/macaroon/blob/master/audit.sql) or [other techniques](https://mydbanotebook.org/post/auditing/) could be used to keep the change data capture history automatically.
+
+For a good understanding of anti-patterns check out [Database Changes Done Right](https://thedailywtf.com/articles/Database-Changes-Done-Right).
+
 ## Stored Procedures
 
 By convention, all SQL is created within the following *types* of stored procedures within *affinity groups* (or *schemas*):
 
+* `[AGorS]_registration`. Responsible for the providing profile, dossier, or similar configuration information for a schema or affinity group.
 * `[AGorS]_construct_storage`. Responsible for the creation of all *storage assets* related. All `create table` and other DDL which defines data storage would be contained in `*_construct_storage` procedures.
   * Each function is responsible to check to see which version of objects are created and only update those necessary
   * Each function is responsible for updating its version number
@@ -45,9 +59,14 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 
 # TODOs
 
-* Create convention of a custom data type called `schema_configuration` in each schema and a single function `schema_config` which will return a constant of type `schema_configuration` for all settings.
+* Create `SQLa` templates to provide per-schema introspection for our naming conventions using [PgTAP](https://raw.githubusercontent.com/theory/pgtap/8f8bb50fc8871dbbcf8dadd240069ae721678a7b/sql/pgtap--0.95.0--0.96.0.sql.in) guidance. For example, we should be able to locate our lifecycle stored routines by searching the PG catalog.
+* Create `SQLa` templates to implement guidance from [Simply auditing your database changes](https://mydbanotebook.org/post/auditing/).
+* Create convention of custom data types called `schema_registration`, `schema_configuration` and `schema_nature` in each schema and a single function `registry` which will return a constant that groups the config/nature and combine any other meta data, settings, etc. for a given schema (make sure to use the PG catalog to stay [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself)). Instead of putting nature and dossier information into the name of the schema, we can have well-typed definitions.
+  * `nature` would be used for settings that would not change often
+    * Add stateless, statful, enhance, unrecoverable, FDW, etc. would probably be good for `nature` meta data
+  * `configuration` would be used for settings that could reasonably change often
+    * Semver to version the schema might be good for `configuration` meta data
 * Move FDWs from simple schema names to real objects provided in `state` Options. Add `PostgreSqlForeignDataWrapper` as new interface to track and verify FDWs. `PostgreSqlForeignDataWrapper` is probably just a subclass of Schema.
-* Add stateless, statful, enhance, unrecoverable, FDW, etc. as options for `PostgreSqlSchema` object which can be verified and tracked.
 * Add `plpgsql_check` into all PgTAP unit tests; consider adding a new AG lifecycle function call `lint_*` which would be called by `select * from runlint()`.
 * Add ability to automatically segregate views that consumers can use from tables ("stores") that should be considered private and not used by consumers/developers.
   * Make the views all updatable in accessible schemas while tables' schemas would be inaccessible and might even have [create rule](https://www.postgresql.org/docs/13/sql-createrule.html) based notices.
@@ -66,6 +85,12 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
     * Test that caller has permissions to all dependencies such as schemas, objects, and will not throw runtime exceptions
 
 ## Activity Log
+
+### March 27, 2021
+
+* Migrated all extensions into new `dcp_extensions` schema instead of `public`.
+* Added type-safe `gitlab_provenance` instead of `etc_` and `etc_secret_*` tables.
+* Added `lifecycle.sql.ts` template with `execution_context` domain and `exec_context_production()` and other `exec_context_*()` functions as "constants"
 
 ### March 24, 2021
 
