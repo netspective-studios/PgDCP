@@ -51,10 +51,10 @@ export function SQL(
         CALL ${
     lcqr("event_manager_construct")
   }('${schemas.lifecycle.name}', 'activity', 'event', 'lifecycle');
-      CALL ${
+        CALL ${
     lcqr("variant_construct")
   }('${schemas.confidential.name}', 'etc_secret', 'secrets', 'project');
-      CALL ${
+        CALL ${
     lcqr("variant_construct")
   }('${schemas.lib.name}','etc','config','project');
     END;
