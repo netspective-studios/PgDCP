@@ -55,7 +55,7 @@ export function SQL(
             -- TODO: add, optionally, %1$s.%2$s_event_relationship table to connect %1$s.%2$s_store record
             --       to an existing event manager row; that way, we can tie an event to a version of something
 
-            CREATE FUNCTION %1$s.%2$s_initial_revision() RETURNS semver LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''%5$s''::semver';
+            CREATE OR REPLACE FUNCTION %1$s.%2$s_initial_revision() RETURNS semver LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''%5$s''::semver';
 
             -- TODO: add %1$s.%2$s_next_major, %1$s.%2$s_next_minor, and %1$s.%2$s_next_patch
             -- CREATE FUNCTION %1$s.%2$s_next_major(version semver) RETURNS semver LANGUAGE sql IMMUTABLE PARALLEL SAFE AS '(get_semver_major($1))';
