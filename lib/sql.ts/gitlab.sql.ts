@@ -35,7 +35,7 @@ export function SQL(
         authn_token_created_at timestamptz NOT NULL,
         authn_token_created_by text NOT NULL,
         authn_token_expires_at timestamptz NOT NULL,
-        CONSTRAINT gitlab_provenance_unq_row UNIQUE(context, api_base_url, secret_authn_token)
+        CONSTRAINT gitlab_provenance_unq_row UNIQUE(context)
       );
     END;
     $$ LANGUAGE PLPGSQL;
@@ -43,13 +43,26 @@ export function SQL(
     CREATE OR REPLACE PROCEDURE ${fn.constructIdempotent(state).qName}() AS $$
     BEGIN
       ${state.setSearchPathSql()};
-      -- CREATE OR REPLACE FUNCTION gitlab_project_asset_http_request(prov gitlab_provenance, project_id integer, asset_file_path text, branchOrTag text) returns http_request AS $innerFnBody$
-      -- BEGIN
-      --   ${state.setSearchPathSql()};
-      --   return ('GET', format('%s/projects/%s/repository/files/%s?ref=%s', prov.api_base_url, project_id, asset_file_path, branchOrTag),
-      --        ARRAY[http_header('PRIVATE-TOKEN',prov.secret_authn_token)], NULL, NULL)::http_request;
-      -- END;
-      -- $innerFnBody$ LANGUAGE PLPGSQL;
+
+      CREATE OR REPLACE FUNCTION gitlab_project_asset_http_request(prov ${
+    cqr("gitlab_provenance")
+  }, project_id integer, asset_file_path text, branchOrTag text) returns http_request AS $innerFnBody$
+      BEGIN
+        ${state.setSearchPathSql()};
+        return ('GET', format('%s/projects/%s/repository/files/%s?ref=%s', prov.api_base_url, project_id, asset_file_path, branchOrTag),
+             ARRAY[http_header('PRIVATE-TOKEN', prov.secret_authn_token)], NULL, NULL)::http_request;
+      END;
+      $innerFnBody$ LANGUAGE PLPGSQL;
+
+      CREATE OR REPLACE FUNCTION gitlab_project_commit_http_request(prov ${
+    cqr("gitlab_provenance")
+  }, project_id integer, commit_id text) returns http_request AS $innerFnBody$
+      BEGIN
+        ${state.setSearchPathSql()};
+        return ('GET', format('%s/projects/%s/repository/commits/%s', prov.api_base_url, project_id, commit_id),
+             ARRAY[http_header('PRIVATE-TOKEN', prov.secret_authn_token)], NULL, NULL)::http_request;
+      END;
+      $innerFnBody$ LANGUAGE PLPGSQL;
     END;
     $$ LANGUAGE PLPGSQL;
 
