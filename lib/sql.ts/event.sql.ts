@@ -30,6 +30,7 @@ export function SQL(
                 nature ltree NOT NULL, -- the type, kind, or nature of the event, depends on context
                 context ltree default '%4$s', -- could be tenant, account, or any other "ownership" context
                 provenance ltree NOT NULL, -- the stream or human identity of the event source, depends on context and nature
+                caption text, -- a human-friendly message associated with the event
                 %3$s jsonb, -- elaboration of the event
                 meta_data jsonb, -- elaboration of the context, nature, provanance or other meta data
                 aliases ltree[], -- symlinks
@@ -64,10 +65,11 @@ export function SQL(
             declare
                 %2$sId UUID;
             begin
-                insert into %1$s.%2$s_store (context, nature, provenance, %3$s, meta_data, aliases, versions) select 
+                insert into %1$s.%2$s_store (context, nature, provenance, caption, %3$s, meta_data, aliases, versions) select 
                     (CASE WHEN (NEW.context IS NULL) THEN '%4$s' ELSE NEW.context END),
                     NEW.nature,
                     NEW.provenance,
+                    NEW.caption,
                     NEW.%3$s,
                     NEW.meta_data,
                     NEW.aliases,
