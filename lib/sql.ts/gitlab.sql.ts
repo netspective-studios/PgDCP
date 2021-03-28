@@ -15,10 +15,7 @@ export function SQL(
       {
         schema: schemas.lib,
         affinityGroup,
-        extensions: [
-          schemas.extensions.httpExtn,
-          schemas.pgCatalog.plPythonExtn,
-        ],
+        extensions: [schemas.extensions.httpExtn],
       },
   );
   const { qualifiedReference: cqr } = schemas.confidential;
@@ -69,17 +66,9 @@ export function SQL(
     CREATE OR REPLACE PROCEDURE ${fn.destroyIdempotent(state).qName}() AS $$
     BEGIN
         DROP FUNCTION IF EXISTS ${fn.unitTest(state).qName}();        
-        DROP FUNCTION ${
-    sqr("gitlab_project_asset_content_text")
-  }(TEXT, TEXT, INTEGER, TEXT);
-        DROP FUNCTION ${
-    sqr("gitlab_project_asset_content_json")
-  }(TEXT, TEXT, INTEGER, TEXT);
-        DROP FUNCTION ${
-    sqr("gitlab_project_asset_content_xml")
-  }(TEXT, TEXT, INTEGER, TEXT);
-        DROP PROCEDURE IF EXISTS ${sqr("gitlab_project_asset_http_request")};
-        DROP TABLE IF EXISTS ${sqr("gitlab_provenance")};        
+        DROP FUNCTION IF EXISTS ${sqr("gitlab_project_asset_http_request")};
+        DROP FUNCTION IF EXISTS ${sqr("gitlab_project_commit_http_request")};
+        DROP TABLE IF EXISTS ${cqr("gitlab_provenance")};
     END;
     $$ LANGUAGE PLPGSQL;
 
@@ -87,10 +76,7 @@ export function SQL(
     fn.unitTest(state).qName
   }() RETURNS SETOF TEXT AS $$
     BEGIN 
-        RETURN NEXT has_extension('plpython3u');
-        RETURN NEXT has_function('gitlab_project_asset_content_text');
-        RETURN NEXT has_function('gitlab_project_asset_content_json');
-        RETURN NEXT has_function('gitlab_project_asset_content_xml');
+        RETURN NEXT has_table('${schemas.confidential.name}', 'gitlab_provenance');
     END;
     $$ LANGUAGE plpgsql;`;
 }
