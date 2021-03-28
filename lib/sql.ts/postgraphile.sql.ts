@@ -15,7 +15,7 @@ export function SQL(
       {
         schema: schemas.lib,
         affinityGroup,
-        extensions: [schemas.publicSchema.pgCryptoExtn],
+        extensions: [schemas.extensions.pgCryptoExtn],
       },
   );
   const { lcFunctions: fn } = state.affinityGroup;

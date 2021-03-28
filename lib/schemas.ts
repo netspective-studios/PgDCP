@@ -8,7 +8,7 @@ export class TypicalSchemaExtension implements iSQL.PostgreSqlExtension {
   }
 
   readonly createSql: iSQL.PostgreSqlStatementSupplier = () => {
-    return `CREATE EXTENSION IF NOT EXISTS ${this.name}`;
+    return `CREATE EXTENSION IF NOT EXISTS ${this.name} SCHEMA ${this.schema.name}`;
   };
 
   readonly dropSql: iSQL.PostgreSqlStatementSupplier = () => {
@@ -187,10 +187,9 @@ export class TypicalSchema implements iSQL.PostgreSqlSchema {
   };
 }
 
-export class PublicSchema extends TypicalSchema {
+export class ExtensionsSchema extends TypicalSchema {
   readonly pgTapExtn: iSQL.PostgreSqlExtension;
   readonly pgStatStatementsExtn: iSQL.PostgreSqlExtension;
-  readonly plPythonExtn: iSQL.PostgreSqlExtension;
   readonly pgCryptoExtn: iSQL.PostgreSqlExtension;
   readonly unaccentExtn: iSQL.PostgreSqlExtension;
   readonly ltreeExtn: iSQL.PostgreSqlExtension;
@@ -198,27 +197,41 @@ export class PublicSchema extends TypicalSchema {
   readonly crossTabExtn: iSQL.PostgreSqlExtension;
   readonly pgCronExtn: iSQL.PostgreSqlExtension;
   readonly uuidExtn: iSQL.PostgreSqlExtension;
+  readonly httpExtn: iSQL.PostgreSqlExtension;
 
   constructor() {
-    super("public");
+    super("dcp_extensions");
     this.pgTapExtn = this.extension("pgtap");
     this.pgStatStatementsExtn = this.extension("pg_stat_statements");
     this.unaccentExtn = this.extension("unaccent");
-    this.plPythonExtn = this.extension("plpython3u");
     this.ltreeExtn = this.extension("ltree");
     this.semverExtn = this.extension("semver");
     this.crossTabExtn = this.extension("tablefunc");
     this.pgCronExtn = this.extension("pg_cron");
     this.pgCryptoExtn = this.extension("pgcrypto");
     this.uuidExtn = this.extension('"uuid-ossp"');
+    this.httpExtn = this.extension("http");
   }
 }
 
-export const publicSchema = new PublicSchema();
+export class PgCatalogSchema extends TypicalSchema {
+  // extension "plpython3u" must be installed in schema "pg_catalog"
+  // "pg_catalog" is implictly included in every search_path, though
+  readonly plPythonExtn: iSQL.PostgreSqlExtension;
+
+  constructor() {
+    super("pg_catalog");
+    this.plPythonExtn = this.extension("plpython3u");
+  }
+}
+
+export const extensions = new ExtensionsSchema();
+export const pgCatalog = new PgCatalogSchema();
 export const lifecycle = new TypicalSchema("dcp_lifecycle");
 export const assurance = new TypicalSchema("dcp_assurance_engineering");
 export const experimental = new TypicalSchema("dcp_experimental");
 export const lib = new TypicalSchema("dcp_lib");
+export const confidential = new TypicalSchema("dcp_confidential");
 export const cron = new TypicalSchema("cron");
 
 export const stateless = (name: string, enhancing?: boolean) => {

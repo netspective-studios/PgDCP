@@ -14,8 +14,8 @@ export function SQL(
         schemas.lib,
       ],
       extensions: [
-        schemas.publicSchema.ltreeExtn,
-        schemas.publicSchema.semverExtn,
+        schemas.extensions.ltreeExtn,
+        schemas.extensions.semverExtn,
       ],
     },
   );

@@ -14,7 +14,7 @@ export function SQL(
     options || {
       schema: schemas.lib,
       affinityGroup,
-      extensions: [schemas.publicSchema.plPythonExtn],
+      extensions: [schemas.pgCatalog.plPythonExtn],
     },
   );
   const { lcFunctions: fn } = state.affinityGroup;

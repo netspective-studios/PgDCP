@@ -15,7 +15,7 @@ export function SQL(
       schema: schemas.lib,
       affinityGroup,
       searchPath: [schemas.lib],
-      extensions: [schemas.publicSchema.unaccentExtn],
+      extensions: [schemas.extensions.unaccentExtn],
     },
   );
   const { lcFunctions: fn } = state.affinityGroup;

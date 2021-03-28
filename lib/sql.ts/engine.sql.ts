@@ -2,6 +2,7 @@ import * as mod from "../mod.ts";
 import * as schemas from "../schemas.ts";
 import * as tmpl from "../templates.ts";
 import * as variant from "./variant.sql.ts";
+import * as lifecycle from "./lifecycle.sql.ts";
 
 export const affinityGroup = new schemas.TypicalAffinityGroup(
   "engine",
@@ -18,26 +19,25 @@ export function SQL(
         affinityGroup,
         headers: { standalone: [tmpl.preface, tmpl.extensions] }, // skip schema and search path
         extensions: [
-          schemas.publicSchema.pgTapExtn,
-          schemas.publicSchema.pgStatStatementsExtn,
-          schemas.publicSchema.ltreeExtn,
-          schemas.publicSchema.semverExtn,
+          schemas.extensions.pgTapExtn,
+          schemas.extensions.pgStatStatementsExtn,
+          schemas.extensions.ltreeExtn,
+          schemas.extensions.semverExtn,
         ],
       },
     ),
   };
+  const { qualifiedReference: lcqr } = schemas.lifecycle;
   const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`
     ${schemas.lifecycle.createSchemaSql(state)};
+    ${schemas.confidential.createSchemaSql(state)};
     ${schemas.assurance.createSchemaSql(state)};
     ${schemas.experimental.createSchemaSql(state)};
     ${schemas.lib.createSchemaSql(state)};
 
     CREATE OR REPLACE PROCEDURE ${fn.constructIdempotent(state).qName}() AS $$
     BEGIN
-        ${schemas.assurance.createSchemaSql(state)};
-        ${schemas.experimental.createSchemaSql(state)};
-        ${schemas.lib.createSchemaSql(state)};
         CALL ${
     schemas.lifecycle.qualifiedReference("version_construct")
   }('${schemas.lifecycle.name}', 'asset_version', 'asset', NULL, '1.0.0'::semver);
@@ -46,11 +46,17 @@ export function SQL(
         insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_history', ${schemas.lifecycle.name}.asset_version_initial_revision());
 
         CALL ${
-    schemas.lifecycle.qualifiedReference("variant_construct")
+    lcqr("variant_construct")
   }('${schemas.lifecycle.name}', 'configuration', 'lifecycle', 'main');
         CALL ${
-    schemas.lifecycle.qualifiedReference("event_manager_construct")
+    lcqr("event_manager_construct")
   }('${schemas.lifecycle.name}', 'activity', 'event', 'lifecycle');
+      CALL ${
+    lcqr("variant_construct")
+  }('${schemas.confidential.name}', 'etc_secret', 'secrets', 'project');
+      CALL ${
+    lcqr("variant_construct")
+  }('${schemas.lib.name}','etc','config','project');
     END;
     $$ LANGUAGE PLPGSQL;
 
@@ -111,6 +117,7 @@ export function SQL(
         RETURN NEXT ok(pg_version_num() > 13000, 
                     format('PostgreSQL engine instance versions should be at least 13000 [%s]', pg_version()));
     END;$$;
-    
+
+${ctx.embed(ctx, state, (eic) => lifecycle.SQL(eic))}    
 ${ctx.embed(ctx, state, (eic) => variant.SQL(eic))}`;
 }

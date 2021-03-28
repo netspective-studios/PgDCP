@@ -26,9 +26,13 @@ export const schema: iSQL.DcpTemplateSupplier = (state) => {
 };
 
 export const extensions: iSQL.DcpTemplateSupplier = (state) => {
-  return state.extensions
-    ? (state.extensions.map((e) => `${e.createSql(state)};`).join("\n"))
-    : "-- no extensions required";
+  if (state.extensions) {
+    return [
+      schemas.extensions.createSchemaSql(state) + ";",
+      ...(state.extensions.map((e) => `${e.createSql(state)};`)),
+    ].join("\n");
+  }
+  return "-- no extensions required";
 };
 
 export const searchPath: iSQL.DcpTemplateSupplier = (state) => {
