@@ -76,6 +76,26 @@ export class TypicalSqlLifecycleFunctions
     );
   };
 
+  readonly deployProvenanceHttpRequest: iSQL.PostgreSqlStoredRoutineSupplier = (
+    _,
+    override?,
+  ) => {
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      assurance,
+      `${override || this.ag.name}_deploy_provenance_http_request`,
+    );
+  };
+
+  readonly upgrade: iSQL.PostgreSqlStoredRoutineSupplier = (
+    _,
+    override?,
+  ) => {
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      assurance,
+      `${override || this.ag.name}_upgrade`,
+    );
+  };
+
   readonly unitTest: iSQL.PostgreSqlStoredRoutineSupplier = (
     _,
     override?,

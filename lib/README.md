@@ -37,6 +37,8 @@ By convention, all SQL is created within the following *types* of stored procedu
   * Each function is responsible for logging info, warn, error, and exception logs into the event/activity storage system.
 * `[AGorS]_destroy_storage`. Responsible for the destruction of all storage assets created by `[AGorS]_construct_storage`.
 * `[AGorS]_destroy_idempotent`. Responsible for the destruction of all non-storage, idempotent, assets created by `[AGorS]_construct_idempotent`.
+* `[AGorS]_deploy_provenance_http_request`. Responsible for providing an HTTP Request filled out to retrieve the latest code that will upgrade this affinity group or schema.
+* `[AGorS]_upgrade`. Uses `[AGorS]_deploy_provenance_http_request` to obtain the latest code and reload the code into the database, effectively "upgrading" the affinity group or schema.
 * `[AGorS]_hook_*`. TODO: Responsible for responding to external requests from CI/CD or other webhook consumers. The job of the hook might be something as simple as refreshing a materialized view or something more complicated such as rebuilding all schema objects.
 * `[AGorS]_test_*`. pgTAP unit tests for objects related to a schema or AG.
 * `[AGorS]_lint_*`. `plpgsql_check` lint results for objects related to a schema or AG.
