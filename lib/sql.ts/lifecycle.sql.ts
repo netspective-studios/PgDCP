@@ -15,32 +15,15 @@ export function SQL(
   const { qualifiedReference: eqr } = schemas.extensions;
   const { qualifiedReference: sqr } = state.schema;
   const { lcFunctions: lcf } = state.affinityGroup;
+
+  // deno-fmt-ignore
   return mod.SQL(ctx, state)`  
     CREATE DOMAIN ${sqr("execution_context")} as ${eqr("ltree")};
 
-    CREATE OR REPLACE FUNCTION ${sqr("exec_context_production")}() RETURNS ${
-    sqr("execution_context")
-  } LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''production''::${
-    sqr("execution_context")
-  }';
-
-    CREATE OR REPLACE FUNCTION ${sqr("exec_context_test")}() RETURNS ${
-    sqr("execution_context")
-  } LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''test''::${
-    sqr("execution_context")
-  }';
-
-    CREATE OR REPLACE FUNCTION ${sqr("exec_context_devl")}() RETURNS ${
-    sqr("execution_context")
-  } LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''devl''::${
-    sqr("execution_context")
-  }';
-
-    CREATE OR REPLACE FUNCTION ${sqr("exec_context_sandbox")}() RETURNS ${
-    sqr("execution_context")
-  } LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''sandbox''::${
-    sqr("execution_context")
-  }';
+    CREATE OR REPLACE FUNCTION ${sqr("exec_context_production")}() RETURNS ${sqr("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''production''::${sqr("execution_context")}';
+    CREATE OR REPLACE FUNCTION ${sqr("exec_context_test")}() RETURNS ${sqr("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''test''::${sqr("execution_context")}';
+    CREATE OR REPLACE FUNCTION ${sqr("exec_context_devl")}() RETURNS ${sqr("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''devl''::${sqr("execution_context")}';
+    CREATE OR REPLACE FUNCTION ${sqr("exec_context_sandbox")}() RETURNS ${sqr("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''sandbox''::${sqr("execution_context")}';
 
     -- TODO: create is_exec_context_production(execution_context) and is_exec_context_experimental(execution_context)
 
@@ -54,9 +37,7 @@ export function SQL(
     END;
     $$ LANGUAGE PLPGSQL;
     
-    CREATE OR REPLACE FUNCTION ${
-    lcf.unitTest(state).qName
-  }() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
+    CREATE OR REPLACE FUNCTION ${lcf.unitTest(state).qName}() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
     BEGIN 
         RETURN NEXT has_function('${state.schema.name}', 'exec_context_production');
         RETURN NEXT has_function('${state.schema.name}', 'exec_context_test');
