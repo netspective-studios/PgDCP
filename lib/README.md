@@ -91,6 +91,10 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 
 ## Activity Log
 
+### March 29, 2021
+
+* Introduce new `asset.sql.ts` which is a type-safe library for managing remote assets such as GitLab project repo files.
+
 ### March 27, 2021
 
 * Migrated all extensions into new `dcp_extensions` schema instead of `public`.
