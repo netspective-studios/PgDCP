@@ -29,6 +29,7 @@ export function SQL(
   };
   const { qualifiedReference: lcqr } = schemas.lifecycle;
   const { lcFunctions: fn } = state.affinityGroup;
+  // deno-fmt-ignore
   return mod.SQL(ctx, state)`
     ${schemas.lifecycle.createSchemaSql(state)};
     ${schemas.confidential.createSchemaSql(state)};
@@ -49,35 +50,25 @@ export function SQL(
 
     CREATE OR REPLACE PROCEDURE ${fn.constructIdempotent(state).qName}() AS $$
     BEGIN
-        CALL ${
-    schemas.lifecycle.qualifiedReference("version_construct")
-  }('${schemas.lifecycle.name}', 'asset_version', 'asset', NULL, '1.0.0'::semver);
+        CALL ${schemas.lifecycle.qualifiedReference("version_construct")}('${schemas.lifecycle.name}', 'asset_version', 'asset', NULL, '1.0.0'::semver);
         insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_store', ${schemas.lifecycle.name}.asset_version_initial_revision());
         insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_label_store', ${schemas.lifecycle.name}.asset_version_initial_revision());
         insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_history', ${schemas.lifecycle.name}.asset_version_initial_revision());
 
-        CALL ${
-    lcqr("variant_construct")
-  }('${schemas.lifecycle.name}', 'configuration', 'lifecycle', 'main');
-        CALL ${
-    lcqr("event_manager_construct")
-  }('${schemas.lifecycle.name}', 'activity', 'event', 'lifecycle');
-        CALL ${
-    lcqr("variant_construct")
-  }('${schemas.confidential.name}', 'etc_secret', 'secrets', 'project');
-        CALL ${
-    lcqr("variant_construct")
-  }('${schemas.lib.name}','etc','config','project');
+        CALL ${lcqr("variant_construct")}('${schemas.lifecycle.name}', 'configuration', 'lifecycle', 'main');
+        CALL ${lcqr("event_manager_construct")}('${schemas.lifecycle.name}', 'activity', 'event', 'lifecycle');
+        
+        CALL ${lcqr("variant_construct")}('${schemas.lib.name}','etc','config','project');
     END;
     $$ LANGUAGE PLPGSQL;
 
     CREATE OR REPLACE PROCEDURE ${fn.destroyIdempotent(state).qName}() AS $$
     BEGIN
         -- TODO: if user = 'dcp_destroyer' ... else raise exception invalid user trying to destroyIdempotent
-        ${schemas.assurance.dropSchemaSql(state)};
-        ${schemas.experimental.dropSchemaSql(state)};
-        ${schemas.lib.dropSchemaSql(state)};
-        call variant_dcp_lifecycle_etc_destroy_all_objects();
+      ${schemas.assurance.dropSchemaSql(state)};
+      ${schemas.experimental.dropSchemaSql(state)};
+      ${schemas.lib.dropSchemaSql(state)};
+      call variant_dcp_lifecycle_etc_destroy_all_objects();
     END;
     $$ LANGUAGE PLPGSQL;
 
@@ -97,10 +88,8 @@ export function SQL(
         FOR funcrow IN SELECT proargtypes FROM pg_proc WHERE proname = function_name LOOP
             --for some reason array_upper is off by one for the oidvector type, hence the +1
             numparameters = array_upper(funcrow.proargtypes, 1) + 1;
-
             i = 0;
             paramtext = '';
-
             LOOP
                 IF i < numparameters THEN
                     IF i > 0 THEN
@@ -112,10 +101,8 @@ export function SQL(
                     EXIT;
                 END IF;
             END LOOP;
-
             EXECUTE 'DROP FUNCTION ' || function_name || '(' || paramtext || ');';
             numfunctions = numfunctions + 1;
-
         END LOOP;
     RETURN 'Dropped ' || numfunctions || ' functionNames';
     END;
@@ -126,7 +113,7 @@ export function SQL(
   }() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
     BEGIN 
         RETURN NEXT ok(pg_version_num() > 13000, 
-                    format('PostgreSQL engine instance versions should be at least 13000 [%s]', pg_version()));
+        format('PostgreSQL engine instance versions should be at least 13000 [%s]', pg_version()));
     END;$$;
 
 ${ctx.embed(ctx, state, (eic) => lifecycle.SQL(eic))}    
