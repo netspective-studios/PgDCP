@@ -29,6 +29,8 @@ export function SQL(
         host text NOT NULL,
         port integer NOT NULL,
         dbname text NOT NULL,
+        local_schema text NOT NULL,
+        server_name text NOT NULL,
         fetch_size integer default 50,
         user_name text NOT NULL,
         password_clear text NOT NULL,
