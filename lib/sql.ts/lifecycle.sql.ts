@@ -24,6 +24,7 @@ export function SQL(
     CREATE OR REPLACE FUNCTION ${sqr("exec_context_test")}() RETURNS ${sqr("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''test''::${sqr("execution_context")}';
     CREATE OR REPLACE FUNCTION ${sqr("exec_context_devl")}() RETURNS ${sqr("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''devl''::${sqr("execution_context")}';
     CREATE OR REPLACE FUNCTION ${sqr("exec_context_sandbox")}() RETURNS ${sqr("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''sandbox''::${sqr("execution_context")}';
+    CREATE OR REPLACE FUNCTION ${sqr("exec_context_experimental")}() RETURNS ${sqr("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''experimental''::${sqr("execution_context")}';
 
     -- TODO: create is_exec_context_production(execution_context) and is_exec_context_experimental(execution_context)
 
@@ -34,6 +35,7 @@ export function SQL(
         DROP FUNCTION IF EXISTS ${sqr("exec_context_test")}();
         DROP FUNCTION IF EXISTS ${sqr("exec_context_devl")}();
         DROP FUNCTION IF EXISTS ${sqr("exec_context_sandbox")}();
+        DROP FUNCTION IF EXISTS ${sqr("exec_context_experimental")}();
     END;
     $$ LANGUAGE PLPGSQL;
     
@@ -43,6 +45,7 @@ export function SQL(
         RETURN NEXT has_function('${state.schema.name}', 'exec_context_test');
         RETURN NEXT has_function('${state.schema.name}', 'exec_context_devl');
         RETURN NEXT has_function('${state.schema.name}', 'exec_context_sandbox');
+        RETURN NEXT has_function('${state.schema.name}', 'exec_context_experimental');
     END;
     $$;`;
 }

@@ -26,6 +26,10 @@ export function SQL(
       CREATE TABLE IF NOT EXISTS ${cqr("fdw_postgres_authn")} (
         context ${lcqr("execution_context")} NOT NULL,
         identity text NOT NULL,
+        host text NOT NULL,
+        port integer NOT NULL,
+        dbname text NOT NULL,
+        fetch_size integer default 50,
         user_name text NOT NULL,
         password_clear text NOT NULL,
         purpose text NOT NULL,

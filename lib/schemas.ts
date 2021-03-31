@@ -228,6 +228,7 @@ export class ExtensionsSchema extends TypicalSchema {
   readonly pgCronExtn: iSQL.PostgreSqlExtension;
   readonly uuidExtn: iSQL.PostgreSqlExtension;
   readonly httpExtn: iSQL.PostgreSqlExtension;
+  readonly postgresFDW: iSQL.PostgreSqlExtension;
 
   constructor() {
     super("dcp_extensions");
@@ -241,6 +242,7 @@ export class ExtensionsSchema extends TypicalSchema {
     this.pgCryptoExtn = this.extension("pgcrypto");
     this.uuidExtn = this.extension('"uuid-ossp"');
     this.httpExtn = this.extension("http");
+    this.postgresFDW = this.extension("postgres_fdw");
   }
 }
 
