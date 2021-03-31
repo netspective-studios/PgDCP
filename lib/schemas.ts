@@ -18,6 +18,27 @@ export class TypicalSchemaExtension implements iSQL.PostgreSqlExtension {
   readonly searchPath = [this.schema];
 }
 
+export class TypicalSchemaDomain implements iSQL.PostgreSqlDomain {
+  constructor(
+    readonly name: iSQL.PostgreSqlExtensionName,
+    readonly dataType: iSQL.PostgreSqlDomainDataType,
+    readonly schema: iSQL.PostgreSqlSchema,
+    readonly domainDefnSql?: iSQL.SqlStatement,
+  ) {
+  }
+
+  readonly qName: iSQL.PostgreSqlDomainQualifiedName =
+    `${this.schema.name}.${this.name}`;
+
+  readonly createSql: iSQL.PostgreSqlStatementSupplier = () => {
+    return `CREATE DOMAIN ${this.schema.name}.${this.name} AS ${this.dataType}${this.domainDefnSql}`;
+  };
+
+  readonly dropSql: iSQL.PostgreSqlStatementSupplier = () => {
+    return `DROP EXTENSION IF EXISTS ${this.name}`;
+  };
+}
+
 export class TypicalPostgreSqlSchemaStoredRoutine
   implements iSQL.PostgreSqlStoredRoutine {
   constructor(
@@ -214,6 +235,14 @@ export class TypicalSchema implements iSQL.PostgreSqlSchema {
     name: iSQL.PostgreSqlExtensionName,
   ): iSQL.PostgreSqlExtension => {
     return new TypicalSchemaExtension(name, this);
+  };
+
+  readonly domain = (
+    name: iSQL.PostgreSqlDomainName,
+    dataType: iSQL.PostgreSqlDomainDataType,
+    elaborateDefn?: iSQL.SqlStatement,
+  ): iSQL.PostgreSqlDomain => {
+    return new TypicalSchemaDomain(name, dataType, this, elaborateDefn);
   };
 }
 

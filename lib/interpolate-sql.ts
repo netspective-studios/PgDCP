@@ -63,6 +63,9 @@ export type PostgreSqlStoredRoutineName = string;
 export type PostgreSqlStoredRoutineQualifiedName = string;
 export type PostgreSqlSchemaName = string;
 export type PostgreSqlExtensionName = string;
+export type PostgreSqlDomainName = string;
+export type PostgreSqlDomainDataType = string;
+export type PostgreSqlDomainQualifiedName = string;
 
 export interface PostgreSqlStatementSupplier {
   (state: DcpTemplateState): PostgreSqlStatement;
@@ -77,6 +80,14 @@ export interface PostgreSqlExtension {
   readonly createSql: PostgreSqlStatementSupplier;
   readonly dropSql: PostgreSqlStatementSupplier;
   readonly searchPath: PostgreSqlSchema[];
+}
+
+export interface PostgreSqlDomain {
+  readonly name: PostgreSqlDomainName;
+  readonly qName: PostgreSqlDomainQualifiedName;
+  readonly dataType: PostgreSqlDomainDataType;
+  readonly createSql: PostgreSqlStatementSupplier;
+  readonly dropSql: PostgreSqlStatementSupplier;
 }
 
 export interface SqlTable {
@@ -127,6 +138,11 @@ export interface PostgreSqlSchema extends SqlAffinityGroup {
   readonly extension: (
     name: PostgreSqlExtensionName,
   ) => PostgreSqlExtension;
+  readonly domain: (
+    name: PostgreSqlDomainName,
+    dataType: PostgreSqlDomainDataType,
+    elaborateDefn?: SqlStatement,
+  ) => PostgreSqlDomain;
 }
 
 export interface DcpTemplateState extends interp.InterpolationState {
