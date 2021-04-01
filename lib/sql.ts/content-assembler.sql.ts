@@ -21,8 +21,10 @@ export function SQL(
   const { qualifiedReference: eqr } = schemas.extensions;
   const { qualifiedReference: lqr } = schemas.lib;
   const { lcFunctions: fn } = state.affinityGroup;
+
+  // deno-fmt-ignore
   return mod.SQL(ctx, state)`    
-    CREATE OR REPLACE FUNCTION slugify("value" TEXT) RETURNS TEXT AS $$ 
+    CREATE OR REPLACE FUNCTION ${lqr("slugify")}("value" TEXT) RETURNS TEXT AS $$ 
         -- removes accents (diacritic signs) from a given string --
         WITH "unaccented" AS (
             SELECT ${eqr("unaccent")}("value") AS "value"
@@ -52,7 +54,7 @@ export function SQL(
     $$ LANGUAGE SQL STRICT IMMUTABLE;
     comment on function slugify("value" TEXT) is 'Given a string such as a URL, remove diacritic marks, lowercase the string, and return with hyphens between words';
     
-    create or replace function prepare_file_name(basis TEXT, extn TEXT, max_length smallint = 100) returns TEXT as $$
+    create or replace function ${lqr("prepare_file_name")}(basis TEXT, extn TEXT, max_length smallint = 100) returns TEXT as $$
     declare 
         file_name TEXT;
     begin
