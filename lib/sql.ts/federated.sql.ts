@@ -31,9 +31,10 @@ export function SQL(
         dbname text NOT NULL,
         local_schema text NOT NULL,
         server_name text NOT NULL,
-        fetch_size integer default 50,
+        fetch_size integer DEFAULT 50,
         user_name text NOT NULL,
         password_clear text NOT NULL,
+        prepare_function_name text DEFAULT NULL,
         purpose text NOT NULL,
         -- TODO: add readonly, readwrite, etc. suggested permissions?
         CONSTRAINT fdw_postgres_authn_unq_row UNIQUE(context, identity)
