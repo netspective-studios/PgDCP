@@ -19,6 +19,7 @@ export function SQL(
     },
   );
   const { qualifiedReference: eqr } = schemas.extensions;
+  const { qualifiedReference: lqr } = schemas.lib;
   const { lcFunctions: fn } = state.affinityGroup;
   return mod.SQL(ctx, state)`    
     CREATE OR REPLACE FUNCTION slugify("value" TEXT) RETURNS TEXT AS $$ 
@@ -55,7 +56,7 @@ export function SQL(
     declare 
         file_name TEXT;
     begin
-        select concat(slugify(basis), extn) into file_name;
+        select concat(${lqr("slugify")}(basis), extn) into file_name;
         return substring(
             file_name
             from 1 for max_length
