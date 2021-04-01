@@ -30,8 +30,10 @@ export function SQL(
   return mod.SQL(ctx, state)`
     CREATE OR REPLACE PROCEDURE ${lcf.constructStorage(state).qName}() AS $$
     BEGIN
+      CREATE DOMAIN ${cqr("gitlab_server_identity")} AS text;
+
       CREATE TABLE IF NOT EXISTS ${cqr("gitlab_provenance")} (
-        identity text NOT NULL,
+        identity ${cqr("gitlab_server_identity")} NOT NULL,
         context ${lcqr("execution_context")} NOT NULL,
         api_base_url text NOT NULL,
         secret_authn_token text NOT NULL,
