@@ -145,8 +145,14 @@ export interface SqlTable extends QualifiedReferenceSupplier {
   readonly dropSql: PostgreSqlStatementSupplier;
 }
 
+export interface SqlTableColumnReference {
+  readonly table: SqlTable;
+  readonly column: SqlTableColumn;
+}
+
 export interface SqlTableColumnOptions extends PostgreSqlDomainColumnOptions {
   readonly isPrimaryKey?: boolean;
+  readonly foreignKey?: SqlTableColumnReference;
   readonly foreignKeyDecl?: SqlTableColumnForeignKeyExpr;
   readonly tableConstraintsSql?:
     | PostgreSqlStatementSupplier

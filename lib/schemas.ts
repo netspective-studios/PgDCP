@@ -31,6 +31,7 @@ export class TypicalTableColumnInstance implements iSQL.SqlTableColumn {
   readonly isNotNullable = this.options?.isNotNullable;
   readonly isPrimaryKey = this.options?.isPrimaryKey;
   readonly foreignKeyDecl = this.options?.foreignKeyDecl;
+  readonly foreignKey = this.options?.foreignKey;
   readonly defaultSqlExpr = this.options?.defaultSqlExpr;
   readonly tableConstraintsSql = this.options?.tableConstraintsSql;
   readonly tableIndexesSql = this.options?.tableIndexesSql;
@@ -51,6 +52,11 @@ export class TypicalTableColumnInstance implements iSQL.SqlTableColumn {
     }
     if (this.foreignKeyDecl) {
       options.push(this.foreignKeyDecl);
+    }
+    if (this.foreignKey) {
+      options.push(
+        `REFERENCES ${this.foreignKey.table.qName}(${this.foreignKey.column.name})`,
+      );
     }
     return `${this.name} ${this.dataType}${
       options.length > 0 ? ` ${options.join(" ")}` : ""
