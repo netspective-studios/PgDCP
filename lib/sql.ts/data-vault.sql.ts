@@ -144,7 +144,7 @@ export class HubTable extends mod.schemas.TypicalTable {
 
   constructor(
     readonly state: mod.DcpTemplateState,
-    readonly name: mod.SqlTableName,
+    readonly hubName: HubName,
     readonly keys: {
       name: mod.SqlTableColumnName;
       domain: mod.PostgreSqlDomainSupplier;
@@ -155,12 +155,12 @@ export class HubTable extends mod.schemas.TypicalTable {
       domainRefSupplier?: mod.PostgreSqlDomainReferenceSupplier;
     },
   ) {
-    super(state, name);
+    super(state, `hub_${hubName}`);
     this.domainRefSupplier = options?.domainRefSupplier || ((domain, state) => {
       return new mod.schemas.TypicalDomainReference(state.schema, domain);
     });
     this.hubIdDomain = options?.hubIdDomain ||
-      hubIdDomain(name)(state);
+      hubIdDomain(hubName)(state);
     this.hubIdRefDomain = this.domainRefSupplier(
       this.hubIdDomain,
       state,
@@ -206,7 +206,7 @@ export class SatelliteTable extends mod.schemas.TypicalTable {
   constructor(
     readonly state: mod.DcpTemplateState,
     readonly parent: HubTable,
-    readonly name: mod.SqlTableName,
+    readonly satelliteName: SatelliteName,
     readonly organicColumns: (
       table: SatelliteTable,
     ) => mod.schemas.TypicalTableColumns,
@@ -216,11 +216,11 @@ export class SatelliteTable extends mod.schemas.TypicalTable {
       domainRefSupplier?: mod.PostgreSqlDomainReferenceSupplier;
     },
   ) {
-    super(state, name);
+    super(state, `sat_${satelliteName}`);
     this.domainRefSupplier = options?.domainRefSupplier ||
       parent.domainRefSupplier;
     this.satIdDomain = options?.satIdDomain ||
-      satelliteIdDomain(name)(state);
+      satelliteIdDomain(satelliteName)(state);
     this.satIdRefDomain = this.domainRefSupplier(
       this.satIdDomain,
       state,
@@ -258,12 +258,12 @@ export class SatelliteTable extends mod.schemas.TypicalTable {
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
-  options?: mod.InterpolationContextStateOptions,
+  schema: mod.PostgreSqlSchema,
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    options || {
-      schema: mod.schemas.lib,
+    {
+      schema,
       extensions: [
         mod.schemas.extensions.ltreeExtn,
         mod.schemas.extensions.httpExtn,
@@ -276,13 +276,43 @@ export function SQL(
     name: "key",
     domain: hubTextBusinessKeyDomain("exception_hub_key"),
   }]);
-  const exceptionDiagsSatTable = new SatelliteTable(
+  const exceptionDiagsSatTable: SatelliteTable = new SatelliteTable(
     state,
     exceptionHubTable,
     "exception_diagnostics",
-    () => {
+    (table) => {
       return {
-        all: [],
+        all: [
+          "message",
+          "err_returned_sqlstate",
+          "err_pg_exception_detail",
+          "err_pg_exception_hint",
+          "err_pg_exception_context",
+        ].map((name) =>
+          new mod.schemas.TypicalTableColumnInstance(
+            state.schema,
+            table,
+            name,
+            "text",
+          )
+        ),
+      };
+    },
+  );
+  const exceptionHttpClientSatTable: SatelliteTable = new SatelliteTable(
+    state,
+    exceptionHubTable,
+    "exception_http_client",
+    (table) => {
+      return {
+        all: ["http_req", "http_resp"].map((name) =>
+          new mod.schemas.TypicalTableColumnInstance(
+            state.schema,
+            table,
+            name,
+            "jsonb",
+          )
+        ),
       };
     },
   );
@@ -292,55 +322,12 @@ export function SQL(
     CREATE OR REPLACE PROCEDURE ${lcf.constructStorage(state).qName}() AS $$
     BEGIN
       call ${lcf.constructDomains(state).qName}();
+
       ${exceptionHubTable.createSql(state)}
+
       ${exceptionDiagsSatTable.createSql(state)}
 
-      CREATE DOMAIN ${sqr("hub_exception_id")} AS UUID NOT NULL DEFAULT gen_random_uuid();
-      CREATE DOMAIN ${sqr("hub_exception_id_fk")} AS UUID;
-      CREATE TABLE ${sqr("hub_exception")}(
-        hub_id ${sqr("hub_exception_id")} PRIMARY KEY,
-        key ${sqr("dv_span_id")} NOT NULL,
-        created_at timestamptz NOT NULL default current_timestamp,
-        created_by name NOT NULL default current_user,
-        provDomain ${sqr("dv_provenance_uri")},
-        observability jsonb,
-        CONSTRAINT hub_exception_pk UNIQUE(hub_id),
-        CONSTRAINT hub_exception_unq UNIQUE(key)
-      );
-      CREATE INDEX hub_exception_key_idx ON ${sqr("hub_exception")} (key);
-
-      CREATE DOMAIN ${sqr("sat_exception_diagnostics_id")} AS UUID NOT NULL DEFAULT gen_random_uuid();
-      CREATE DOMAIN ${sqr("sat_exception_diagnostics_id_fk")} AS UUID;
-      CREATE TABLE ${sqr("sat_exception_diagnostics")}(
-        sat_id ${sqr("sat_exception_diagnostics_id")} PRIMARY KEY,
-        hub_id ${sqr("hub_exception_id_fk")} NOT NULL REFERENCES ${sqr("hub_exception")}(hub_id),
-        message text,
-        err_returned_sqlstate text,
-        err_pg_exception_detail text,
-        err_pg_exception_hint text,
-        err_pg_exception_context text,
-        created_at timestamptz NOT NULL default current_timestamp,
-        created_by name NOT NULL default current_user,
-        provDomain ${sqr("dv_provenance_uri")},
-        observability jsonb,
-        CONSTRAINT sat_exception_diagnostics_pk UNIQUE(sat_id)
-      );
-      CREATE INDEX sat_exception_diagnostics_hub_id_idx ON ${sqr("sat_exception_diagnostics")} (hub_id);
-
-      CREATE DOMAIN ${sqr("sat_exception_http_client_id")} AS UUID NOT NULL DEFAULT gen_random_uuid();
-      CREATE DOMAIN ${sqr("sat_exception_diagnostics_id_fk")} AS UUID;
-      CREATE TABLE ${sqr("sat_exception_http_client")}(
-        sat_id ${sqr("sat_exception_http_client_id")} PRIMARY KEY,
-        hub_id ${sqr("hub_exception_id_fk")} NOT NULL REFERENCES ${sqr("hub_exception")}(hub_id),
-        http_req jsonb,
-        http_resp jsonb,
-        created_at timestamptz NOT NULL default current_timestamp,
-        created_by name NOT NULL default current_user,
-        provDomain ${sqr("dv_provenance_uri")},
-        observability jsonb,
-        CONSTRAINT sat_exception_http_client_pk UNIQUE(sat_id)
-      );
-      CREATE INDEX sat_exception_http_client_hub_id_idx ON ${sqr("sat_exception_http_client")} (hub_id);
+      ${exceptionHttpClientSatTable.createSql(state)}
     END; $$ LANGUAGE PLPGSQL;
 
     CREATE OR REPLACE PROCEDURE ${lcf.destroyIdempotent(state).qName}() AS $innerFn$
