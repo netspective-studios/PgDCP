@@ -218,7 +218,7 @@ export class LinkTable extends mod.schemas.TypicalTable {
     });
     this.provDomain = options?.provDomain || provenanceUriDomain(state);
 
-    this.linkId = this.linkIdDomain.tableColumn(this, "hub_id");
+    this.linkId = this.linkIdDomain.tableColumn(this, "link_id");
     this.hubColumns = [];
     for (const hub of this.hubs) {
       const domain = hub.hubIdRefDomain;
