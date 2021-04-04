@@ -49,9 +49,6 @@ export class TypicalTableColumnInstance implements iSQL.SqlTableColumn {
     if (this.defaultSqlExpr) {
       options.push(`default ${this.defaultSqlExpr}`);
     }
-    if (this.isPrimaryKey) {
-      options.push("PRIMARY KEY");
-    }
     if (this.foreignKeyDecl) {
       options.push(this.foreignKeyDecl);
     }
@@ -239,7 +236,7 @@ export class TypicalDomainReference implements iSQL.PostgreSqlDomainReference {
   get reference(): iSQL.PostgreSqlDomain {
     return new TypicalDomain(
       this.schema,
-      `${this.prime.name}_fk`,
+      `${this.prime.name}_ref`,
       this.prime.dataType,
     );
   }
