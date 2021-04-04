@@ -2,22 +2,9 @@ import * as mod from "../mod.ts";
 
 export const spanIdDomain: mod.PostgreSqlDomainSupplier = (state) => {
   return state.schema.useDomain("span_id", (name, schema) => {
-    const domain: mod.PostgreSqlDomain & mod.NullabilitySupplier = {
-      ...(new mod.schemas.TypicalDomain(
-        schema,
-        name,
-        "text",
-        (table, columnName, state) => {
-          return mod.schemas.typicalDomainTableColumn(
-            schema,
-            domain,
-            columnName,
-          )(table, columnName, state);
-        },
-      )),
-      isNullable: false,
-    };
-    return domain;
+    return new mod.schemas.TypicalDomain(schema, name, "text", {
+      isNotNullable: true,
+    });
   });
 };
 
@@ -37,64 +24,25 @@ export const creationTimestampDomain: mod.PostgreSqlDomainSupplier = (
   state,
 ) => {
   return state.schema.useDomain("creation_timestamp", (name, schema) => {
-    const domain: mod.PostgreSqlDomain & mod.DefaultSqlExprSupplier = {
-      ...(new mod.schemas.TypicalDomain(
-        schema,
-        name,
-        "timestamptz",
-        (table, columnName, state) => {
-          return mod.schemas.typicalDomainTableColumn(
-            schema,
-            domain,
-            columnName,
-          )(table, columnName, state);
-        },
-      )),
+    return new mod.schemas.TypicalDomain(schema, name, "timestamptz", {
       defaultSqlExpr: "current_timestamp",
-    };
-    return domain;
+    });
   });
 };
 
 export const creationUserDomain: mod.PostgreSqlDomainSupplier = (state) => {
   return state.schema.useDomain("creation_user_name", (name, schema) => {
-    const domain: mod.PostgreSqlDomain & mod.DefaultSqlExprSupplier = {
-      ...(new mod.schemas.TypicalDomain(
-        schema,
-        name,
-        "name",
-        (table, columnName, state) => {
-          return mod.schemas.typicalDomainTableColumn(
-            schema,
-            domain,
-            columnName,
-          )(table, columnName, state);
-        },
-      )),
+    return new mod.schemas.TypicalDomain(schema, name, "name", {
       defaultSqlExpr: "current_user",
-    };
-    return domain;
+    });
   });
 };
 
 export const provenanceUriDomain: mod.PostgreSqlDomainSupplier = (state) => {
   return state.schema.useDomain("provenance_uri", (name, schema) => {
-    const domain: mod.PostgreSqlDomain & mod.DefaultSqlExprSupplier = {
-      ...(new mod.schemas.TypicalDomain(
-        schema,
-        name,
-        "text",
-        (table, columnName, state) => {
-          return mod.schemas.typicalDomainTableColumn(
-            schema,
-            domain,
-            columnName,
-          )(table, columnName, state);
-        },
-      )),
+    return new mod.schemas.TypicalDomain(schema, name, "text", {
       defaultSqlExpr: "'system://'",
-    };
-    return domain;
+    });
   });
 };
 
@@ -104,36 +52,33 @@ export type SatelliteName = string;
 export function hubIdDomain(name: HubName): mod.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(`hub_${name}_id`, (name, schema) => {
-      const domain:
-        & mod.PostgreSqlDomain
-        & mod.NullabilitySupplier
-        & mod.DefaultSqlExprSupplier = {
-          ...(new mod.schemas.TypicalDomain(schema, name, "UUID", (
-            table,
-            columnName,
-            state,
-          ): mod.TypedSqlTableColumn => {
-            const supplier = mod.schemas.typicalDomainTableColumn(
-              schema,
-              domain,
-              columnName,
-            );
-            const suggested = supplier(table, columnName, state);
-            const enhanced:
-              & mod.TypedSqlTableColumn
-              & mod.SqlTableColumnPrimaryKey = {
-                ...suggested,
-                tableConstraintsSql: (state) =>
-                  `CONSTRAINT ${table.name}_pk UNIQUE(${suggested.name})`,
-                tableIndexesSql: () =>
-                  `CREATE INDEX ${table.name}_${suggested.name}_idx ON ${table.qName} (${suggested.name})`,
-                isPrimaryKey: true,
-              };
-            return enhanced;
-          })),
-          isNullable: false,
+      const domain: mod.PostgreSqlDomain = new mod.schemas.TypicalDomain(
+        schema,
+        name,
+        "UUID",
+        {
+          isNotNullable: true,
           defaultSqlExpr: "gen_random_uuid()",
-        };
+          tableColumn: (table, columnName, options) => {
+            const column: mod.TypedSqlTableColumn = new mod.schemas
+              .TypicalTypedTableColumnInstance(
+              schema,
+              table,
+              columnName,
+              domain,
+              {
+                ...options, // TODO: properly merge in the items below, not just override them
+                tableConstraintsSql: (state) =>
+                  `CONSTRAINT ${table.name}_pk UNIQUE(${column.name})`,
+                tableIndexesSql: () =>
+                  `CREATE INDEX ${table.name}_${column.name}_idx ON ${table.qName} (${column.name})`,
+                isPrimaryKey: true,
+              },
+            );
+            return column;
+          },
+        },
+      );
       return domain;
     });
   };
@@ -144,36 +89,33 @@ export function satelliteIdDomain(
 ): mod.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(`sat_${name}_id`, (name, schema) => {
-      const domain:
-        & mod.PostgreSqlDomain
-        & mod.NullabilitySupplier
-        & mod.DefaultSqlExprSupplier = {
-          ...(new mod.schemas.TypicalDomain(schema, name, "UUID", (
-            table,
-            columnName,
-            state,
-          ): mod.TypedSqlTableColumn => {
-            const supplier = mod.schemas.typicalDomainTableColumn(
-              schema,
-              domain,
-              columnName,
-            );
-            const suggested = supplier(table, columnName, state);
-            const enhanced:
-              & mod.TypedSqlTableColumn
-              & mod.SqlTableColumnPrimaryKey = {
-                ...suggested,
-                tableConstraintsSql: (state) =>
-                  `CONSTRAINT ${table.name}_pk UNIQUE(${suggested.name})`,
-                tableIndexesSql: () =>
-                  `CREATE INDEX ${table.name}_${suggested.name}_idx ON ${table.qName} (${suggested.name})`,
-                isPrimaryKey: true,
-              };
-            return enhanced;
-          })),
-          isNullable: false,
+      const domain: mod.PostgreSqlDomain = new mod.schemas.TypicalDomain(
+        schema,
+        name,
+        "UUID",
+        {
+          isNotNullable: true,
           defaultSqlExpr: "gen_random_uuid()",
-        };
+          tableColumn: (table, columnName, options) => {
+            const column: mod.TypedSqlTableColumn = new mod.schemas
+              .TypicalTypedTableColumnInstance(
+              schema,
+              table,
+              columnName,
+              domain,
+              {
+                ...options, // TODO: properly merge in the items below, not just override them
+                tableConstraintsSql: (state) =>
+                  `CONSTRAINT ${table.name}_pk UNIQUE(${column.name})`,
+                tableIndexesSql: () =>
+                  `CREATE INDEX ${table.name}_${column.name}_idx ON ${table.qName} (${column.name})`,
+                isPrimaryKey: true,
+              },
+            );
+            return column;
+          },
+        },
+      );
       return domain;
     });
   };
@@ -184,22 +126,9 @@ export function hubTextBusinessKeyDomain(
 ): mod.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(name, (name, schema) => {
-      const domain: mod.PostgreSqlDomain & mod.NullabilitySupplier = {
-        ...(new mod.schemas.TypicalDomain(
-          schema,
-          name,
-          "text",
-          (table, columnName, state) => {
-            return mod.schemas.typicalDomainTableColumn(
-              schema,
-              domain,
-              columnName,
-            )(table, columnName, state);
-          },
-        )),
-        isNullable: false,
-      };
-      return domain;
+      return new mod.schemas.TypicalDomain(schema, name, "text", {
+        isNotNullable: true,
+      });
     });
   };
 }
@@ -241,20 +170,20 @@ export class HubTable extends mod.schemas.TypicalTable {
     });
     this.provDomain = options?.provDomain || provenanceUriDomain(state);
 
-    this.hubId = this.hubIdDomain.tableColumn(this, "hub_id", state);
+    this.hubId = this.hubIdDomain.tableColumn(this, "hub_id");
     this.keyColumns = [];
     for (const key of this.keys) {
       const domain = key.domain(state);
-      this.keyColumns.push(domain.tableColumn(this, key.name, state));
+      this.keyColumns.push(domain.tableColumn(this, key.name));
     }
 
     this.columns = {
       all: [
         this.hubId,
         ...this.keyColumns,
-        creationTimestampDomain(state).tableColumn(this, "created_at", state),
-        creationUserDomain(state).tableColumn(this, "created_by", state),
-        this.provDomain.tableColumn(this, "provenance", state),
+        creationTimestampDomain(state).tableColumn(this, "created_at"),
+        creationUserDomain(state).tableColumn(this, "created_by"),
+        this.provDomain.tableColumn(this, "provenance"),
         observabilityColumn(state, this),
       ],
       unique: [{
@@ -268,7 +197,7 @@ export class HubTable extends mod.schemas.TypicalTable {
 export class SatelliteTable extends mod.schemas.TypicalTable {
   readonly satIdDomain: mod.PostgreSqlDomain;
   readonly satId: mod.TypedSqlTableColumn;
-  readonly hubId: mod.TypedSqlTableColumn & mod.NullabilitySupplier;
+  readonly hubId: mod.TypedSqlTableColumn;
   readonly satIdRefDomain: mod.PostgreSqlDomainReference;
   readonly provDomain: mod.PostgreSqlDomain;
   readonly domainRefSupplier: mod.PostgreSqlDomainReferenceSupplier;
@@ -301,24 +230,25 @@ export class SatelliteTable extends mod.schemas.TypicalTable {
     });
     this.provDomain = options?.provDomain || parent.provDomain;
 
-    this.satId = this.satIdDomain.tableColumn(this, "sat_id", state);
-    this.hubId = {
-      ...this.parent.hubIdRefDomain.reference.tableColumn(
-        this,
-        "hub_id",
-        state,
-      ),
-      isNullable: false,
-    };
+    this.satId = this.satIdDomain.tableColumn(this, "sat_id");
+    this.hubId = this.parent.hubIdRefDomain.reference.tableColumn(
+      this,
+      "hub_id",
+      {
+        isNotNullable: true,
+        foreignKeyDecl:
+          `REFERENCES ${this.parent.qName}(${this.parent.hubId.name})`,
+      },
+    );
     const attributes = organicColumns(this);
     this.columns = {
       all: [
         this.satId,
         this.hubId,
         ...attributes.all,
-        creationTimestampDomain(state).tableColumn(this, "created_at", state),
-        creationUserDomain(state).tableColumn(this, "created_by", state),
-        this.provDomain.tableColumn(this, "provenance", state),
+        creationTimestampDomain(state).tableColumn(this, "created_at"),
+        creationUserDomain(state).tableColumn(this, "created_by"),
+        this.provDomain.tableColumn(this, "provenance"),
         observabilityColumn(state, this),
       ],
       unique: attributes.unique,

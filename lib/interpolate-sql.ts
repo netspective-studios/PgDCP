@@ -104,37 +104,12 @@ export interface PostgreSqlExtension {
   readonly searchPath: PostgreSqlSchema[];
 }
 
-export interface NullabilitySupplier {
-  readonly isNullable: boolean;
+export interface PostgreSqlDomainColumnOptions {
+  readonly isNotNullable?: boolean;
+  readonly defaultSqlExpr?: PostgreSqlDomainDefaultExpr;
 }
 
-export const isNullabilitySupplier = safety.typeGuard<NullabilitySupplier>(
-  "isNullable",
-);
-
-export function isNotNull(o: unknown) {
-  return isNullabilitySupplier(o) && !o.isNullable;
-}
-
-export interface DefaultSqlExprSupplier {
-  readonly defaultSqlExpr: PostgreSqlDomainDefaultExpr;
-}
-
-export const isDefaultExprSupplier = safety.typeGuard<DefaultSqlExprSupplier>(
-  "defaultSqlExpr",
-);
-
-export interface ForeignKeyDeclSupplier {
-  readonly foreignKeyDecl: SqlTableColumnForeignKeyExpr;
-}
-
-export const isForeignKeyDeclSupplier = safety.typeGuard<
-  ForeignKeyDeclSupplier
->(
-  "foreignKeyDecl",
-);
-
-export interface PostgreSqlDomain {
+export interface PostgreSqlDomain extends PostgreSqlDomainColumnOptions {
   readonly name: PostgreSqlDomainName;
   readonly qName: PostgreSqlDomainQualifiedName;
   readonly dataType: PostgreSqlDomainDataType;
@@ -170,12 +145,9 @@ export interface SqlTable extends QualifiedReferenceSupplier {
   readonly dropSql: PostgreSqlStatementSupplier;
 }
 
-export interface SqlTableColumn {
-  readonly name: SqlTableColumnName;
-  readonly tableQualifiedName: SqlTableColumnQualifiedName;
-  readonly schemaQualifiedName: SqlTableColumnQualifiedName;
-  readonly dataType: PostgreSqlDomainDataType;
-  readonly tableColumnDeclSql: PostgreSqlStatementSupplier;
+export interface SqlTableColumnOptions extends PostgreSqlDomainColumnOptions {
+  readonly isPrimaryKey?: boolean;
+  readonly foreignKeyDecl?: SqlTableColumnForeignKeyExpr;
   readonly tableConstraintsSql?:
     | PostgreSqlStatementSupplier
     | PostgreSqlStatementSupplier[];
@@ -184,23 +156,17 @@ export interface SqlTableColumn {
     | PostgreSqlStatementSupplier[];
 }
 
+export interface SqlTableColumn extends SqlTableColumnOptions {
+  readonly name: SqlTableColumnName;
+  readonly tableQualifiedName: SqlTableColumnQualifiedName;
+  readonly schemaQualifiedName: SqlTableColumnQualifiedName;
+  readonly dataType: PostgreSqlDomainDataType;
+  readonly tableColumnDeclSql: PostgreSqlStatementSupplier;
+}
+
 export const isSqlTableColumn = safety.typeGuard<SqlTableColumn>(
   "tableColumnDeclSql",
 );
-
-export interface SqlTableColumnPrimaryKey {
-  readonly isPrimaryKey: true;
-}
-
-export const isSqlTableColumnPrimaryKey = safety.typeGuard<
-  SqlTableColumnPrimaryKey
->(
-  "isPrimaryKey",
-);
-
-export function isColumnTablePrimaryKey(o: unknown) {
-  return isSqlTableColumn(o) && isSqlTableColumnPrimaryKey(o) && o.isPrimaryKey;
-}
 
 export interface TypedSqlTableColumn extends SqlTableColumn {
   readonly domain: PostgreSqlDomain;
@@ -215,7 +181,7 @@ export interface SqlTableColumnSupplier {
   (
     table: SqlTable,
     columnName: SqlTableColumnName,
-    state: DcpTemplateState,
+    options?: SqlTableColumnOptions,
   ): SqlTableColumn;
 }
 
@@ -223,7 +189,7 @@ export interface TypedSqlTableColumnSupplier {
   (
     table: SqlTable,
     columnName: SqlTableColumnName,
-    state: DcpTemplateState,
+    options?: SqlTableColumnOptions,
   ): TypedSqlTableColumn;
 }
 
