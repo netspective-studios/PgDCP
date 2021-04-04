@@ -222,10 +222,12 @@ export class LinkTable extends mod.schemas.TypicalTable {
     this.hubColumns = [];
     for (const hub of this.hubs) {
       const domain = hub.hubIdRefDomain;
-      this.hubColumns.push(domain.reference.tableColumn(this, hub.name, {
-        isNotNullable: true,
-        foreignKey: { table: hub, column: hub.hubId },
-      }));
+      this.hubColumns.push(
+        domain.reference.tableColumn(this, `${hub.hubName}_hub_id`, {
+          isNotNullable: true,
+          foreignKey: { table: hub, column: hub.hubId },
+        }),
+      );
     }
 
     this.columns = {
@@ -248,7 +250,7 @@ export class LinkTable extends mod.schemas.TypicalTable {
 export class SatelliteTable extends mod.schemas.TypicalTable {
   readonly satIdDomain: mod.PostgreSqlDomain;
   readonly satId: mod.TypedSqlTableColumn;
-  readonly hubId: mod.TypedSqlTableColumn;
+  readonly parentId: mod.TypedSqlTableColumn;
   readonly satIdRefDomain: mod.PostgreSqlDomainReference;
   readonly provDomain: mod.PostgreSqlDomain;
   readonly domainRefSupplier: mod.PostgreSqlDomainReferenceSupplier;
@@ -256,7 +258,7 @@ export class SatelliteTable extends mod.schemas.TypicalTable {
 
   constructor(
     readonly state: mod.DcpTemplateState,
-    readonly parent: HubTable,
+    readonly parent: HubTable | LinkTable,
     readonly satelliteName: SatelliteName,
     readonly organicColumns: (
       table: SatelliteTable,
@@ -282,19 +284,28 @@ export class SatelliteTable extends mod.schemas.TypicalTable {
     this.provDomain = options?.provDomain || parent.provDomain;
 
     this.satId = this.satIdDomain.tableColumn(this, "sat_id");
-    this.hubId = this.parent.hubIdRefDomain.reference.tableColumn(
-      this,
-      "hub_id",
-      {
-        isNotNullable: true,
-        foreignKey: { table: this.parent, column: this.parent.hubId },
-      },
-    );
+    this.parentId = this.parent instanceof HubTable
+      ? this.parent.hubIdRefDomain.reference.tableColumn(
+        this,
+        "hub_id",
+        {
+          isNotNullable: true,
+          foreignKey: { table: this.parent, column: this.parent.hubId },
+        },
+      )
+      : this.parent.linkIdRefDomain.reference.tableColumn(
+        this,
+        "link_id",
+        {
+          isNotNullable: true,
+          foreignKey: { table: this.parent, column: this.parent.linkId },
+        },
+      );
     const attributes = organicColumns(this);
     this.columns = {
       all: [
         this.satId,
-        this.hubId,
+        this.parentId,
         ...attributes.all,
         creationTimestampDomain(state).tableColumn(this, "created_at"),
         creationUserDomain(state).tableColumn(this, "created_by"),
@@ -306,12 +317,31 @@ export class SatelliteTable extends mod.schemas.TypicalTable {
   }
 }
 
+export class TelemetrySpanHub extends HubTable {
+  constructor(readonly state: mod.DcpTemplateState) {
+    super(state, "telemetry_span", [{
+      name: "span_id",
+      domain: spanIdDomain,
+    }]);
+  }
+}
+
 export class ExceptionHub extends HubTable {
   constructor(readonly state: mod.DcpTemplateState) {
     super(state, "exception", [{
       name: "key",
       domain: hubTextBusinessKeyDomain("exception_hub_key"),
     }]);
+  }
+}
+
+export class ExceptionSpanLink extends LinkTable {
+  constructor(
+    readonly state: mod.DcpTemplateState,
+    readonly exception: ExceptionHub,
+    readonly span: TelemetrySpanHub,
+  ) {
+    super(state, "exception_telemetry_span", [exception, span]);
   }
 }
 
@@ -390,6 +420,12 @@ export function SQL(
   const exceptionHub = new ExceptionHub(state);
   const exceptionDiags = new ExceptionDiagnostics(state, exceptionHub);
   const exceptionHttpClient = new ExceptionHttpClient(state, exceptionHub);
+  const telemetrySpanHub = new TelemetrySpanHub(state);
+  const exceptSpanLink = new ExceptionSpanLink(
+    state,
+    exceptionHub,
+    telemetrySpanHub,
+  );
 
   // deno-fmt-ignore
   return mod.SQL(ctx, state)`
@@ -402,6 +438,10 @@ export function SQL(
       ${exceptionDiags.createSql(state)}
 
       ${exceptionHttpClient.createSql(state)}
+
+      ${telemetrySpanHub.createSql(state)}
+
+      ${exceptSpanLink.createSql(state)}
     END; $$ LANGUAGE PLPGSQL;
 
     CREATE OR REPLACE PROCEDURE ${lcf.destroyIdempotent(state).qName}() AS $innerFn$
