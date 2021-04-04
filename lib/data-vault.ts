@@ -1,43 +1,44 @@
-import * as mod from "../mod.ts";
+import * as iSQL from "./interpolate-sql.ts";
+import * as schemas from "./schemas.ts";
 
-export const telemetrySpanIdDomain: mod.PostgreSqlDomainSupplier = (state) => {
+export const telemetrySpanIdDomain: iSQL.PostgreSqlDomainSupplier = (state) => {
   return state.schema.useDomain("telemetry_span_id", (name, schema) => {
-    return new mod.schemas.TypicalDomain(schema, name, "text", {
+    return new schemas.TypicalDomain(schema, name, "text", {
       isNotNullable: true,
     });
   });
 };
 
-export const creationTimestampDomain: mod.PostgreSqlDomainSupplier = (
+export const creationTimestampDomain: iSQL.PostgreSqlDomainSupplier = (
   state,
 ) => {
   return state.schema.useDomain("creation_timestamp", (name, schema) => {
-    return new mod.schemas.TypicalDomain(schema, name, "timestamptz", {
+    return new schemas.TypicalDomain(schema, name, "timestamptz", {
       defaultSqlExpr: "current_timestamp",
     });
   });
 };
 
-export const creationUserDomain: mod.PostgreSqlDomainSupplier = (state) => {
+export const creationUserDomain: iSQL.PostgreSqlDomainSupplier = (state) => {
   return state.schema.useDomain("creation_user_name", (name, schema) => {
-    return new mod.schemas.TypicalDomain(schema, name, "name", {
+    return new schemas.TypicalDomain(schema, name, "name", {
       defaultSqlExpr: "current_user",
     });
   });
 };
 
-export const provenanceUriDomain: mod.PostgreSqlDomainSupplier = (state) => {
+export const provenanceUriDomain: iSQL.PostgreSqlDomainSupplier = (state) => {
   return state.schema.useDomain("provenance_uri", (name, schema) => {
-    return new mod.schemas.TypicalDomain(schema, name, "text", {
+    return new schemas.TypicalDomain(schema, name, "text", {
       defaultSqlExpr: "'system://'",
     });
   });
 };
 
-export class DataVaultIdentity extends mod.schemas.TypicalDomain {
+export class DataVaultIdentity extends schemas.TypicalDomain {
   constructor(
-    readonly schema: mod.PostgreSqlSchema,
-    readonly name: mod.PostgreSqlDomainName,
+    readonly schema: iSQL.PostgreSqlSchema,
+    readonly name: iSQL.PostgreSqlDomainName,
   ) {
     super(schema, name, "UUID", {
       isNotNullable: true,
@@ -45,12 +46,12 @@ export class DataVaultIdentity extends mod.schemas.TypicalDomain {
     });
   }
 
-  readonly tableColumn: mod.TypedSqlTableColumnSupplier = (
+  readonly tableColumn: iSQL.TypedSqlTableColumnSupplier = (
     table,
     columnName,
     options?,
-  ): mod.TypedSqlTableColumn => {
-    const column: mod.TypedSqlTableColumn = new mod.schemas
+  ): iSQL.TypedSqlTableColumn => {
+    const column: iSQL.TypedSqlTableColumn = new schemas
       .TypicalTypedTableColumnInstance(
       this.schema,
       table,
@@ -73,7 +74,7 @@ export type HubName = string;
 export type LinkName = string;
 export type SatelliteName = string;
 
-export function hubIdDomain(name: HubName): mod.PostgreSqlDomainSupplier {
+export function hubIdDomain(name: HubName): iSQL.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(`hub_${name}_id`, (name, schema) => {
       return new DataVaultIdentity(schema, name);
@@ -81,7 +82,7 @@ export function hubIdDomain(name: HubName): mod.PostgreSqlDomainSupplier {
   };
 }
 
-export function linkIdDomain(name: LinkName): mod.PostgreSqlDomainSupplier {
+export function linkIdDomain(name: LinkName): iSQL.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(`link_${name}_id`, (name, schema) => {
       return new DataVaultIdentity(schema, name);
@@ -91,7 +92,7 @@ export function linkIdDomain(name: LinkName): mod.PostgreSqlDomainSupplier {
 
 export function satelliteIdDomain(
   name: SatelliteName,
-): mod.PostgreSqlDomainSupplier {
+): iSQL.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(`sat_${name}_id`, (name, schema) => {
       return new DataVaultIdentity(schema, name);
@@ -100,11 +101,11 @@ export function satelliteIdDomain(
 }
 
 export function hubTextBusinessKeyDomain(
-  name: mod.PostgreSqlDomainName,
-): mod.PostgreSqlDomainSupplier {
+  name: iSQL.PostgreSqlDomainName,
+): iSQL.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(name, (name, schema) => {
-      return new mod.schemas.TypicalDomain(schema, name, "text", {
+      return new schemas.TypicalDomain(schema, name, "text", {
         isNotNullable: true,
       });
     });
@@ -112,11 +113,11 @@ export function hubTextBusinessKeyDomain(
 }
 
 export function hubUriBusinessKeyDomain(
-  name: mod.PostgreSqlDomainName,
-): mod.PostgreSqlDomainSupplier {
+  name: iSQL.PostgreSqlDomainName,
+): iSQL.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(name, (name, schema) => {
-      return new mod.schemas.TypicalDomain(schema, name, "text", {
+      return new schemas.TypicalDomain(schema, name, "text", {
         isNotNullable: true,
         // TODO: add a constraint to verify that it's a valid URI
       });
@@ -125,42 +126,42 @@ export function hubUriBusinessKeyDomain(
 }
 
 export function hubLtreeBusinessKeyDomain(
-  name: mod.PostgreSqlDomainName,
-): mod.PostgreSqlDomainSupplier {
+  name: iSQL.PostgreSqlDomainName,
+): iSQL.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(name, (name, schema) => {
-      return new mod.schemas.TypicalDomain(schema, name, "ltree", {
+      return new schemas.TypicalDomain(schema, name, "ltree", {
         isNotNullable: true,
       });
     });
   };
 }
 
-export class HubTable extends mod.schemas.TypicalTable {
-  readonly hubIdDomain: mod.PostgreSqlDomain;
-  readonly hubId: mod.TypedSqlTableColumn;
-  readonly hubIdRefDomain: mod.PostgreSqlDomainReference;
-  readonly keyColumns: mod.TypedSqlTableColumn[];
-  readonly provDomain: mod.PostgreSqlDomain;
-  readonly domainRefSupplier: mod.PostgreSqlDomainReferenceSupplier;
-  readonly columns: mod.schemas.TypicalTableColumns;
+export class HubTable extends schemas.TypicalTable {
+  readonly hubIdDomain: iSQL.PostgreSqlDomain;
+  readonly hubId: iSQL.TypedSqlTableColumn;
+  readonly hubIdRefDomain: iSQL.PostgreSqlDomainReference;
+  readonly keyColumns: iSQL.TypedSqlTableColumn[];
+  readonly provDomain: iSQL.PostgreSqlDomain;
+  readonly domainRefSupplier: iSQL.PostgreSqlDomainReferenceSupplier;
+  readonly columns: schemas.TypicalTableColumns;
 
   constructor(
-    readonly state: mod.DcpTemplateState,
+    readonly state: iSQL.DcpTemplateState,
     readonly hubName: HubName,
     readonly keys: {
-      name: mod.SqlTableColumnName;
-      domain: mod.PostgreSqlDomainSupplier;
+      name: iSQL.SqlTableColumnName;
+      domain: iSQL.PostgreSqlDomainSupplier;
     }[],
     options?: {
-      hubIdDomain?: mod.PostgreSqlDomain;
-      provDomain?: mod.PostgreSqlDomain;
-      domainRefSupplier?: mod.PostgreSqlDomainReferenceSupplier;
+      hubIdDomain?: iSQL.PostgreSqlDomain;
+      provDomain?: iSQL.PostgreSqlDomain;
+      domainRefSupplier?: iSQL.PostgreSqlDomainReferenceSupplier;
     },
   ) {
     super(state, `hub_${hubName}`);
     this.domainRefSupplier = options?.domainRefSupplier || ((domain, state) => {
-      return new mod.schemas.TypicalDomainReference(state.schema, domain);
+      return new schemas.TypicalDomainReference(state.schema, domain);
     });
     this.hubIdDomain = options?.hubIdDomain ||
       hubIdDomain(hubName)(state);
@@ -196,28 +197,28 @@ export class HubTable extends mod.schemas.TypicalTable {
   }
 }
 
-export class LinkTable extends mod.schemas.TypicalTable {
-  readonly linkIdDomain: mod.PostgreSqlDomain;
-  readonly linkId: mod.TypedSqlTableColumn;
-  readonly linkIdRefDomain: mod.PostgreSqlDomainReference;
-  readonly hubColumns: mod.TypedSqlTableColumn[];
-  readonly provDomain: mod.PostgreSqlDomain;
-  readonly domainRefSupplier: mod.PostgreSqlDomainReferenceSupplier;
-  readonly columns: mod.schemas.TypicalTableColumns;
+export class LinkTable extends schemas.TypicalTable {
+  readonly linkIdDomain: iSQL.PostgreSqlDomain;
+  readonly linkId: iSQL.TypedSqlTableColumn;
+  readonly linkIdRefDomain: iSQL.PostgreSqlDomainReference;
+  readonly hubColumns: iSQL.TypedSqlTableColumn[];
+  readonly provDomain: iSQL.PostgreSqlDomain;
+  readonly domainRefSupplier: iSQL.PostgreSqlDomainReferenceSupplier;
+  readonly columns: schemas.TypicalTableColumns;
 
   constructor(
-    readonly state: mod.DcpTemplateState,
+    readonly state: iSQL.DcpTemplateState,
     readonly linkName: LinkName,
     readonly hubs: HubTable[],
     options?: {
-      hubIdDomain?: mod.PostgreSqlDomain;
-      provDomain?: mod.PostgreSqlDomain;
-      domainRefSupplier?: mod.PostgreSqlDomainReferenceSupplier;
+      hubIdDomain?: iSQL.PostgreSqlDomain;
+      provDomain?: iSQL.PostgreSqlDomain;
+      domainRefSupplier?: iSQL.PostgreSqlDomainReferenceSupplier;
     },
   ) {
     super(state, `link_${linkName}`);
     this.domainRefSupplier = options?.domainRefSupplier || ((domain, state) => {
-      return new mod.schemas.TypicalDomainReference(state.schema, domain);
+      return new schemas.TypicalDomainReference(state.schema, domain);
     });
     this.linkIdDomain = options?.hubIdDomain ||
       linkIdDomain(linkName)(state);
@@ -258,26 +259,26 @@ export class LinkTable extends mod.schemas.TypicalTable {
   }
 }
 
-export class SatelliteTable extends mod.schemas.TypicalTable {
-  readonly satIdDomain: mod.PostgreSqlDomain;
-  readonly satId: mod.TypedSqlTableColumn;
-  readonly parentId: mod.TypedSqlTableColumn;
-  readonly satIdRefDomain: mod.PostgreSqlDomainReference;
-  readonly provDomain: mod.PostgreSqlDomain;
-  readonly domainRefSupplier: mod.PostgreSqlDomainReferenceSupplier;
-  readonly columns: mod.schemas.TypicalTableColumns;
+export class SatelliteTable extends schemas.TypicalTable {
+  readonly satIdDomain: iSQL.PostgreSqlDomain;
+  readonly satId: iSQL.TypedSqlTableColumn;
+  readonly parentId: iSQL.TypedSqlTableColumn;
+  readonly satIdRefDomain: iSQL.PostgreSqlDomainReference;
+  readonly provDomain: iSQL.PostgreSqlDomain;
+  readonly domainRefSupplier: iSQL.PostgreSqlDomainReferenceSupplier;
+  readonly columns: schemas.TypicalTableColumns;
 
   constructor(
-    readonly state: mod.DcpTemplateState,
+    readonly state: iSQL.DcpTemplateState,
     readonly parent: HubTable | LinkTable,
     readonly satelliteName: SatelliteName,
     readonly organicColumns: (
       table: SatelliteTable,
-    ) => mod.schemas.TypicalTableColumns,
+    ) => schemas.TypicalTableColumns,
     options?: {
-      satIdDomain?: mod.PostgreSqlDomain;
-      provDomain?: mod.PostgreSqlDomain;
-      domainRefSupplier?: mod.PostgreSqlDomainReferenceSupplier;
+      satIdDomain?: iSQL.PostgreSqlDomain;
+      provDomain?: iSQL.PostgreSqlDomain;
+      domainRefSupplier?: iSQL.PostgreSqlDomainReferenceSupplier;
     },
   ) {
     super(state, `sat_${satelliteName}`);
@@ -328,7 +329,7 @@ export class SatelliteTable extends mod.schemas.TypicalTable {
 }
 
 export class TelemetrySpanHub extends HubTable {
-  constructor(readonly state: mod.DcpTemplateState) {
+  constructor(readonly state: iSQL.DcpTemplateState) {
     super(state, "telemetry_span", [{
       name: "span_id",
       domain: telemetrySpanIdDomain,
@@ -337,7 +338,7 @@ export class TelemetrySpanHub extends HubTable {
 }
 
 export class ExceptionHub extends HubTable {
-  constructor(readonly state: mod.DcpTemplateState) {
+  constructor(readonly state: iSQL.DcpTemplateState) {
     super(state, "exception", [{
       name: "key",
       domain: hubTextBusinessKeyDomain("exception_hub_key"),
@@ -347,7 +348,7 @@ export class ExceptionHub extends HubTable {
 
 export class ExceptionSpanLink extends LinkTable {
   constructor(
-    readonly state: mod.DcpTemplateState,
+    readonly state: iSQL.DcpTemplateState,
     readonly exception: ExceptionHub,
     readonly span: TelemetrySpanHub,
   ) {
@@ -357,7 +358,7 @@ export class ExceptionSpanLink extends LinkTable {
 
 export class ExceptionDiagnostics extends SatelliteTable {
   constructor(
-    readonly state: mod.DcpTemplateState,
+    readonly state: iSQL.DcpTemplateState,
     readonly parent: ExceptionHub,
   ) {
     super(
@@ -373,7 +374,7 @@ export class ExceptionDiagnostics extends SatelliteTable {
             "err_pg_exception_hint",
             "err_pg_exception_context",
           ].map((name) =>
-            new mod.schemas.TypicalTableColumnInstance(
+            new schemas.TypicalTableColumnInstance(
               state.schema,
               table,
               name,
@@ -388,7 +389,7 @@ export class ExceptionDiagnostics extends SatelliteTable {
 
 export class ExceptionHttpClient extends SatelliteTable {
   constructor(
-    readonly state: mod.DcpTemplateState,
+    readonly state: iSQL.DcpTemplateState,
     readonly parent: ExceptionHub,
   ) {
     super(
@@ -398,7 +399,7 @@ export class ExceptionHttpClient extends SatelliteTable {
       (table) => {
         return {
           all: ["http_req", "http_resp"].map((name) =>
-            new mod.schemas.TypicalTableColumnInstance(
+            new schemas.TypicalTableColumnInstance(
               state.schema,
               table,
               name,
@@ -411,22 +412,19 @@ export class ExceptionHttpClient extends SatelliteTable {
   }
 }
 
-export function SQL(
-  ctx: mod.DcpInterpolationContext,
-  schema: mod.PostgreSqlSchema,
-): mod.DcpInterpolationResult {
-  const state = ctx.prepareState(
-    ctx.prepareTsModuleExecution(import.meta.url),
-    {
-      schema,
-      extensions: [
-        mod.schemas.extensions.ltreeExtn,
-        mod.schemas.extensions.httpExtn,
-      ],
-    },
-  );
-  const { qualifiedReference: sqr } = state.schema;
-  const { lcFunctions: lcf } = state.schema;
+export interface HousekeepingEntities {
+  readonly exceptionHub: ExceptionHub;
+  readonly exceptionDiags: ExceptionDiagnostics;
+  readonly exceptionHttpClient: ExceptionHttpClient;
+  readonly telemetrySpanHub: TelemetrySpanHub;
+  readonly exceptSpanLink: ExceptionSpanLink;
+
+  readonly tables: () => iSQL.SqlTable[];
+}
+
+export function typicalHousekeepingEntities(
+  state: iSQL.DcpTemplateState,
+): HousekeepingEntities {
   const exceptionHub = new ExceptionHub(state);
   const exceptionDiags = new ExceptionDiagnostics(state, exceptionHub);
   const exceptionHttpClient = new ExceptionHttpClient(state, exceptionHub);
@@ -437,17 +435,46 @@ export function SQL(
     telemetrySpanHub,
   );
 
-  // tables should be in dependency order
-  const tables = [
+  return {
     exceptionHub,
     exceptionDiags,
     exceptionHttpClient,
     telemetrySpanHub,
     exceptSpanLink,
-  ];
+    tables: () => {
+      return [
+        exceptionHub,
+        exceptionDiags,
+        exceptionHttpClient,
+        telemetrySpanHub,
+        exceptSpanLink,
+      ];
+    },
+  };
+}
+
+export function SQL(
+  ctx: iSQL.DcpInterpolationContext,
+  schema: iSQL.PostgreSqlSchema,
+  heSupplier: (state: iSQL.DcpTemplateState) => HousekeepingEntities,
+): iSQL.DcpInterpolationResult {
+  const state = ctx.prepareState(
+    ctx.prepareTsModuleExecution(import.meta.url),
+    {
+      schema,
+      extensions: [
+        schemas.extensions.ltreeExtn,
+        schemas.extensions.httpExtn,
+      ],
+    },
+  );
+
+  const { lcFunctions: lcf } = state.schema;
+  const he = heSupplier(state);
+  const tables = he.tables();
 
   // deno-fmt-ignore
-  return mod.SQL(ctx, state)`
+  return iSQL.SQL(ctx, state)`
     CREATE OR REPLACE PROCEDURE ${lcf.constructStorage(state).qName}() AS $$
     BEGIN
       call ${lcf.constructDomains(state).qName}();
