@@ -123,6 +123,31 @@ export function hubTextBusinessKeyDomain(
   };
 }
 
+export function hubUriBusinessKeyDomain(
+  name: mod.PostgreSqlDomainName,
+): mod.PostgreSqlDomainSupplier {
+  return (state) => {
+    return state.schema.useDomain(name, (name, schema) => {
+      return new mod.schemas.TypicalDomain(schema, name, "text", {
+        isNotNullable: true,
+        // TODO: add a constraint to verify that it's a valid URI
+      });
+    });
+  };
+}
+
+export function hubLtreeBusinessKeyDomain(
+  name: mod.PostgreSqlDomainName,
+): mod.PostgreSqlDomainSupplier {
+  return (state) => {
+    return state.schema.useDomain(name, (name, schema) => {
+      return new mod.schemas.TypicalDomain(schema, name, "ltree", {
+        isNotNullable: true,
+      });
+    });
+  };
+}
+
 export class HubTable extends mod.schemas.TypicalTable {
   readonly hubIdDomain: mod.PostgreSqlDomain;
   readonly hubId: mod.TypedSqlTableColumn;
