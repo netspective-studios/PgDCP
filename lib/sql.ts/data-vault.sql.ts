@@ -1,24 +1,12 @@
 import * as mod from "../mod.ts";
 
-export const spanIdDomain: mod.PostgreSqlDomainSupplier = (state) => {
-  return state.schema.useDomain("span_id", (name, schema) => {
+export const telemetrySpanIdDomain: mod.PostgreSqlDomainSupplier = (state) => {
+  return state.schema.useDomain("telemetry_span_id", (name, schema) => {
     return new mod.schemas.TypicalDomain(schema, name, "text", {
       isNotNullable: true,
     });
   });
 };
-
-export function observabilityColumn(
-  state: mod.DcpTemplateState,
-  table: mod.SqlTable,
-): mod.SqlTableColumn {
-  return new mod.schemas.TypicalTableColumnInstance(
-    state.schema,
-    table,
-    "observability",
-    "jsonb",
-  );
-}
 
 export const creationTimestampDomain: mod.PostgreSqlDomainSupplier = (
   state,
@@ -70,7 +58,7 @@ export class DataVaultIdentity extends mod.schemas.TypicalDomain {
       this,
       {
         ...options, // TODO: properly merge in the items below, not just override them
-        tableConstraintsSql: (state) =>
+        tableConstraintsSql: () =>
           `CONSTRAINT ${table.name}_pk UNIQUE(${column.name})`,
         tableIndexesSql: () =>
           `CREATE INDEX ${table.name}_${column.name}_idx ON ${table.qName} (${column.name})`,
@@ -199,7 +187,6 @@ export class HubTable extends mod.schemas.TypicalTable {
         creationTimestampDomain(state).tableColumn(this, "created_at"),
         creationUserDomain(state).tableColumn(this, "created_by"),
         this.provDomain.tableColumn(this, "provenance"),
-        observabilityColumn(state, this),
       ],
       unique: [{
         name: `${this.name}_unq`,
@@ -262,7 +249,6 @@ export class LinkTable extends mod.schemas.TypicalTable {
         creationTimestampDomain(state).tableColumn(this, "created_at"),
         creationUserDomain(state).tableColumn(this, "created_by"),
         this.provDomain.tableColumn(this, "provenance"),
-        observabilityColumn(state, this),
       ],
       unique: [{
         name: `${this.name}_unq`,
@@ -335,7 +321,6 @@ export class SatelliteTable extends mod.schemas.TypicalTable {
         creationTimestampDomain(state).tableColumn(this, "created_at"),
         creationUserDomain(state).tableColumn(this, "created_by"),
         this.provDomain.tableColumn(this, "provenance"),
-        observabilityColumn(state, this),
       ],
       unique: attributes.unique,
     };
@@ -346,7 +331,7 @@ export class TelemetrySpanHub extends HubTable {
   constructor(readonly state: mod.DcpTemplateState) {
     super(state, "telemetry_span", [{
       name: "span_id",
-      domain: spanIdDomain,
+      domain: telemetrySpanIdDomain,
     }]);
   }
 }
@@ -452,33 +437,35 @@ export function SQL(
     telemetrySpanHub,
   );
 
+  // tables should be in dependency order
+  const tables = [
+    exceptionHub,
+    exceptionDiags,
+    exceptionHttpClient,
+    telemetrySpanHub,
+    exceptSpanLink,
+  ];
+
   // deno-fmt-ignore
   return mod.SQL(ctx, state)`
     CREATE OR REPLACE PROCEDURE ${lcf.constructStorage(state).qName}() AS $$
     BEGIN
       call ${lcf.constructDomains(state).qName}();
 
-      ${exceptionHub.createSql(state)}
-
-      ${exceptionDiags.createSql(state)}
-
-      ${exceptionHttpClient.createSql(state)}
-
-      ${telemetrySpanHub.createSql(state)}
-
-      ${exceptSpanLink.createSql(state)}
+      ${tables.map(t => t.createSql(state)).join("\n\n      ")}
     END; $$ LANGUAGE PLPGSQL;
 
     CREATE OR REPLACE PROCEDURE ${lcf.destroyIdempotent(state).qName}() AS $innerFn$
     BEGIN
       DROP FUNCTION IF EXISTS ${lcf.unitTest(state).qName}();
-      DROP PROCEDURE IF EXISTS ${sqr("populate_gitlab_projec_hubs")};
+      ${tables.reverse().map(t => t.dropSql(state)).join(";\n      ")};
     END; 
     $innerFn$ LANGUAGE PLPGSQL;
 
     CREATE OR REPLACE FUNCTION ${lcf.unitTest(state).qName}() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
     BEGIN
-      RETURN NEXT has_function('populate_gitlab_proje_hubts');
+      -- TODO: create {hub.unitTestSql(state)} and include here
+      --       also unit test the required domains along with tables
     END;
     $$;
 `;
