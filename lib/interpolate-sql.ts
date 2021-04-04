@@ -58,6 +58,12 @@ export type SqlStatement = string;
 export type SqlAffinityGroupName = string;
 export type SqlTableName = string;
 export type SqlTableQualifiedName = string;
+export type SqlTableColumnName = string;
+export type SqlTableColumnQualifiedName = string;
+export type SqlTableCreateDeclFragment = string;
+export type SqlTableConstraintName = string;
+export type SqlTableIndexName = string;
+export type SqlTableColumnForeignKeyExpr = string;
 export type PostgreSqlStatement = SqlStatement;
 export type PostgreSqlStoredRoutineName = string;
 export type PostgreSqlStoredRoutineQualifiedName = string;
@@ -65,10 +71,26 @@ export type PostgreSqlSchemaName = string;
 export type PostgreSqlExtensionName = string;
 export type PostgreSqlDomainName = string;
 export type PostgreSqlDomainDataType = string;
+export type PostgreSqlDomainDefaultExpr = string;
 export type PostgreSqlDomainQualifiedName = string;
+
+export interface QualifiedReferenceSupplier {
+  readonly qualifiedReference: (qualify: string) => string;
+}
+
+export const isQualifiedReferenceSupplier = safety.typeGuard<
+  QualifiedReferenceSupplier
+>("qualifiedReference");
 
 export interface PostgreSqlStatementSupplier {
   (state: DcpTemplateState): PostgreSqlStatement;
+}
+
+export interface PostgreSqlStatementEnhancer {
+  (
+    suggested: PostgreSqlStatement,
+    state: DcpTemplateState,
+  ): PostgreSqlStatement;
 }
 
 export interface DcpTemplateSupplier {
@@ -82,17 +104,127 @@ export interface PostgreSqlExtension {
   readonly searchPath: PostgreSqlSchema[];
 }
 
+export interface NullabilitySupplier {
+  readonly isNullable: boolean;
+}
+
+export const isNullabilitySupplier = safety.typeGuard<NullabilitySupplier>(
+  "isNullable",
+);
+
+export function isNotNull(o: unknown) {
+  return isNullabilitySupplier(o) && !o.isNullable;
+}
+
+export interface DefaultSqlExprSupplier {
+  readonly defaultSqlExpr: PostgreSqlDomainDefaultExpr;
+}
+
+export const isDefaultExprSupplier = safety.typeGuard<DefaultSqlExprSupplier>(
+  "defaultSqlExpr",
+);
+
+export interface ForeignKeyDeclSupplier {
+  readonly foreignKeyDecl: SqlTableColumnForeignKeyExpr;
+}
+
+export const isForeignKeyDeclSupplier = safety.typeGuard<
+  ForeignKeyDeclSupplier
+>(
+  "foreignKeyDecl",
+);
+
 export interface PostgreSqlDomain {
   readonly name: PostgreSqlDomainName;
   readonly qName: PostgreSqlDomainQualifiedName;
   readonly dataType: PostgreSqlDomainDataType;
   readonly createSql: PostgreSqlStatementSupplier;
   readonly dropSql: PostgreSqlStatementSupplier;
+  readonly tableColumn: TypedSqlTableColumnSupplier;
 }
 
-export interface SqlTable {
+export interface PostgreSqlDomainColumnSupplier {
+  (name: SqlTableColumnName): TypedSqlTableColumnSupplier;
+}
+
+export interface PostgreSqlDomainSupplier {
+  (state: DcpTemplateState): PostgreSqlDomain;
+}
+
+export interface PostgreSqlDomainReference {
+  readonly prime: PostgreSqlDomain;
+  readonly reference: PostgreSqlDomain;
+}
+
+export interface PostgreSqlDomainReferenceSupplier {
+  (
+    domain: PostgreSqlDomain,
+    state: DcpTemplateState,
+  ): PostgreSqlDomainReference;
+}
+
+export interface SqlTable extends QualifiedReferenceSupplier {
   readonly name: SqlTableName;
   readonly qName: SqlTableQualifiedName;
+  readonly createSql: PostgreSqlStatementSupplier;
+  readonly dropSql: PostgreSqlStatementSupplier;
+}
+
+export interface SqlTableColumn {
+  readonly name: SqlTableColumnName;
+  readonly tableQualifiedName: SqlTableColumnQualifiedName;
+  readonly schemaQualifiedName: SqlTableColumnQualifiedName;
+  readonly dataType: PostgreSqlDomainDataType;
+  readonly tableColumnDeclSql: PostgreSqlStatementSupplier;
+  readonly tableConstraintsSql?:
+    | PostgreSqlStatementSupplier
+    | PostgreSqlStatementSupplier[];
+  readonly tableIndexesSql?:
+    | PostgreSqlStatementSupplier
+    | PostgreSqlStatementSupplier[];
+}
+
+export const isSqlTableColumn = safety.typeGuard<SqlTableColumn>(
+  "tableColumnDeclSql",
+);
+
+export interface SqlTableColumnPrimaryKey {
+  readonly isPrimaryKey: true;
+}
+
+export const isSqlTableColumnPrimaryKey = safety.typeGuard<
+  SqlTableColumnPrimaryKey
+>(
+  "isPrimaryKey",
+);
+
+export function isColumnTablePrimaryKey(o: unknown) {
+  return isSqlTableColumn(o) && isSqlTableColumnPrimaryKey(o) && o.isPrimaryKey;
+}
+
+export interface TypedSqlTableColumn extends SqlTableColumn {
+  readonly domain: PostgreSqlDomain;
+}
+
+export const isTypedSqlTableColumn = safety.typeGuard<TypedSqlTableColumn>(
+  "tableColumnDeclSql",
+  "domain",
+);
+
+export interface SqlTableColumnSupplier {
+  (
+    table: SqlTable,
+    columnName: SqlTableColumnName,
+    state: DcpTemplateState,
+  ): SqlTableColumn;
+}
+
+export interface TypedSqlTableColumnSupplier {
+  (
+    table: SqlTable,
+    columnName: SqlTableColumnName,
+    state: DcpTemplateState,
+  ): TypedSqlTableColumn;
 }
 
 export interface PostgreSqlStoredRoutine {
@@ -108,6 +240,7 @@ export interface PostgreSqlStoredRoutineSupplier {
 }
 
 export interface PostgreSqlLifecycleFunctions {
+  readonly constructDomains: PostgreSqlStoredRoutineSupplier;
   readonly constructStorage: PostgreSqlStoredRoutineSupplier;
   readonly constructIdempotent: PostgreSqlStoredRoutineSupplier;
   readonly destroyStorage: PostgreSqlStoredRoutineSupplier;
@@ -123,9 +256,8 @@ export interface PostgreSqlLifecycleFunctions {
   readonly populateExperimentalData: PostgreSqlStoredRoutineSupplier;
 }
 
-export interface SqlAffinityGroup {
+export interface SqlAffinityGroup extends QualifiedReferenceSupplier {
   readonly name: SqlAffinityGroupName;
-  readonly qualifiedReference: (qualify: string) => string;
   readonly setSearchPathSql: PostgreSqlStatementSupplier;
   readonly lcFunctions: PostgreSqlLifecycleFunctions;
 }
@@ -135,13 +267,14 @@ export interface PostgreSqlSchema extends SqlAffinityGroup {
   readonly dependencies?: PostgreSqlSchema[];
   readonly createSchemaSql: PostgreSqlStatementSupplier;
   readonly dropSchemaSql: PostgreSqlStatementSupplier;
-  readonly extension: (
-    name: PostgreSqlExtensionName,
-  ) => PostgreSqlExtension;
-  readonly domain: (
+  readonly extension: (name: PostgreSqlExtensionName) => PostgreSqlExtension;
+  readonly domainsUsed: PostgreSqlDomain[];
+  readonly useDomain: (
     name: PostgreSqlDomainName,
-    dataType: PostgreSqlDomainDataType,
-    elaborateDefn?: SqlStatement,
+    onCreate: (
+      name: PostgreSqlDomainName,
+      schema: PostgreSqlSchema,
+    ) => PostgreSqlDomain,
   ) => PostgreSqlDomain;
 }
 
@@ -307,6 +440,7 @@ export function typicalDcpInterpolationContext(
             tmpl.schema,
             tmpl.searchPath,
             tmpl.extensions,
+            tmpl.schemaDomainsUsedLifecycleProc,
           ]
           : (options.headers?.standalone || []),
         extensions: options.extensions,
@@ -352,6 +486,7 @@ export function typicalDcpInterpolationContext(
               tmpl.schema,
               tmpl.searchPath,
               tmpl.extensions,
+              tmpl.schemaDomainsUsedLifecycleProc,
             ],
           };
         },

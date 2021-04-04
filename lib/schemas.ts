@@ -18,25 +18,244 @@ export class TypicalSchemaExtension implements iSQL.PostgreSqlExtension {
   readonly searchPath = [this.schema];
 }
 
-export class TypicalSchemaDomain implements iSQL.PostgreSqlDomain {
+export class TypicalTableColumnInstance implements iSQL.SqlTableColumn {
   constructor(
-    readonly name: iSQL.PostgreSqlExtensionName,
-    readonly dataType: iSQL.PostgreSqlDomainDataType,
     readonly schema: iSQL.PostgreSqlSchema,
-    readonly domainDefnSql?: iSQL.SqlStatement,
+    readonly table: iSQL.SqlTable,
+    readonly name: iSQL.SqlTableColumnName,
+    readonly dataType: iSQL.PostgreSqlDomainDataType,
+    readonly tableConstraintsSql?:
+      | iSQL.PostgreSqlStatementSupplier
+      | iSQL.PostgreSqlStatementSupplier[],
+    readonly tableIndexesSql?:
+      | iSQL.PostgreSqlStatementSupplier
+      | iSQL.PostgreSqlStatementSupplier[],
   ) {
   }
 
-  readonly qName: iSQL.PostgreSqlDomainQualifiedName =
-    `${this.schema.name}.${this.name}`;
+  readonly tableQualifiedName: iSQL.SqlTableColumnQualifiedName = this.table
+    .qualifiedReference(this.name);
 
-  readonly createSql: iSQL.PostgreSqlStatementSupplier = () => {
-    return `CREATE DOMAIN ${this.schema.name}.${this.name} AS ${this.dataType}${this.domainDefnSql}`;
+  readonly schemaQualifiedName: iSQL.SqlTableColumnQualifiedName = this.schema
+    .qualifiedReference(this.table
+      .qualifiedReference(this.name));
+
+  readonly tableColumnDeclSql: iSQL.PostgreSqlStatementSupplier = () => {
+    const options: string[] = [];
+    if (iSQL.isNotNull(this)) options.push("NOT NULL");
+    if (iSQL.isColumnTablePrimaryKey(this)) options.push("PRIMARY KEY");
+    if (iSQL.isDefaultExprSupplier(this)) {
+      options.push(`default ${this.defaultSqlExpr}`);
+    }
+    return `${this.name} ${this.dataType}${
+      options.length > 0 ? ` ${options.join(" ")}` : ""
+    }`;
+  };
+}
+
+export interface TableColumnsSupplier {
+  (state: iSQL.DcpTemplateState, table: iSQL.SqlTable): TypicalTableColumns;
+}
+
+export interface TypicalTableColumns {
+  readonly all: iSQL.SqlTableColumn[];
+  readonly unique?: {
+    name: iSQL.SqlTableConstraintName;
+    columns: iSQL.SqlTableColumn[];
+  }[];
+}
+
+export interface SqlTableCreationComponents {
+  readonly columns: iSQL.SqlTableColumn[];
+  readonly constraints?: iSQL.PostgreSqlStatement[];
+  readonly appendix?: iSQL.PostgreSqlStatement[];
+}
+
+export abstract class TypicalTable implements iSQL.SqlTable {
+  constructor(
+    readonly state: iSQL.DcpTemplateState,
+    readonly name: iSQL.SqlTableName,
+  ) {
+  }
+
+  qName: iSQL.PostgreSqlDomainQualifiedName = this.state.affinityGroup
+    .qualifiedReference(this.name);
+
+  qualifiedReference(qualify: string) {
+    return `${this.name}.${qualify}`;
+  }
+
+  abstract get columns(): TypicalTableColumns;
+
+  prepareCreateComponents(
+    state: iSQL.DcpTemplateState,
+  ): SqlTableCreationComponents {
+    const columns = this.columns;
+    const constraints: iSQL.PostgreSqlStatement[] = [];
+    const appendix: iSQL.PostgreSqlStatement[] = [];
+
+    for (const c of columns.all) {
+      const tcs = c.tableConstraintsSql;
+      if (Array.isArray(tcs)) {
+        constraints.push(...tcs.map((tc) => tc(state)));
+      } else if (tcs) {
+        constraints.push(tcs(state));
+      }
+      const tis = c.tableIndexesSql;
+      if (Array.isArray(tis)) {
+        appendix.push(...tis.map((tc) => tc(state)));
+      } else if (tis) {
+        appendix.push(tis(state));
+      }
+    }
+    if (columns.unique) {
+      for (const ucs of columns.unique) {
+        constraints.push(
+          // deno-fmt-ignore
+          `CONSTRAINT ${ucs.name} UNIQUE(${ucs.columns.map((c) => c.name).join(", ")})`,
+        );
+      }
+    }
+
+    const components: SqlTableCreationComponents = {
+      columns: columns.all,
+      constraints: constraints.length > 0 ? constraints : undefined,
+      appendix: appendix.length > 0 ? appendix : undefined,
+    };
+    return components;
+  }
+
+  createSql(state: iSQL.DcpTemplateState): iSQL.PostgreSqlStatement {
+    const components = this.prepareCreateComponents(state);
+    const columns = this.columns;
+    const sqlRemarks = (c: iSQL.SqlTableColumn) => {
+      const domainReminders = [];
+      if (iSQL.isTypedSqlTableColumn(c)) {
+        domainReminders.push(c.domain.dataType);
+        if (iSQL.isNotNull(c.domain)) domainReminders.push("NOT NULL");
+        if (iSQL.isDefaultExprSupplier(c.domain)) {
+          domainReminders.push(`defaulted`);
+        }
+        return ` /* domain(${domainReminders.join(", ")}) */`;
+      }
+      return "";
+    };
+
+    // deno-fmt-ignore
+    return `CREATE TABLE ${this.qName}(
+        ${columns.all.map(c => { return `${c.tableColumnDeclSql(state)}${sqlRemarks(c)}`}).join(",\n        ")}${components.constraints ? ',' : ''}
+        ${components.constraints ? components.constraints.join(",\n        ") : '-- no column constraints'}
+      );${components.appendix ? `\n      ${components.appendix.join(";\n      ")};` : ''}`;
+  }
+
+  readonly dropSql: iSQL.PostgreSqlStatementSupplier = () => {
+    return `DROP TABLE IF EXISTS ${this.qName}`;
+  };
+}
+
+export class TypicalTypedTableColumnInstance extends TypicalTableColumnInstance
+  implements iSQL.TypedSqlTableColumn {
+  constructor(
+    readonly schema: iSQL.PostgreSqlSchema,
+    readonly table: iSQL.SqlTable,
+    readonly name: iSQL.SqlTableColumnName,
+    readonly domain: iSQL.PostgreSqlDomain,
+  ) {
+    super(schema, table, name, domain.dataType);
+  }
+
+  // for a typed-column, the data type is the domain's name
+  readonly dataType = this.domain.qName;
+}
+
+export function domainOrColumnSqlCommonOptions(
+  o: iSQL.PostgreSqlDomain | iSQL.SqlTableColumn,
+): string[] {
+  const options: string[] = [];
+  if (iSQL.isNotNull(o)) options.push("NOT NULL");
+  if (iSQL.isDefaultExprSupplier(o)) {
+    options.push(`default ${o.defaultSqlExpr}`);
+  }
+  return options;
+}
+
+export function typicalDomainTableColumn(
+  schema: iSQL.PostgreSqlSchema,
+  domain: iSQL.PostgreSqlDomain,
+  columnName: iSQL.SqlTableColumnName,
+): iSQL.TypedSqlTableColumnSupplier {
+  const result: iSQL.TypedSqlTableColumnSupplier = (table) => {
+    const column = new TypicalTypedTableColumnInstance(
+      schema,
+      table,
+      columnName,
+      domain,
+    );
+    const options: string[] = domainOrColumnSqlCommonOptions(column);
+    if (iSQL.isSqlTableColumnPrimaryKey(column)) {
+      options.push("PRIMARY KEY");
+    }
+    return options.length > 0
+      ? {
+        ...column,
+        tableColumnDeclSql: (state) => {
+          const defaultSql = column.tableColumnDeclSql(state);
+          return options.length > 0
+            ? `${defaultSql} ${options.join(" ")}`
+            : defaultSql;
+        },
+      }
+      : column;
+  };
+  return result;
+}
+
+export class TypicalDomain implements iSQL.PostgreSqlDomain {
+  readonly tableColumn: iSQL.TypedSqlTableColumnSupplier;
+
+  constructor(
+    readonly schema: iSQL.PostgreSqlSchema,
+    readonly name: iSQL.PostgreSqlDomainName,
+    readonly dataType: iSQL.PostgreSqlDomainDataType,
+    tableColumn?: iSQL.TypedSqlTableColumnSupplier,
+  ) {
+    this.tableColumn = tableColumn || ((
+      table: iSQL.SqlTable,
+      columnName: iSQL.SqlTableColumnName,
+      state: iSQL.DcpTemplateState,
+    ): iSQL.TypedSqlTableColumn => {
+      const supplier = typicalDomainTableColumn(schema, this, columnName);
+      return supplier(table, columnName, state);
+    });
+  }
+
+  readonly qName: iSQL.PostgreSqlDomainQualifiedName = this.schema
+    .qualifiedReference(this.name);
+
+  readonly createSql: iSQL.PostgreSqlStatementSupplier = (state) => {
+    // deno-fmt-ignore
+    return `CREATE DOMAIN ${this.schema.qualifiedReference(this.name)} AS ${this.dataType}`;
   };
 
   readonly dropSql: iSQL.PostgreSqlStatementSupplier = () => {
-    return `DROP EXTENSION IF EXISTS ${this.name}`;
+    return `DROP DOMAIN IF EXISTS ${this.schema.qualifiedReference(this.name)}`;
   };
+}
+
+export class TypicalDomainReference implements iSQL.PostgreSqlDomainReference {
+  constructor(
+    readonly schema: iSQL.PostgreSqlSchema,
+    readonly prime: iSQL.PostgreSqlDomain,
+  ) {
+  }
+
+  get reference(): iSQL.PostgreSqlDomain {
+    return new TypicalDomain(
+      this.schema,
+      `${this.prime.name}_fk`,
+      this.prime.dataType,
+    );
+  }
 }
 
 export class TypicalPostgreSqlSchemaStoredRoutine
@@ -64,6 +283,16 @@ export class TypicalSqlLifecycleFunctions
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
       `${override || this.ag.name}_construct_storage`,
+    );
+  };
+
+  readonly constructDomains: iSQL.PostgreSqlStoredRoutineSupplier = (
+    _,
+    override?,
+  ) => {
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      lifecycle,
+      `${override || this.ag.name}_construct_domains`,
     );
   };
 
@@ -208,6 +437,10 @@ export class TypicalAffinityGroup implements iSQL.SqlAffinityGroup {
 
 export class TypicalSchema implements iSQL.PostgreSqlSchema {
   readonly lcFunctions: iSQL.PostgreSqlLifecycleFunctions;
+  readonly #domainsCreated = new Map<
+    iSQL.PostgreSqlDomainName,
+    iSQL.PostgreSqlDomain
+  >();
 
   constructor(
     readonly name: iSQL.PostgreSqlSchemaName,
@@ -237,12 +470,39 @@ export class TypicalSchema implements iSQL.PostgreSqlSchema {
     return new TypicalSchemaExtension(name, this);
   };
 
-  readonly domain = (
+  get domainsUsed(): iSQL.PostgreSqlDomain[] {
+    const used: iSQL.PostgreSqlDomain[] = [];
+    for (const d of this.#domainsCreated.values()) {
+      used.push(d);
+    }
+    return used;
+  }
+
+  readonly useDomain = (
     name: iSQL.PostgreSqlDomainName,
-    dataType: iSQL.PostgreSqlDomainDataType,
-    elaborateDefn?: iSQL.SqlStatement,
+    onCreate: (
+      name: iSQL.PostgreSqlDomainName,
+      schema: iSQL.PostgreSqlSchema,
+    ) => iSQL.PostgreSqlDomain,
   ): iSQL.PostgreSqlDomain => {
-    return new TypicalSchemaDomain(name, dataType, this, elaborateDefn);
+    let domain = this.#domainsCreated.get(name);
+    if (!domain) {
+      const suggested = onCreate(name, this);
+      const options: string[] = domainOrColumnSqlCommonOptions(suggested);
+      domain = options.length > 0
+        ? {
+          ...suggested,
+          createSql: (state) => {
+            const defaultSql = suggested.createSql(state);
+            return options.length > 0
+              ? `${defaultSql} ${options.join(" ")}`
+              : defaultSql;
+          },
+        }
+        : suggested;
+      this.#domainsCreated.set(name, domain);
+    }
+    return domain;
   };
 }
 
