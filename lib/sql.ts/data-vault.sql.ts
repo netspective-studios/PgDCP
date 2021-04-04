@@ -46,40 +46,57 @@ export const provenanceUriDomain: mod.PostgreSqlDomainSupplier = (state) => {
   });
 };
 
+export class DataVaultIdentity extends mod.schemas.TypicalDomain {
+  constructor(
+    readonly schema: mod.PostgreSqlSchema,
+    readonly name: mod.PostgreSqlDomainName,
+  ) {
+    super(schema, name, "UUID", {
+      isNotNullable: true,
+      defaultSqlExpr: "gen_random_uuid()",
+    });
+  }
+
+  readonly tableColumn: mod.TypedSqlTableColumnSupplier = (
+    table,
+    columnName,
+    options?,
+  ): mod.TypedSqlTableColumn => {
+    const column: mod.TypedSqlTableColumn = new mod.schemas
+      .TypicalTypedTableColumnInstance(
+      this.schema,
+      table,
+      columnName,
+      this,
+      {
+        ...options, // TODO: properly merge in the items below, not just override them
+        tableConstraintsSql: (state) =>
+          `CONSTRAINT ${table.name}_pk UNIQUE(${column.name})`,
+        tableIndexesSql: () =>
+          `CREATE INDEX ${table.name}_${column.name}_idx ON ${table.qName} (${column.name})`,
+        isPrimaryKey: true,
+      },
+    );
+    return column;
+  };
+}
+
 export type HubName = string;
+export type LinkName = string;
 export type SatelliteName = string;
 
 export function hubIdDomain(name: HubName): mod.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(`hub_${name}_id`, (name, schema) => {
-      const domain: mod.PostgreSqlDomain = new mod.schemas.TypicalDomain(
-        schema,
-        name,
-        "UUID",
-        {
-          isNotNullable: true,
-          defaultSqlExpr: "gen_random_uuid()",
-          tableColumn: (table, columnName, options) => {
-            const column: mod.TypedSqlTableColumn = new mod.schemas
-              .TypicalTypedTableColumnInstance(
-              schema,
-              table,
-              columnName,
-              domain,
-              {
-                ...options, // TODO: properly merge in the items below, not just override them
-                tableConstraintsSql: (state) =>
-                  `CONSTRAINT ${table.name}_pk UNIQUE(${column.name})`,
-                tableIndexesSql: () =>
-                  `CREATE INDEX ${table.name}_${column.name}_idx ON ${table.qName} (${column.name})`,
-                isPrimaryKey: true,
-              },
-            );
-            return column;
-          },
-        },
-      );
-      return domain;
+      return new DataVaultIdentity(schema, name);
+    });
+  };
+}
+
+export function linkIdDomain(name: LinkName): mod.PostgreSqlDomainSupplier {
+  return (state) => {
+    return state.schema.useDomain(`link_${name}_id`, (name, schema) => {
+      return new DataVaultIdentity(schema, name);
     });
   };
 }
@@ -89,34 +106,7 @@ export function satelliteIdDomain(
 ): mod.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(`sat_${name}_id`, (name, schema) => {
-      const domain: mod.PostgreSqlDomain = new mod.schemas.TypicalDomain(
-        schema,
-        name,
-        "UUID",
-        {
-          isNotNullable: true,
-          defaultSqlExpr: "gen_random_uuid()",
-          tableColumn: (table, columnName, options) => {
-            const column: mod.TypedSqlTableColumn = new mod.schemas
-              .TypicalTypedTableColumnInstance(
-              schema,
-              table,
-              columnName,
-              domain,
-              {
-                ...options, // TODO: properly merge in the items below, not just override them
-                tableConstraintsSql: (state) =>
-                  `CONSTRAINT ${table.name}_pk UNIQUE(${column.name})`,
-                tableIndexesSql: () =>
-                  `CREATE INDEX ${table.name}_${column.name}_idx ON ${table.qName} (${column.name})`,
-                isPrimaryKey: true,
-              },
-            );
-            return column;
-          },
-        },
-      );
-      return domain;
+      return new DataVaultIdentity(schema, name);
     });
   };
 }
@@ -194,6 +184,67 @@ export class HubTable extends mod.schemas.TypicalTable {
   }
 }
 
+export class LinkTable extends mod.schemas.TypicalTable {
+  readonly linkIdDomain: mod.PostgreSqlDomain;
+  readonly linkId: mod.TypedSqlTableColumn;
+  readonly linkIdRefDomain: mod.PostgreSqlDomainReference;
+  readonly hubColumns: mod.TypedSqlTableColumn[];
+  readonly provDomain: mod.PostgreSqlDomain;
+  readonly domainRefSupplier: mod.PostgreSqlDomainReferenceSupplier;
+  readonly columns: mod.schemas.TypicalTableColumns;
+
+  constructor(
+    readonly state: mod.DcpTemplateState,
+    readonly linkName: LinkName,
+    readonly hubs: HubTable[],
+    options?: {
+      hubIdDomain?: mod.PostgreSqlDomain;
+      provDomain?: mod.PostgreSqlDomain;
+      domainRefSupplier?: mod.PostgreSqlDomainReferenceSupplier;
+    },
+  ) {
+    super(state, `link_${linkName}`);
+    this.domainRefSupplier = options?.domainRefSupplier || ((domain, state) => {
+      return new mod.schemas.TypicalDomainReference(state.schema, domain);
+    });
+    this.linkIdDomain = options?.hubIdDomain ||
+      linkIdDomain(linkName)(state);
+    this.linkIdRefDomain = this.domainRefSupplier(
+      this.linkIdDomain,
+      state,
+    );
+    state.schema.useDomain(this.linkIdRefDomain.reference.name, () => {
+      return this.linkIdRefDomain.reference;
+    });
+    this.provDomain = options?.provDomain || provenanceUriDomain(state);
+
+    this.linkId = this.linkIdDomain.tableColumn(this, "hub_id");
+    this.hubColumns = [];
+    for (const hub of this.hubs) {
+      const domain = hub.hubIdRefDomain;
+      this.hubColumns.push(domain.reference.tableColumn(this, hub.name, {
+        isNotNullable: true,
+        foreignKey: { table: hub, column: hub.hubId },
+      }));
+    }
+
+    this.columns = {
+      all: [
+        this.linkId,
+        ...this.hubColumns,
+        creationTimestampDomain(state).tableColumn(this, "created_at"),
+        creationUserDomain(state).tableColumn(this, "created_by"),
+        this.provDomain.tableColumn(this, "provenance"),
+        observabilityColumn(state, this),
+      ],
+      unique: [{
+        name: `${this.name}_unq`,
+        columns: this.hubColumns,
+      }],
+    };
+  }
+}
+
 export class SatelliteTable extends mod.schemas.TypicalTable {
   readonly satIdDomain: mod.PostgreSqlDomain;
   readonly satId: mod.TypedSqlTableColumn;
@@ -236,8 +287,7 @@ export class SatelliteTable extends mod.schemas.TypicalTable {
       "hub_id",
       {
         isNotNullable: true,
-        foreignKeyDecl:
-          `REFERENCES ${this.parent.qName}(${this.parent.hubId.name})`,
+        foreignKey: { table: this.parent, column: this.parent.hubId },
       },
     );
     const attributes = organicColumns(this);
@@ -253,6 +303,71 @@ export class SatelliteTable extends mod.schemas.TypicalTable {
       ],
       unique: attributes.unique,
     };
+  }
+}
+
+export class ExceptionHub extends HubTable {
+  constructor(readonly state: mod.DcpTemplateState) {
+    super(state, "exception", [{
+      name: "key",
+      domain: hubTextBusinessKeyDomain("exception_hub_key"),
+    }]);
+  }
+}
+
+export class ExceptionDiagnostics extends SatelliteTable {
+  constructor(
+    readonly state: mod.DcpTemplateState,
+    readonly parent: ExceptionHub,
+  ) {
+    super(
+      state,
+      parent,
+      "exception_diagnostics",
+      (table) => {
+        return {
+          all: [
+            "message",
+            "err_returned_sqlstate",
+            "err_pg_exception_detail",
+            "err_pg_exception_hint",
+            "err_pg_exception_context",
+          ].map((name) =>
+            new mod.schemas.TypicalTableColumnInstance(
+              state.schema,
+              table,
+              name,
+              "text",
+            )
+          ),
+        };
+      },
+    );
+  }
+}
+
+export class ExceptionHttpClient extends SatelliteTable {
+  constructor(
+    readonly state: mod.DcpTemplateState,
+    readonly parent: ExceptionHub,
+  ) {
+    super(
+      state,
+      parent,
+      "exception_http_client",
+      (table) => {
+        return {
+          all: ["http_req", "http_resp"].map((name) =>
+            new mod.schemas.TypicalTableColumnInstance(
+              state.schema,
+              table,
+              name,
+              "jsonb",
+            )
+          ),
+        };
+      },
+    );
   }
 }
 
@@ -272,50 +387,9 @@ export function SQL(
   );
   const { qualifiedReference: sqr } = state.schema;
   const { lcFunctions: lcf } = state.schema;
-  const exceptionHubTable = new HubTable(state, "exception", [{
-    name: "key",
-    domain: hubTextBusinessKeyDomain("exception_hub_key"),
-  }]);
-  const exceptionDiagsSatTable: SatelliteTable = new SatelliteTable(
-    state,
-    exceptionHubTable,
-    "exception_diagnostics",
-    (table) => {
-      return {
-        all: [
-          "message",
-          "err_returned_sqlstate",
-          "err_pg_exception_detail",
-          "err_pg_exception_hint",
-          "err_pg_exception_context",
-        ].map((name) =>
-          new mod.schemas.TypicalTableColumnInstance(
-            state.schema,
-            table,
-            name,
-            "text",
-          )
-        ),
-      };
-    },
-  );
-  const exceptionHttpClientSatTable: SatelliteTable = new SatelliteTable(
-    state,
-    exceptionHubTable,
-    "exception_http_client",
-    (table) => {
-      return {
-        all: ["http_req", "http_resp"].map((name) =>
-          new mod.schemas.TypicalTableColumnInstance(
-            state.schema,
-            table,
-            name,
-            "jsonb",
-          )
-        ),
-      };
-    },
-  );
+  const exceptionHub = new ExceptionHub(state);
+  const exceptionDiags = new ExceptionDiagnostics(state, exceptionHub);
+  const exceptionHttpClient = new ExceptionHttpClient(state, exceptionHub);
 
   // deno-fmt-ignore
   return mod.SQL(ctx, state)`
@@ -323,11 +397,11 @@ export function SQL(
     BEGIN
       call ${lcf.constructDomains(state).qName}();
 
-      ${exceptionHubTable.createSql(state)}
+      ${exceptionHub.createSql(state)}
 
-      ${exceptionDiagsSatTable.createSql(state)}
+      ${exceptionDiags.createSql(state)}
 
-      ${exceptionHttpClientSatTable.createSql(state)}
+      ${exceptionHttpClient.createSql(state)}
     END; $$ LANGUAGE PLPGSQL;
 
     CREATE OR REPLACE PROCEDURE ${lcf.destroyIdempotent(state).qName}() AS $innerFn$
