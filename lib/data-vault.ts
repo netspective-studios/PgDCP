@@ -9,18 +9,18 @@ export const telemetrySpanIdDomain: iSQL.PostgreSqlDomainSupplier = (state) => {
   });
 };
 
-export const creationTimestampDomain: iSQL.PostgreSqlDomainSupplier = (
+export const loadedOnTimestampDomain: iSQL.PostgreSqlDomainSupplier = (
   state,
 ) => {
-  return state.schema.useDomain("creation_timestamp", (name, schema) => {
+  return state.schema.useDomain("loaded_on_timestamp", (name, schema) => {
     return new schemas.TypicalDomain(schema, name, "timestamptz", {
       defaultSqlExpr: "current_timestamp",
     });
   });
 };
 
-export const creationUserDomain: iSQL.PostgreSqlDomainSupplier = (state) => {
-  return state.schema.useDomain("creation_user_name", (name, schema) => {
+export const loadedByUserDomain: iSQL.PostgreSqlDomainSupplier = (state) => {
+  return state.schema.useDomain("loaded_by_db_user_name", (name, schema) => {
     return new schemas.TypicalDomain(schema, name, "name", {
       defaultSqlExpr: "current_user",
     });
@@ -193,8 +193,8 @@ export class HubTable extends schemas.TypicalTable {
       all: [
         this.hubId,
         ...this.keyColumns,
-        creationTimestampDomain(state).tableColumn(this, "created_at"),
-        creationUserDomain(state).tableColumn(this, "created_by"),
+        loadedOnTimestampDomain(state).tableColumn(this, "loaded_on"),
+        loadedByUserDomain(state).tableColumn(this, "loaded_by"),
         this.provDomain.tableColumn(this, "provenance"),
       ],
       unique: [{
@@ -255,8 +255,8 @@ export class LinkTable extends schemas.TypicalTable {
       all: [
         this.linkId,
         ...this.hubColumns,
-        creationTimestampDomain(state).tableColumn(this, "created_at"),
-        creationUserDomain(state).tableColumn(this, "created_by"),
+        loadedOnTimestampDomain(state).tableColumn(this, "loaded_on"),
+        loadedByUserDomain(state).tableColumn(this, "loaded_by"),
         this.provDomain.tableColumn(this, "provenance"),
       ],
       unique: [{
@@ -327,8 +327,8 @@ export class SatelliteTable extends schemas.TypicalTable {
         this.satId,
         this.parentId,
         ...attributes.all,
-        creationTimestampDomain(state).tableColumn(this, "created_at"),
-        creationUserDomain(state).tableColumn(this, "created_by"),
+        loadedOnTimestampDomain(state).tableColumn(this, "loaded_on"),
+        loadedByUserDomain(state).tableColumn(this, "loaded_by"),
         this.provDomain.tableColumn(this, "provenance"),
       ],
       unique: attributes.unique,
