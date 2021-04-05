@@ -63,14 +63,17 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 
 # TODOs
 
+* Add `context` parameter to each lifecycle function like `construct_*`, `destroy_*`, etc. so that the procedure can make a decision about how to proceed in different runtime environments/contexts like sandbox, devl, production, etc. Instead of making decisions about context at SQL generation time, this would allow us to make decisions at runtime. 
+  * We should create a `dcp_context` schema which would contain a table called `execution_context` and contain global information about the database's execution context.
+  * The `context` parameter should default to `dcp_context.execution_context` row that would "know" which database was currently running (e.g. sandbox, devl, production, etc.)
+  * Create convention of custom data types called `schema_registration`, `schema_configuration` and `schema_nature` in each schema and a single function `registry` which will return a constant that groups the config/nature and combine any other meta data, settings, etc. for a given schema (make sure to use the PG catalog to stay [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself)). Instead of putting nature and dossier information into the name of the schema, we can have well-typed definitions.
+    * `nature` would be used for settings that would not change often
+      * Add stateless, statful, enhance, unrecoverable, FDW, etc. would probably be good for `nature` meta data
+    * `configuration` would be used for settings that could reasonably change often
+      * Semver to version the schema might be good for `configuration` meta data
 * Review [Sequential UUID Generators](https://www.2ndquadrant.com/en/blog/sequential-uuid-generators/) to create less expensive keys for Data Vault objects.
 * Create `SQLa` templates to provide per-schema introspection for our naming conventions using [PgTAP](https://raw.githubusercontent.com/theory/pgtap/8f8bb50fc8871dbbcf8dadd240069ae721678a7b/sql/pgtap--0.95.0--0.96.0.sql.in) guidance. For example, we should be able to locate our lifecycle stored routines by searching the PG catalog.
 * Create `SQLa` templates to implement guidance from [Simply auditing your database changes](https://mydbanotebook.org/post/auditing/).
-* Create convention of custom data types called `schema_registration`, `schema_configuration` and `schema_nature` in each schema and a single function `registry` which will return a constant that groups the config/nature and combine any other meta data, settings, etc. for a given schema (make sure to use the PG catalog to stay [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself)). Instead of putting nature and dossier information into the name of the schema, we can have well-typed definitions.
-  * `nature` would be used for settings that would not change often
-    * Add stateless, statful, enhance, unrecoverable, FDW, etc. would probably be good for `nature` meta data
-  * `configuration` would be used for settings that could reasonably change often
-    * Semver to version the schema might be good for `configuration` meta data
 * Move FDWs from simple schema names to real objects provided in `state` Options. Add `PostgreSqlForeignDataWrapper` as new interface to track and verify FDWs. `PostgreSqlForeignDataWrapper` is probably just a subclass of Schema.
 * Add `plpgsql_check` into all PgTAP unit tests; consider adding a new AG lifecycle function call `lint_*` which would be called by `select * from runlint()`.
 * Add ability to automatically segregate views that consumers can use from tables ("stores") that should be considered private and not used by consumers/developers.
@@ -86,9 +89,8 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
     * Test that all extensions required are installed and will not throw runtime exceptions
     * Test that caller has permissions to all dependencies such as schemas, objects, and will not throw runtime exceptions
 * Add `[AGorS]_hook_*` for responding to external requests from CI/CD or other webhook consumers. The job of the hook might be something as simple as refreshing a materialized view or something more complicated such as rebuilding all schema objects.
-* In Variant, add updatable views to retrieve / store provenance.
-* In Variant, add pg_cron-based auto-update capability (which and automatically retire old versions and refresh views).
-* In Variant, add *sensitivity* ltree[] to allow confidentiality to be specified in provenance as well as prime; base on *sensitivity* we may want to store encrypted text/JSON/XML.
+* In Data Vault, add pg_cron-based auto-update capability (which and automatically retire old versions and refresh views).
+* In Data Vault, add *sensitivity* ltree[] to allow confidentiality to be specified in provenance as well as prime; base on *sensitivity* we may want to store encrypted text/JSON/XML.
 
 ## Activity Log
 
