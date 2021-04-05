@@ -63,6 +63,8 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 
 # TODOs
 
+Infrastructure TODOs:
+
 * Add `context` parameter to each lifecycle function like `construct_*`, `destroy_*`, etc. so that the procedure can make a decision about how to proceed in different runtime environments/contexts like sandbox, devl, production, etc. Instead of making decisions about context at SQL generation time, this would allow us to make decisions at runtime. 
   * We should create a `dcp_context` schema which would contain a table called `execution_context` and contain global information about the database's execution context.
   * The `context` parameter should default to `dcp_context.execution_context` row that would "know" which database was currently running (e.g. sandbox, devl, production, etc.)
@@ -89,8 +91,15 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
     * Test that all extensions required are installed and will not throw runtime exceptions
     * Test that caller has permissions to all dependencies such as schemas, objects, and will not throw runtime exceptions
 * Add `[AGorS]_hook_*` for responding to external requests from CI/CD or other webhook consumers. The job of the hook might be something as simple as refreshing a materialized view or something more complicated such as rebuilding all schema objects.
-* In Data Vault, add pg_cron-based auto-update capability (which and automatically retire old versions and refresh views).
-* In Data Vault, add *sensitivity* ltree[] to allow confidentiality to be specified in provenance as well as prime; base on *sensitivity* we may want to store encrypted text/JSON/XML.
+
+Data Vault TODOs:
+
+* Add Lifecycle functions for loading (should we use `populateSeedData`, etc.?).
+* Add Lifecycle functions pg_cron-based auto-update capability (which and automatically retire old versions and refresh views).
+* Add *sensitivity* ltree[] to allow confidentiality to be specified in provenance as well as prime; base on *sensitivity* we may want to store encrypted text/JSON/XML.
+* Add OpenTelemetry Trace Hub to group Spans with Links
+* Add OpenTelemetry Log Hub that can integrate Exceptions, Traces, and Spans
+* Add OpenMetrics / OpenTelemetry Metric Hub that can store metrics which can be exposed as Prometheus endpoints via PostgREST.
 
 ## Activity Log
 
