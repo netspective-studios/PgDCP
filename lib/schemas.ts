@@ -18,11 +18,18 @@ export class TypicalSchemaExtension implements iSQL.PostgreSqlExtension {
   readonly searchPath = [this.schema];
 }
 
+export function tableColumnName(
+  name: iSQL.SqlTableColumnNameFlexible,
+  suggestion?: iSQL.SqlTableColumnName,
+): iSQL.SqlTableColumnName {
+  return typeof name === "string" ? name : name(suggestion);
+}
+
 export class TypicalTableColumnInstance implements iSQL.SqlTableColumn {
   constructor(
     readonly schema: iSQL.PostgreSqlSchema,
     readonly table: iSQL.SqlTable,
-    readonly name: iSQL.SqlTableColumnName,
+    readonly name: iSQL.SqlTableColumnNameFlexible,
     readonly dataType: iSQL.PostgreSqlDomainDataType,
     readonly options?: iSQL.SqlTableColumnOptions,
   ) {
@@ -37,11 +44,11 @@ export class TypicalTableColumnInstance implements iSQL.SqlTableColumn {
   readonly tableIndexesSql = this.options?.tableIndexesSql;
 
   readonly tableQualifiedName: iSQL.SqlTableColumnQualifiedName = this.table
-    .qualifiedReference(this.name);
+    .qualifiedReference(tableColumnName(this.name));
 
   readonly schemaQualifiedName: iSQL.SqlTableColumnQualifiedName = this.schema
     .qualifiedReference(this.table
-      .qualifiedReference(this.name));
+      .qualifiedReference(tableColumnName(this.name)));
 
   readonly tableColumnDeclSql: iSQL.PostgreSqlStatementSupplier = () => {
     const options: string[] = [];
@@ -58,7 +65,7 @@ export class TypicalTableColumnInstance implements iSQL.SqlTableColumn {
         `REFERENCES ${this.foreignKey.table.qName}(${this.foreignKey.column.name})`,
       );
     }
-    return `${this.name} ${this.dataType}${
+    return `${tableColumnName(this.name)} ${this.dataType}${
       options.length > 0 ? ` ${options.join(" ")}` : ""
     }`;
   };
@@ -169,11 +176,17 @@ export class TypicalTypedTableColumnInstance extends TypicalTableColumnInstance
   constructor(
     readonly schema: iSQL.PostgreSqlSchema,
     readonly table: iSQL.SqlTable,
-    readonly name: iSQL.SqlTableColumnName,
+    readonly name: iSQL.SqlTableColumnNameFlexible,
     readonly domain: iSQL.PostgreSqlDomain,
     readonly options?: iSQL.SqlTableColumnOptions,
   ) {
-    super(schema, table, name, domain.dataType, options);
+    super(
+      schema,
+      table,
+      name,
+      domain.dataType,
+      options,
+    );
   }
 
   // for a typed-column, the data type is the domain's name
@@ -186,6 +199,7 @@ export class TypicalDomain implements iSQL.PostgreSqlDomain {
     readonly name: iSQL.PostgreSqlDomainName,
     readonly dataType: iSQL.PostgreSqlDomainDataType,
     readonly options?: iSQL.PostgreSqlDomainColumnOptions & {
+      readonly defaultColumnName?: iSQL.SqlTableColumnNameFlexible;
       readonly tableColumn?: iSQL.TypedSqlTableColumnSupplier;
       readonly overrideTableColOptions?: (
         options?: iSQL.SqlTableColumnOptions,
@@ -194,6 +208,7 @@ export class TypicalDomain implements iSQL.PostgreSqlDomain {
   ) {
   }
 
+  readonly defaultColumnName = this.options?.defaultColumnName || this.name;
   readonly isNotNullable = this.options?.isNotNullable;
   readonly defaultSqlExpr = this.options?.defaultSqlExpr;
 
@@ -217,13 +232,12 @@ export class TypicalDomain implements iSQL.PostgreSqlDomain {
   readonly tableColumn: iSQL.TypedSqlTableColumnSupplier =
     this.options?.tableColumn || ((
       table: iSQL.SqlTable,
-      columnName: iSQL.SqlTableColumnName,
       options?: iSQL.SqlTableColumnOptions,
     ): iSQL.TypedSqlTableColumn => {
       return new TypicalTypedTableColumnInstance(
         this.schema,
         table,
-        columnName,
+        this.defaultColumnName,
         this,
         this.options?.overrideTableColOptions
           ? this.options?.overrideTableColOptions(options)
@@ -244,6 +258,9 @@ export class TypicalDomainReference implements iSQL.PostgreSqlDomainReference {
       this.schema,
       `${this.prime.name}_ref`,
       this.prime.dataType,
+      {
+        defaultColumnName: this.prime.name,
+      },
     );
   }
 }

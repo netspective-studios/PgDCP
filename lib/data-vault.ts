@@ -4,6 +4,7 @@ import * as schemas from "./schemas.ts";
 export const telemetrySpanIdDomain: iSQL.PostgreSqlDomainSupplier = (state) => {
   return state.schema.useDomain("telemetry_span_id", (name, schema) => {
     return new schemas.TypicalDomain(schema, name, "text", {
+      defaultColumnName: "span_id",
       isNotNullable: true,
     });
   });
@@ -12,8 +13,9 @@ export const telemetrySpanIdDomain: iSQL.PostgreSqlDomainSupplier = (state) => {
 export const loadedOnTimestampDomain: iSQL.PostgreSqlDomainSupplier = (
   state,
 ) => {
-  return state.schema.useDomain("loaded_on_timestamp", (name, schema) => {
+  return state.schema.useDomain("loaded_at_timestamp", (name, schema) => {
     return new schemas.TypicalDomain(schema, name, "timestamptz", {
+      defaultColumnName: "loaded_at",
       defaultSqlExpr: "current_timestamp",
     });
   });
@@ -22,6 +24,7 @@ export const loadedOnTimestampDomain: iSQL.PostgreSqlDomainSupplier = (
 export const loadedByUserDomain: iSQL.PostgreSqlDomainSupplier = (state) => {
   return state.schema.useDomain("loaded_by_db_user_name", (name, schema) => {
     return new schemas.TypicalDomain(schema, name, "name", {
+      defaultColumnName: "loaded_by",
       defaultSqlExpr: "current_user",
     });
   });
@@ -30,6 +33,7 @@ export const loadedByUserDomain: iSQL.PostgreSqlDomainSupplier = (state) => {
 export const provenanceUriDomain: iSQL.PostgreSqlDomainSupplier = (state) => {
   return state.schema.useDomain("provenance_uri", (name, schema) => {
     return new schemas.TypicalDomain(schema, name, "text", {
+      defaultColumnName: "provenance",
       defaultSqlExpr: "'system://'",
     });
   });
@@ -47,8 +51,10 @@ export class DataVaultIdentity extends schemas.TypicalDomain {
   constructor(
     readonly schema: iSQL.PostgreSqlSchema,
     readonly name: iSQL.PostgreSqlDomainName,
+    readonly defaultColumnName: iSQL.SqlTableColumnNameFlexible,
   ) {
     super(schema, name, "UUID", {
+      defaultColumnName,
       isNotNullable: true,
       defaultSqlExpr: "gen_random_uuid()",
     });
@@ -56,14 +62,13 @@ export class DataVaultIdentity extends schemas.TypicalDomain {
 
   readonly tableColumn: iSQL.TypedSqlTableColumnSupplier = (
     table,
-    columnName,
     options?,
   ): iSQL.TypedSqlTableColumn => {
     const column: iSQL.TypedSqlTableColumn = new schemas
       .TypicalTypedTableColumnInstance(
       this.schema,
       table,
-      columnName,
+      this.defaultColumnName,
       this,
       {
         ...options, // TODO: properly merge in the items below, not just override them
@@ -85,7 +90,7 @@ export type SatelliteName = string;
 export function hubIdDomain(name: HubName): iSQL.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(`hub_${name}_id`, (name, schema) => {
-      return new DataVaultIdentity(schema, name);
+      return new DataVaultIdentity(schema, name, "hub_id");
     });
   };
 }
@@ -93,7 +98,7 @@ export function hubIdDomain(name: HubName): iSQL.PostgreSqlDomainSupplier {
 export function linkIdDomain(name: LinkName): iSQL.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(`link_${name}_id`, (name, schema) => {
-      return new DataVaultIdentity(schema, name);
+      return new DataVaultIdentity(schema, name, "link_id");
     });
   };
 }
@@ -103,7 +108,7 @@ export function satelliteIdDomain(
 ): iSQL.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(`sat_${name}_id`, (name, schema) => {
-      return new DataVaultIdentity(schema, name);
+      return new DataVaultIdentity(schema, name, "sat_id");
     });
   };
 }
@@ -158,7 +163,7 @@ export class HubTable extends schemas.TypicalTable {
     readonly state: iSQL.DcpTemplateState,
     readonly hubName: HubName,
     readonly keys: {
-      name: iSQL.SqlTableColumnName;
+      name: iSQL.SqlTableColumnNameFlexible;
       domain: iSQL.PostgreSqlDomainSupplier;
     }[],
     options?: {
@@ -182,20 +187,20 @@ export class HubTable extends schemas.TypicalTable {
     });
     this.provDomain = options?.provDomain || provenanceUriDomain(state);
 
-    this.hubId = this.hubIdDomain.tableColumn(this, "hub_id");
+    this.hubId = this.hubIdDomain.tableColumn(this);
     this.keyColumns = [];
     for (const key of this.keys) {
       const domain = key.domain(state);
-      this.keyColumns.push(domain.tableColumn(this, key.name));
+      this.keyColumns.push(domain.tableColumn(this));
     }
 
     this.columns = {
       all: [
         this.hubId,
         ...this.keyColumns,
-        loadedOnTimestampDomain(state).tableColumn(this, "loaded_on"),
-        loadedByUserDomain(state).tableColumn(this, "loaded_by"),
-        this.provDomain.tableColumn(this, "provenance"),
+        loadedOnTimestampDomain(state).tableColumn(this),
+        loadedByUserDomain(state).tableColumn(this),
+        this.provDomain.tableColumn(this),
       ],
       unique: [{
         name: `${this.name}_unq`,
@@ -239,12 +244,13 @@ export class LinkTable extends schemas.TypicalTable {
     });
     this.provDomain = options?.provDomain || provenanceUriDomain(state);
 
-    this.linkId = this.linkIdDomain.tableColumn(this, "link_id");
+    this.linkId = this.linkIdDomain.tableColumn(this);
     this.hubColumns = [];
     for (const hub of this.hubs) {
       const domain = hub.hubIdRefDomain;
       this.hubColumns.push(
-        domain.reference.tableColumn(this, `${hub.hubName}_hub_id`, {
+        domain.reference.tableColumn(this, {
+          columnName: `${hub.hubName}_hub_id`,
           isNotNullable: true,
           foreignKey: { table: hub, column: hub.hubId },
         }),
@@ -255,9 +261,9 @@ export class LinkTable extends schemas.TypicalTable {
       all: [
         this.linkId,
         ...this.hubColumns,
-        loadedOnTimestampDomain(state).tableColumn(this, "loaded_on"),
-        loadedByUserDomain(state).tableColumn(this, "loaded_by"),
-        this.provDomain.tableColumn(this, "provenance"),
+        loadedOnTimestampDomain(state).tableColumn(this),
+        loadedByUserDomain(state).tableColumn(this),
+        this.provDomain.tableColumn(this),
       ],
       unique: [{
         name: `${this.name}_unq`,
@@ -303,33 +309,25 @@ export class SatelliteTable extends schemas.TypicalTable {
     });
     this.provDomain = options?.provDomain || parent.provDomain;
 
-    this.satId = this.satIdDomain.tableColumn(this, "sat_id");
+    this.satId = this.satIdDomain.tableColumn(this);
     this.parentId = this.parent instanceof HubTable
-      ? this.parent.hubIdRefDomain.reference.tableColumn(
-        this,
-        "hub_id",
-        {
-          isNotNullable: true,
-          foreignKey: { table: this.parent, column: this.parent.hubId },
-        },
-      )
-      : this.parent.linkIdRefDomain.reference.tableColumn(
-        this,
-        "link_id",
-        {
-          isNotNullable: true,
-          foreignKey: { table: this.parent, column: this.parent.linkId },
-        },
-      );
+      ? this.parent.hubIdRefDomain.reference.tableColumn(this, {
+        isNotNullable: true,
+        foreignKey: { table: this.parent, column: this.parent.hubId },
+      })
+      : this.parent.linkIdRefDomain.reference.tableColumn(this, {
+        isNotNullable: true,
+        foreignKey: { table: this.parent, column: this.parent.linkId },
+      });
     const attributes = organicColumns(this);
     this.columns = {
       all: [
         this.satId,
         this.parentId,
         ...attributes.all,
-        loadedOnTimestampDomain(state).tableColumn(this, "loaded_on"),
-        loadedByUserDomain(state).tableColumn(this, "loaded_by"),
-        this.provDomain.tableColumn(this, "provenance"),
+        loadedOnTimestampDomain(state).tableColumn(this),
+        loadedByUserDomain(state).tableColumn(this),
+        this.provDomain.tableColumn(this),
       ],
       unique: attributes.unique,
     };
@@ -339,7 +337,7 @@ export class SatelliteTable extends schemas.TypicalTable {
 export class TelemetrySpanHub extends HubTable {
   constructor(readonly state: iSQL.DcpTemplateState) {
     super(state, "telemetry_span", [{
-      name: "span_id",
+      name: telemetrySpanIdDomain(state).defaultColumnName,
       domain: telemetrySpanIdDomain,
     }]);
   }

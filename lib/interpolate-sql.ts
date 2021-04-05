@@ -59,6 +59,12 @@ export type SqlAffinityGroupName = string;
 export type SqlTableName = string;
 export type SqlTableQualifiedName = string;
 export type SqlTableColumnName = string;
+export type SqlTableColumnNameSupplier = (
+  suggested?: SqlTableColumnName,
+) => SqlTableColumnName;
+export type SqlTableColumnNameFlexible =
+  | SqlTableColumnName
+  | SqlTableColumnNameSupplier;
 export type SqlTableColumnQualifiedName = string;
 export type SqlTableCreateDeclFragment = string;
 export type SqlTableConstraintName = string;
@@ -113,13 +119,10 @@ export interface PostgreSqlDomain extends PostgreSqlDomainColumnOptions {
   readonly name: PostgreSqlDomainName;
   readonly qName: PostgreSqlDomainQualifiedName;
   readonly dataType: PostgreSqlDomainDataType;
+  readonly defaultColumnName: SqlTableColumnNameFlexible;
   readonly createSql: PostgreSqlStatementSupplier;
   readonly dropSql: PostgreSqlStatementSupplier;
   readonly tableColumn: TypedSqlTableColumnSupplier;
-}
-
-export interface PostgreSqlDomainColumnSupplier {
-  (name: SqlTableColumnName): TypedSqlTableColumnSupplier;
 }
 
 export interface PostgreSqlDomainSupplier {
@@ -163,7 +166,7 @@ export interface SqlTableColumnOptions extends PostgreSqlDomainColumnOptions {
 }
 
 export interface SqlTableColumn extends SqlTableColumnOptions {
-  readonly name: SqlTableColumnName;
+  readonly name: SqlTableColumnNameFlexible;
   readonly tableQualifiedName: SqlTableColumnQualifiedName;
   readonly schemaQualifiedName: SqlTableColumnQualifiedName;
   readonly dataType: PostgreSqlDomainDataType;
@@ -186,7 +189,7 @@ export const isTypedSqlTableColumn = safety.typeGuard<TypedSqlTableColumn>(
 export interface SqlTableColumnSupplier {
   (
     table: SqlTable,
-    columnName: SqlTableColumnName,
+    columnName: SqlTableColumnNameFlexible,
     options?: SqlTableColumnOptions,
   ): SqlTableColumn;
 }
@@ -194,8 +197,9 @@ export interface SqlTableColumnSupplier {
 export interface TypedSqlTableColumnSupplier {
   (
     table: SqlTable,
-    columnName: SqlTableColumnName,
-    options?: SqlTableColumnOptions,
+    options?: SqlTableColumnOptions & {
+      columnName?: SqlTableColumnNameFlexible;
+    },
   ): TypedSqlTableColumn;
 }
 
