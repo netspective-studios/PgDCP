@@ -156,6 +156,11 @@ export function hubLtreeBusinessKeyDomain(
   };
 }
 
+/**
+ * HubTable automates the creation of Data Vault 2.0 physical Hub tables.
+ * 
+ * Ref: https://www.sciencedirect.com/topics/computer-science/data-vault-model
+ */
 export class HubTable extends schemas.TypicalTable {
   readonly hubIdDomain: iSQL.PostgreSqlDomain;
   readonly hubId: iSQL.TypedSqlTableColumn;
@@ -218,6 +223,10 @@ export class HubTable extends schemas.TypicalTable {
   }
 }
 
+/**
+ * LinkTable automates the creation of Data Vault 2.0 physical Link tables
+ * which connect one or more Hubs together.
+ */
 export class LinkTable extends schemas.TypicalTable {
   readonly linkIdDomain: iSQL.PostgreSqlDomain;
   readonly linkId: iSQL.TypedSqlTableColumn;
@@ -281,6 +290,12 @@ export class LinkTable extends schemas.TypicalTable {
   }
 }
 
+/**
+ * SatelliteTable automates the creation of Data Vault 2.0 physical Satellite
+ * tables that may elaborate or further describe an existing Hub or Link.
+ * 
+ * Ref: https://www.sciencedirect.com/topics/computer-science/data-vault-satellite
+ */
 export class SatelliteTable extends schemas.TypicalTable {
   readonly satIdDomain: iSQL.PostgreSqlDomain;
   readonly satId: iSQL.TypedSqlTableColumn;
