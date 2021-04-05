@@ -115,6 +115,7 @@ Platform and site reliability engineers should review:
 * [Postgres extension to introspect postgres log files](https://github.com/sroeschus/loginfo) from within the database
 * [Postgres clone schema utility](https://github.com/denishpatel/pg-clone-schema) without need of going outside of database. Makes developers life easy by running single function to clone schema with all objects. It is very handy on Postgres RDS.
 * [An unassuming proposal for PLSQL Continuous Integration using revision control, Jenkins and Maven\.](https://github.com/pauldzy/Tentative_PLpgSQL_CI)
+* [Securing Your PostgreSQL Database](https://goteleport.com/blog/securing-postgres-postgresql/)
 
 Engineers writing stored routines (functions, SPs) should review:
 
