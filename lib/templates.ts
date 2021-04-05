@@ -25,22 +25,6 @@ export const schema: iSQL.DcpTemplateSupplier = (state) => {
   return `${state.schema.createSchemaSql(state)};`;
 };
 
-export const schemaDomainsUsedLifecycleProc: iSQL.DcpTemplateSupplier = (
-  state,
-) => {
-  const domainsUsed = state.schema.domainsUsed;
-  if (domainsUsed.length > 0) {
-    return [
-      // deno-fmt-ignore
-      `CREATE OR REPLACE PROCEDURE ${ state.schema.lcFunctions.constructDomains(state).qName}() AS $$`,
-      "BEGIN",
-      ...(domainsUsed.map((d) => `    ${d.createSql(state)};`)),
-      "END; $$ LANGUAGE PLPGSQL;",
-    ].join("\n");
-  }
-  return "-- no domains used";
-};
-
 export const extensions: iSQL.DcpTemplateSupplier = (state) => {
   if (state.extensions) {
     return [

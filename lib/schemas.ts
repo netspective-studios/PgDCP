@@ -89,7 +89,7 @@ export abstract class TypicalTable implements iSQL.SqlTable {
   ) {
   }
 
-  qName: iSQL.PostgreSqlDomainQualifiedName = this.state.affinityGroup
+  qName: iSQL.PostgreSqlDomainQualifiedName = this.state.schema
     .qualifiedReference(this.name);
 
   qualifiedReference(qualify: string) {
@@ -207,7 +207,7 @@ export class TypicalDomain implements iSQL.PostgreSqlDomain {
       options.push(`default ${this.defaultSqlExpr}`);
     }
     // deno-fmt-ignore
-    return `CREATE DOMAIN ${this.schema.qualifiedReference(this.name)} AS ${this.dataType}${options.length > 0 ? ` ${options.join(" ")}` : ""}`;
+    return `BEGIN CREATE DOMAIN ${this.schema.qualifiedReference(this.name)} AS ${this.dataType}${options.length > 0 ? ` ${options.join(" ")}` : ""}; EXCEPTION WHEN duplicate_object THEN null; END`
   };
 
   readonly dropSql: iSQL.PostgreSqlStatementSupplier = () => {

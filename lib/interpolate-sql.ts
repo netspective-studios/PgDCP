@@ -412,7 +412,6 @@ export function typicalDcpInterpolationContext(
             tmpl.schema,
             tmpl.searchPath,
             tmpl.extensions,
-            tmpl.schemaDomainsUsedLifecycleProc,
           ]
           : (options.headers?.standalone || []),
         extensions: options.extensions,
@@ -458,7 +457,6 @@ export function typicalDcpInterpolationContext(
               tmpl.schema,
               tmpl.searchPath,
               tmpl.extensions,
-              tmpl.schemaDomainsUsedLifecycleProc,
             ],
           };
         },

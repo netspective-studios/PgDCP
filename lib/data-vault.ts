@@ -35,6 +35,14 @@ export const provenanceUriDomain: iSQL.PostgreSqlDomainSupplier = (state) => {
   });
 };
 
+export const contentHashDomain: iSQL.PostgreSqlDomainSupplier = (state) => {
+  return state.schema.useDomain("content_hash", (name, schema) => {
+    return new schemas.TypicalDomain(schema, name, "text", {
+      isNotNullable: true,
+    });
+  });
+};
+
 export class DataVaultIdentity extends schemas.TypicalDomain {
   constructor(
     readonly schema: iSQL.PostgreSqlSchema,
@@ -456,25 +464,35 @@ export function typicalHousekeepingEntities(
 export function SQL(
   ctx: iSQL.DcpInterpolationContext,
   schema: iSQL.PostgreSqlSchema,
+  affinityGroup: iSQL.SqlAffinityGroup,
   heSupplier: (state: iSQL.DcpTemplateState) => HousekeepingEntities,
 ): iSQL.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
     {
       schema,
+      affinityGroup,
       extensions: [
         schemas.extensions.ltreeExtn,
-        schemas.extensions.httpExtn,
       ],
     },
   );
 
-  const { lcFunctions: lcf } = state.schema;
+  // Affinity group (instead of schema) is important for LCF since we might
+  // have multiple groups of DV entities. Also, state.affinityGroup is safe
+  // to use since it defaults to the schema in case Affinity Group is not
+  // defined.
+  const { lcFunctions: lcf } = state.affinityGroup;
   const he = heSupplier(state);
   const tables = he.tables();
 
   // deno-fmt-ignore
   return iSQL.SQL(ctx, state)`
+    CREATE OR REPLACE PROCEDURE ${lcf.constructDomains(state).qName}() AS $$
+    BEGIN
+      ${state.schema.domainsUsed.map((d) => d.createSql(state)).join(';\n      ')};
+    END; $$ LANGUAGE PLPGSQL;
+  
     CREATE OR REPLACE PROCEDURE ${lcf.constructStorage(state).qName}() AS $$
     BEGIN
       call ${lcf.constructDomains(state).qName}();
