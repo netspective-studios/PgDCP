@@ -63,6 +63,7 @@ PgDCP encourages fine-granined [Semantic Versioning](https://semver.org/) by pro
 
 # TODOs
 
+* Review [Sequential UUID Generators](https://www.2ndquadrant.com/en/blog/sequential-uuid-generators/) to create less expensive keys for Data Vault objects.
 * Create `SQLa` templates to provide per-schema introspection for our naming conventions using [PgTAP](https://raw.githubusercontent.com/theory/pgtap/8f8bb50fc8871dbbcf8dadd240069ae721678a7b/sql/pgtap--0.95.0--0.96.0.sql.in) guidance. For example, we should be able to locate our lifecycle stored routines by searching the PG catalog.
 * Create `SQLa` templates to implement guidance from [Simply auditing your database changes](https://mydbanotebook.org/post/auditing/).
 * Create convention of custom data types called `schema_registration`, `schema_configuration` and `schema_nature` in each schema and a single function `registry` which will return a constant that groups the config/nature and combine any other meta data, settings, etc. for a given schema (make sure to use the PG catalog to stay [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself)). Instead of putting nature and dossier information into the name of the schema, we can have well-typed definitions.
