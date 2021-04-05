@@ -115,10 +115,12 @@ export function satelliteIdDomain(
 
 export function hubTextBusinessKeyDomain(
   name: iSQL.PostgreSqlDomainName,
+  defaultColumnName: iSQL.SqlTableColumnNameFlexible,
 ): iSQL.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(name, (name, schema) => {
       return new schemas.TypicalDomain(schema, name, "text", {
+        defaultColumnName,
         isNotNullable: true,
       });
     });
@@ -127,10 +129,12 @@ export function hubTextBusinessKeyDomain(
 
 export function hubUriBusinessKeyDomain(
   name: iSQL.PostgreSqlDomainName,
+  defaultColumnName: iSQL.SqlTableColumnNameFlexible,
 ): iSQL.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(name, (name, schema) => {
       return new schemas.TypicalDomain(schema, name, "text", {
+        defaultColumnName,
         isNotNullable: true,
         // TODO: add a constraint to verify that it's a valid URI
       });
@@ -140,10 +144,12 @@ export function hubUriBusinessKeyDomain(
 
 export function hubLtreeBusinessKeyDomain(
   name: iSQL.PostgreSqlDomainName,
+  defaultColumnName: iSQL.SqlTableColumnNameFlexible,
 ): iSQL.PostgreSqlDomainSupplier {
   return (state) => {
     return state.schema.useDomain(name, (name, schema) => {
       return new schemas.TypicalDomain(schema, name, "ltree", {
+        defaultColumnName,
         isNotNullable: true,
       });
     });
@@ -163,8 +169,8 @@ export class HubTable extends schemas.TypicalTable {
     readonly state: iSQL.DcpTemplateState,
     readonly hubName: HubName,
     readonly keys: {
-      name: iSQL.SqlTableColumnNameFlexible;
       domain: iSQL.PostgreSqlDomainSupplier;
+      columnName?: iSQL.SqlTableColumnNameFlexible;
     }[],
     options?: {
       hubIdDomain?: iSQL.PostgreSqlDomain;
@@ -191,7 +197,9 @@ export class HubTable extends schemas.TypicalTable {
     this.keyColumns = [];
     for (const key of this.keys) {
       const domain = key.domain(state);
-      this.keyColumns.push(domain.tableColumn(this));
+      this.keyColumns.push(
+        domain.tableColumn(this, { columnName: key.columnName }),
+      );
     }
 
     this.columns = {
@@ -337,7 +345,6 @@ export class SatelliteTable extends schemas.TypicalTable {
 export class TelemetrySpanHub extends HubTable {
   constructor(readonly state: iSQL.DcpTemplateState) {
     super(state, "telemetry_span", [{
-      name: telemetrySpanIdDomain(state).defaultColumnName,
       domain: telemetrySpanIdDomain,
     }]);
   }
@@ -346,8 +353,7 @@ export class TelemetrySpanHub extends HubTable {
 export class ExceptionHub extends HubTable {
   constructor(readonly state: iSQL.DcpTemplateState) {
     super(state, "exception", [{
-      name: "key",
-      domain: hubTextBusinessKeyDomain("exception_hub_key"),
+      domain: hubTextBusinessKeyDomain("exception_hub_key", "key"),
     }]);
   }
 }
