@@ -94,6 +94,10 @@ Infrastructure TODOs:
 
 Data Vault TODOs:
 
+* Add `active`, `version`, `effective_at` and `expired_at` columns to `SatelliteTable` for storing history. 
+  * Add rule to check that every satellite has at least one record so that outer joins are not necessary?
+* See if it makes sense to implement custom [point in time (PIT) tables](https://danlinstedt.com/allposts/datavaultcat/pit-bridge-value/).
+* See if it makes sense to implement custom [bridge tables](https://blog.scalefree.com/2019/03/13/bridge-tables-101/).
 * Add Lifecycle functions for loading (should we use `populateSeedData`, etc.?).
 * Add Lifecycle functions pg_cron-based auto-update capability (which and automatically retire old versions and refresh views).
 * Add *sensitivity* ltree[] to allow confidentiality to be specified in provenance as well as prime; base on *sensitivity* we may want to store encrypted text/JSON/XML.
