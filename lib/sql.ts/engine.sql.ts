@@ -31,11 +31,12 @@ export function SQL(
   const { lcFunctions: fn } = state.affinityGroup;
   // deno-fmt-ignore
   return mod.SQL(ctx, state)`
+    ${schemas.context.createSchemaSql(state)};
+    ${schemas.lib.createSchemaSql(state)};
     ${schemas.lifecycle.createSchemaSql(state)};
     ${schemas.confidential.createSchemaSql(state)};
     ${schemas.assurance.createSchemaSql(state)};
     ${schemas.experimental.createSchemaSql(state)};
-    ${schemas.lib.createSchemaSql(state)};
 
     -- make sure everybody can use everything in the extensions schema
     grant usage on schema ${schemas.extensions.name} to public;
@@ -65,8 +66,8 @@ export function SQL(
     CREATE OR REPLACE PROCEDURE ${fn.destroyIdempotent(state).qName}() AS $$
     BEGIN
         -- TODO: if user = 'dcp_destroyer' ... else raise exception invalid user trying to destroyIdempotent
-      ${schemas.assurance.dropSchemaSql(state)};
       ${schemas.experimental.dropSchemaSql(state)};
+      ${schemas.assurance.dropSchemaSql(state)};
       ${schemas.lib.dropSchemaSql(state)};
       call variant_dcp_lifecycle_etc_destroy_all_objects();
     END;

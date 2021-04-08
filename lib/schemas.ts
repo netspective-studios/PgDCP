@@ -69,6 +69,12 @@ export class TypicalTableColumnInstance implements iSQL.SqlTableColumn {
       options.length > 0 ? ` ${options.join(" ")}` : ""
     }`;
   };
+
+  readonly castSql = (
+    expr: iSQL.PostgreSqlDomainCastExpr,
+  ): iSQL.PostgreSqlDomainCastExpr => {
+    return `(${expr})::${this.dataType}`;
+  };
 }
 
 export interface TableColumnsSupplier {
@@ -89,6 +95,42 @@ export interface SqlTableCreationComponents {
   readonly appendix?: iSQL.PostgreSqlStatement[];
 }
 
+export abstract class TypicalView implements iSQL.SqlView {
+  constructor(
+    readonly state: iSQL.DcpTemplateState,
+    readonly name: iSQL.SqlViewName,
+  ) {
+  }
+
+  // this is a special template literal function named SQL so that Visual
+  // Studio code will properly syntax highlight the content
+  SQL(
+    literals: TemplateStringsArray,
+    ...expressions: unknown[]
+  ): iSQL.PostgreSqlStatement {
+    let interpolated = "";
+    for (let i = 0; i < expressions.length; i++) {
+      interpolated += literals[i];
+      interpolated += expressions[i];
+    }
+    interpolated += literals[literals.length - 1];
+    return interpolated;
+  }
+
+  qName: iSQL.PostgreSqlSchemaViewQualifiedName = this.state.schema
+    .qualifiedReference(this.name);
+
+  qualifiedReference(qualify: string) {
+    return `${this.name}.${qualify}`;
+  }
+
+  abstract readonly createSql: iSQL.PostgreSqlStatementSupplier;
+
+  readonly dropSql: iSQL.PostgreSqlStatementSupplier = () => {
+    return `DROP VIEW IF EXISTS ${this.qName}`;
+  };
+}
+
 export abstract class TypicalTable implements iSQL.SqlTable {
   constructor(
     readonly state: iSQL.DcpTemplateState,
@@ -96,7 +138,7 @@ export abstract class TypicalTable implements iSQL.SqlTable {
   ) {
   }
 
-  qName: iSQL.PostgreSqlDomainQualifiedName = this.state.schema
+  qName: iSQL.PostgreSqlSchemaTableQualifiedName = this.state.schema
     .qualifiedReference(this.name);
 
   qualifiedReference(qualify: string) {
@@ -191,6 +233,7 @@ export class TypicalTypedTableColumnInstance extends TypicalTableColumnInstance
 
   // for a typed-column, the data type is the domain's name
   readonly dataType = this.domain.qName;
+  readonly castSql = this.domain.castSql;
 }
 
 export class TypicalDomain implements iSQL.PostgreSqlDomain {
@@ -214,6 +257,12 @@ export class TypicalDomain implements iSQL.PostgreSqlDomain {
 
   readonly qName: iSQL.PostgreSqlDomainQualifiedName = this.schema
     .qualifiedReference(this.name);
+
+  readonly castSql = (
+    expr: iSQL.PostgreSqlDomainCastExpr,
+  ): iSQL.PostgreSqlDomainCastExpr => {
+    return `(${expr})::${this.qName}`;
+  };
 
   readonly createSql: iSQL.PostgreSqlStatementSupplier = (state) => {
     const options: string[] = [];
@@ -274,6 +323,7 @@ export class TypicalPostgreSqlSchemaStoredRoutine
   }
 
   readonly qName = this.ag.qualifiedReference(this.name);
+  readonly bodyBlockName = `${this.qName.replaceAll(/\./g, "_")}_body`;
 }
 
 export class TypicalSqlLifecycleFunctions
@@ -289,7 +339,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
-      `${override || this.ag.name}_construct_storage`,
+      `${override || this.ag.qName}_construct_storage`,
     );
   };
 
@@ -299,7 +349,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
-      `${override || this.ag.name}_construct_domains`,
+      `${override || this.ag.qName}_construct_domains`,
     );
   };
 
@@ -309,7 +359,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
-      `${override || this.ag.name}_construct_idempotent`,
+      `${override || this.ag.qName}_construct_idempotent`,
     );
   };
 
@@ -319,7 +369,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
-      `${override || this.ag.name}_destroy_storage`,
+      `${override || this.ag.qName}_destroy_storage`,
     );
   };
 
@@ -329,7 +379,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
-      `${override || this.ag.name}_destroy_idempotent`,
+      `${override || this.ag.qName}_destroy_idempotent`,
     );
   };
 
@@ -339,7 +389,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       assurance,
-      `${override || this.ag.name}_deploy_provenance_http_request`,
+      `${override || this.ag.qName}_deploy_provenance_http_request`,
     );
   };
 
@@ -349,7 +399,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       assurance,
-      `${override || this.ag.name}_upgrade`,
+      `${override || this.ag.qName}_upgrade`,
     );
   };
 
@@ -359,7 +409,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       assurance,
-      `test_${override || this.ag.name}`,
+      `test_${override || this.ag.qName}`,
     );
   };
 
@@ -369,7 +419,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       assurance,
-      `lint_${override || this.ag.name}`,
+      `lint_${override || this.ag.qName}`,
     );
   };
 
@@ -379,7 +429,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       assurance,
-      `test_doctor_${override || this.ag.name}`,
+      `test_doctor_${override || this.ag.qName}`,
     );
   };
 
@@ -389,7 +439,17 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       assurance,
-      `observability_metrics_${override || this.ag.name}`,
+      `observability_metrics_${override || this.ag.qName}`,
+    );
+  };
+
+  readonly populateContext: iSQL.PostgreSqlStoredRoutineSupplier = (
+    _,
+    override?,
+  ) => {
+    return new TypicalPostgreSqlSchemaStoredRoutine(
+      context,
+      `${override || this.ag.qName}_populate_experimental_data`,
     );
   };
 
@@ -399,7 +459,7 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
-      `${override || this.ag.name}_populate_secrets`,
+      `${override || this.ag.qName}_populate_secrets`,
     );
   };
 
@@ -409,17 +469,17 @@ export class TypicalSqlLifecycleFunctions
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
-      `${override || this.ag.name}_populate_seed_data`,
+      `${override || this.ag.qName}_populate_seed_data`,
     );
   };
 
-  readonly populateExperimentalData: iSQL.PostgreSqlStoredRoutineSupplier = (
+  readonly populateData: iSQL.PostgreSqlStoredRoutineSupplier = (
     _,
     override?,
   ) => {
     return new TypicalPostgreSqlSchemaStoredRoutine(
-      experimental,
-      `${override || this.ag.name}_populate_experimental_data`,
+      lifecycle,
+      `${override || this.ag.qName}_populate_data`,
     );
   };
 }
@@ -429,12 +489,17 @@ export class TypicalAffinityGroup implements iSQL.SqlAffinityGroup {
 
   constructor(
     readonly name: iSQL.PostgreSqlSchemaName,
+    readonly parent?: iSQL.SqlAffinityGroup,
   ) {
     this.lcFunctions = new TypicalSqlLifecycleFunctions(this);
   }
 
+  readonly qName: iSQL.SqlAffinityAncestorizedGroupName = this.parent
+    ? `${this.parent.qName}_${this.name}`
+    : this.name;
+
   readonly qualifiedReference = (qualify: string) => {
-    return `${this.name}_${qualify}`;
+    return `${this.qName}_${qualify}`;
   };
 
   readonly setSearchPathSql: iSQL.PostgreSqlStatementSupplier = () => {
@@ -454,6 +519,9 @@ export class TypicalSchema implements iSQL.PostgreSqlSchema {
   ) {
     this.lcFunctions = new TypicalSqlLifecycleFunctions(this);
   }
+
+  // schemas, unlike affinity groups, cannot have ancestors
+  readonly qName: iSQL.SqlAffinityAncestorizedGroupName = this.name;
 
   readonly qualifiedReference = (qualify: string) => {
     return `${this.name}.${qualify}`;
@@ -546,6 +614,7 @@ export const pgCatalog = new PgCatalogSchema();
 export const lifecycle = new TypicalSchema("dcp_lifecycle");
 export const assurance = new TypicalSchema("dcp_assurance_engineering");
 export const experimental = new TypicalSchema("dcp_experimental");
+export const context = new TypicalSchema("dcp_context");
 export const lib = new TypicalSchema("dcp_lib");
 export const confidential = new TypicalSchema("dcp_confidential");
 export const cron = new TypicalSchema("cron");

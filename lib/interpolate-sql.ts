@@ -56,8 +56,8 @@ export function SQL(
 
 export type SqlStatement = string;
 export type SqlAffinityGroupName = string;
+export type SqlAffinityAncestorizedGroupName = string;
 export type SqlTableName = string;
-export type SqlTableQualifiedName = string;
 export type SqlTableColumnName = string;
 export type SqlTableColumnNameSupplier = (
   suggested?: SqlTableColumnName,
@@ -70,15 +70,21 @@ export type SqlTableCreateDeclFragment = string;
 export type SqlTableConstraintName = string;
 export type SqlTableIndexName = string;
 export type SqlTableColumnForeignKeyExpr = string;
+export type SqlViewName = string;
 export type PostgreSqlStatement = SqlStatement;
 export type PostgreSqlStoredRoutineName = string;
 export type PostgreSqlStoredRoutineQualifiedName = string;
+export type PostgreSqlStoredRoutineBodyCodeBlockName = string;
 export type PostgreSqlSchemaName = string;
+export type PostgreSqlSchemaTableQualifiedName = string;
+export type PostgreSqlSchemaViewQualifiedName = string;
+export type PostgreSqlSchemaTableColumnQualifiedName = string;
 export type PostgreSqlExtensionName = string;
 export type PostgreSqlDomainName = string;
 export type PostgreSqlDomainDataType = string;
 export type PostgreSqlDomainDefaultExpr = string;
 export type PostgreSqlDomainQualifiedName = string;
+export type PostgreSqlDomainCastExpr = string;
 
 export interface QualifiedReferenceSupplier {
   readonly qualifiedReference: (qualify: string) => string;
@@ -123,6 +129,9 @@ export interface PostgreSqlDomain extends PostgreSqlDomainColumnOptions {
   readonly createSql: PostgreSqlStatementSupplier;
   readonly dropSql: PostgreSqlStatementSupplier;
   readonly tableColumn: TypedSqlTableColumnSupplier;
+  readonly castSql: (
+    expr: PostgreSqlDomainCastExpr,
+  ) => PostgreSqlDomainCastExpr;
 }
 
 export interface PostgreSqlDomainSupplier {
@@ -141,9 +150,16 @@ export interface PostgreSqlDomainReferenceSupplier {
   ): PostgreSqlDomainReference;
 }
 
+export interface SqlView extends QualifiedReferenceSupplier {
+  readonly name: SqlViewName;
+  readonly qName: PostgreSqlSchemaViewQualifiedName;
+  readonly createSql: PostgreSqlStatementSupplier;
+  readonly dropSql: PostgreSqlStatementSupplier;
+}
+
 export interface SqlTable extends QualifiedReferenceSupplier {
   readonly name: SqlTableName;
-  readonly qName: SqlTableQualifiedName;
+  readonly qName: PostgreSqlSchemaTableQualifiedName;
   readonly createSql: PostgreSqlStatementSupplier;
   readonly dropSql: PostgreSqlStatementSupplier;
 }
@@ -171,6 +187,9 @@ export interface SqlTableColumn extends SqlTableColumnOptions {
   readonly schemaQualifiedName: SqlTableColumnQualifiedName;
   readonly dataType: PostgreSqlDomainDataType;
   readonly tableColumnDeclSql: PostgreSqlStatementSupplier;
+  readonly castSql: (
+    expr: PostgreSqlDomainCastExpr,
+  ) => PostgreSqlDomainCastExpr;
 }
 
 export const isSqlTableColumn = safety.typeGuard<SqlTableColumn>(
@@ -206,6 +225,7 @@ export interface TypedSqlTableColumnSupplier {
 export interface PostgreSqlStoredRoutine {
   readonly name: PostgreSqlStoredRoutineName;
   readonly qName: PostgreSqlStoredRoutineQualifiedName;
+  readonly bodyBlockName: PostgreSqlStoredRoutineBodyCodeBlockName;
 }
 
 export interface PostgreSqlStoredRoutineSupplier {
@@ -227,13 +247,15 @@ export interface PostgreSqlLifecycleFunctions {
   readonly lint: PostgreSqlStoredRoutineSupplier;
   readonly doctor: PostgreSqlStoredRoutineSupplier;
   readonly metrics: PostgreSqlStoredRoutineSupplier;
+  readonly populateContext: PostgreSqlStoredRoutineSupplier;
   readonly populateSecrets: PostgreSqlStoredRoutineSupplier;
   readonly populateSeedData: PostgreSqlStoredRoutineSupplier;
-  readonly populateExperimentalData: PostgreSqlStoredRoutineSupplier;
+  readonly populateData: PostgreSqlStoredRoutineSupplier;
 }
 
 export interface SqlAffinityGroup extends QualifiedReferenceSupplier {
   readonly name: SqlAffinityGroupName;
+  readonly qName: SqlAffinityAncestorizedGroupName;
   readonly setSearchPathSql: PostgreSqlStatementSupplier;
   readonly lcFunctions: PostgreSqlLifecycleFunctions;
 }

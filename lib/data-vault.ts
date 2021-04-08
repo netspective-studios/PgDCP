@@ -169,6 +169,8 @@ export class HubTable extends schemas.TypicalTable {
   readonly provDomain: iSQL.PostgreSqlDomain;
   readonly domainRefSupplier: iSQL.PostgreSqlDomainReferenceSupplier;
   readonly columns: schemas.TypicalTableColumns;
+  readonly ag: iSQL.SqlAffinityGroup;
+  readonly lcf: iSQL.PostgreSqlLifecycleFunctions;
 
   constructor(
     readonly state: iSQL.DcpTemplateState,
@@ -181,9 +183,15 @@ export class HubTable extends schemas.TypicalTable {
       hubIdDomain?: iSQL.PostgreSqlDomain;
       provDomain?: iSQL.PostgreSqlDomain;
       domainRefSupplier?: iSQL.PostgreSqlDomainReferenceSupplier;
+      parentAffinityGroup?: iSQL.SqlAffinityGroup;
     },
   ) {
     super(state, `hub_${hubName}`);
+    this.ag = new schemas.TypicalAffinityGroup(
+      `hub_${hubName}`,
+      options?.parentAffinityGroup,
+    );
+    this.lcf = this.ag.lcFunctions; // just a shortcut for now, might change in the future
     this.domainRefSupplier = options?.domainRefSupplier || ((domain, state) => {
       return new schemas.TypicalDomainReference(state.schema, domain);
     });
@@ -235,6 +243,8 @@ export class LinkTable extends schemas.TypicalTable {
   readonly provDomain: iSQL.PostgreSqlDomain;
   readonly domainRefSupplier: iSQL.PostgreSqlDomainReferenceSupplier;
   readonly columns: schemas.TypicalTableColumns;
+  readonly ag: iSQL.SqlAffinityGroup;
+  readonly lcf: iSQL.PostgreSqlLifecycleFunctions;
 
   constructor(
     readonly state: iSQL.DcpTemplateState,
@@ -244,9 +254,15 @@ export class LinkTable extends schemas.TypicalTable {
       hubIdDomain?: iSQL.PostgreSqlDomain;
       provDomain?: iSQL.PostgreSqlDomain;
       domainRefSupplier?: iSQL.PostgreSqlDomainReferenceSupplier;
+      parentAffinityGroup?: iSQL.SqlAffinityGroup;
     },
   ) {
     super(state, `link_${linkName}`);
+    this.ag = new schemas.TypicalAffinityGroup(
+      `link_${linkName}`,
+      options?.parentAffinityGroup,
+    );
+    this.lcf = this.ag.lcFunctions; // just a shortcut for now, might change in the future
     this.domainRefSupplier = options?.domainRefSupplier || ((domain, state) => {
       return new schemas.TypicalDomainReference(state.schema, domain);
     });
@@ -304,6 +320,9 @@ export class SatelliteTable extends schemas.TypicalTable {
   readonly provDomain: iSQL.PostgreSqlDomain;
   readonly domainRefSupplier: iSQL.PostgreSqlDomainReferenceSupplier;
   readonly columns: schemas.TypicalTableColumns;
+  readonly attributes: schemas.TypicalTableColumns;
+  readonly ag: iSQL.SqlAffinityGroup;
+  readonly lcf: iSQL.PostgreSqlLifecycleFunctions;
 
   constructor(
     readonly state: iSQL.DcpTemplateState,
@@ -316,9 +335,15 @@ export class SatelliteTable extends schemas.TypicalTable {
       satIdDomain?: iSQL.PostgreSqlDomain;
       provDomain?: iSQL.PostgreSqlDomain;
       domainRefSupplier?: iSQL.PostgreSqlDomainReferenceSupplier;
+      parentAffinityGroup?: iSQL.SqlAffinityGroup;
     },
   ) {
     super(state, `sat_${satelliteName}`);
+    this.ag = new schemas.TypicalAffinityGroup(
+      `sat_${satelliteName}`,
+      options?.parentAffinityGroup,
+    );
+    this.lcf = this.ag.lcFunctions; // just a shortcut for now, might change in the future
     this.domainRefSupplier = options?.domainRefSupplier ||
       parent.domainRefSupplier;
     this.satIdDomain = options?.satIdDomain ||
@@ -342,17 +367,17 @@ export class SatelliteTable extends schemas.TypicalTable {
         isNotNullable: true,
         foreignKey: { table: this.parent, column: this.parent.linkId },
       });
-    const attributes = organicColumns(this);
+    this.attributes = organicColumns(this);
     this.columns = {
       all: [
         this.satId,
         this.parentId,
-        ...attributes.all,
+        ...this.attributes.all,
         loadedOnTimestampDomain(state).tableColumn(this),
         loadedByUserDomain(state).tableColumn(this),
         this.provDomain.tableColumn(this),
       ],
-      unique: attributes.unique,
+      unique: this.attributes.unique,
     };
   }
 }
@@ -412,6 +437,25 @@ export class ExceptionDiagnostics extends SatelliteTable {
       },
     );
   }
+
+  diagnosticsView(): iSQL.SqlView {
+    // deno-lint-ignore no-this-alias
+    const satellite = this;
+    return new (class extends schemas.TypicalView {
+      readonly createSql = () => {
+        // deno-fmt-ignore
+        return this.SQL`CREATE OR REPLACE VIEW ${this.qName} AS 
+        select hub.key, 
+               sat.message,
+               sat.err_returned_sqlstate,
+               sat.err_pg_exception_detail,
+               sat.err_pg_exception_hint,
+               sat.err_pg_exception_context
+         from ${satellite.parent.qName} hub, ${satellite.qName} sat
+        where hub.hub_id = sat.hub_exception_id`; // don't include trailing semi-colon in SQL, since it's a "statement" not complete SQL
+      };
+    })(this.state, "exception_diagnostics");
+  }
 }
 
 export class ExceptionHttpClient extends SatelliteTable {
@@ -436,6 +480,22 @@ export class ExceptionHttpClient extends SatelliteTable {
         };
       },
     );
+  }
+
+  httpClientView(): iSQL.SqlView {
+    // deno-lint-ignore no-this-alias
+    const satellite = this;
+    return new (class extends schemas.TypicalView {
+      readonly createSql = () => {
+        // deno-fmt-ignore
+        return this.SQL`CREATE OR REPLACE VIEW ${this.qName} AS 
+        select hub.key, 
+               sat.http_req,
+               sat.http_resp
+         from ${satellite.parent.qName} hub, ${satellite.qName} sat
+        where hub.hub_id = sat.hub_exception_id`; // don't include trailing semi-colon in SQL, since it's a "statement" not complete SQL
+      };
+    })(this.state, "exception_http_client");
   }
 }
 
