@@ -13,7 +13,7 @@ export const telemetrySpanIdDomain: iSQL.PostgreSqlDomainSupplier = (state) => {
 export const loadedOnTimestampDomain: iSQL.PostgreSqlDomainSupplier = (
   state,
 ) => {
-  return state.schema.useDomain("loaded_at_timestamp", (name, schema) => {
+  return state.schema.useDomain("loaded_at_timestamptz", (name, schema) => {
     return new schemas.TypicalDomain(schema, name, "timestamptz", {
       defaultColumnName: "loaded_at",
       defaultSqlExpr: "current_timestamp",
