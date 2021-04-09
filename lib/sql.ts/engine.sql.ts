@@ -23,6 +23,7 @@ export function SQL(
           schemas.extensions.pgStatStatementsExtn,
           schemas.extensions.ltreeExtn,
           schemas.extensions.semverExtn,
+          schemas.extensions.isjsonbValid,
         ],
       },
     ),

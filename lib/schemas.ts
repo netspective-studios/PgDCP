@@ -581,6 +581,7 @@ export class ExtensionsSchema extends TypicalSchema {
   readonly uuidExtn: iSQL.PostgreSqlExtension;
   readonly httpExtn: iSQL.PostgreSqlExtension;
   readonly postgresFDW: iSQL.PostgreSqlExtension;
+  readonly isjsonbValid: iSQL.PostgreSqlExtension;
 
   constructor() {
     super("dcp_extensions");
@@ -595,6 +596,7 @@ export class ExtensionsSchema extends TypicalSchema {
     this.uuidExtn = this.extension('"uuid-ossp"');
     this.httpExtn = this.extension("http");
     this.postgresFDW = this.extension("postgres_fdw");
+    this.isjsonbValid = this.extension("is_jsonb_valid");
   }
 }
 
