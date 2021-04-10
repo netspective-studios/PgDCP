@@ -1,5 +1,4 @@
 import * as SQLa from "../../mod.ts";
-import * as SQLaT from "../mod.ts";
 import { schemas } from "../mod.ts";
 
 export const affinityGroup = new schemas.TypicalAffinityGroup("media_type");
