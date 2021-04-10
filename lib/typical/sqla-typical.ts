@@ -279,14 +279,12 @@ export class TypicalDomain implements SQLa.PostgreSqlDomain {
   };
 
   readonly tableColumn: SQLa.TypedSqlTableColumnSupplier =
-    this.options?.tableColumn || ((
-      table: SQLa.SqlTable,
-      options?: SQLa.SqlTableColumnOptions,
-    ): SQLa.TypedSqlTableColumn => {
+    this.options?.tableColumn ||
+    ((table, options?): SQLa.TypedSqlTableColumn => {
       return new TypicalTypedTableColumnInstance(
         this.schema,
         table,
-        this.defaultColumnName,
+        options?.columnName || this.defaultColumnName,
         this,
         this.options?.overrideTableColOptions
           ? this.options?.overrideTableColOptions(options)
