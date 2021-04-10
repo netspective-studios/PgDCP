@@ -1,10 +1,13 @@
 # PgDCP Exemplars and Samples
 
-This document contains examples of how to do common 
+This document contains examples of how to do common
 
 ## HTTP client processing if pg_http extension is not getting the job done
 
-Typically we want to use the `pg_http` extension which is a nice type-safe wrapper around CURL that can be used in almost any normal SQL code. However, sometimes we might want to do some more complex processing so the following are examples of PL/Python wrappers.
+Typically we want to use the `pg_http` extension which is a nice type-safe
+wrapper around CURL that can be used in almost any normal SQL code. However,
+sometimes we might want to do some more complex processing so the following are
+examples of PL/Python wrappers.
 
 ```python
 CREATE OR REPLACE FUNCTION gitlab_project_asset_content_text(gl_api_base_url text, gl_auth_token text, project_id integer, asset_file_name text) returns TEXT AS $$

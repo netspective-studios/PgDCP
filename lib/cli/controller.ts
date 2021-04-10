@@ -9,8 +9,8 @@ import {
   textWhitespace as tw,
   uuid,
 } from "../deps.ts";
-import * as SQLaT from "./mod.ts";
-import * as git from "../git.ts";
+import * as SQLaT from "../typical/mod.ts";
+import * as git from "./git.ts";
 
 export type ExecutionContextID = string;
 
