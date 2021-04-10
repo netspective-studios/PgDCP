@@ -390,6 +390,141 @@ export class TelemetrySpanHub extends HubTable {
   }
 }
 
+export const telemetryMetricKeyDomain = hubLtreeBusinessKeyDomain(
+  "metric_key",
+  "metric_key",
+);
+
+export const telemtryMetricLabelsDomain: iSQL.PostgreSqlDomainSupplier = (
+  state,
+) => {
+  return state.schema.useDomain("telemetry_metric_labels", (name, schema) => {
+    return new schemas.TypicalDomain(schema, name, "jsonb", {
+      defaultColumnName: "labels",
+    });
+  });
+};
+
+export const telemetryMetricIntValueDomain: iSQL.PostgreSqlDomainSupplier = (
+  state,
+) => {
+  return state.schema.useDomain(
+    "telemetry_metric_int_value",
+    (name, schema) => {
+      return new schemas.TypicalDomain(schema, name, "integer", {
+        isNotNullable: true,
+      });
+    },
+  );
+};
+
+export const telemetryMetricRealValueDomain: iSQL.PostgreSqlDomainSupplier = (
+  state,
+) => {
+  return state.schema.useDomain(
+    "telemetry_metric_real_value",
+    (name, schema) => {
+      return new schemas.TypicalDomain(schema, name, "real", {
+        isNotNullable: true,
+      });
+    },
+  );
+};
+
+export class TelemetryMetricHub extends HubTable {
+  constructor(readonly state: iSQL.DcpTemplateState) {
+    super(state, "telemetry_metric", [{
+      domain: telemetryMetricKeyDomain,
+    }]);
+  }
+}
+
+export class TelemetryMetricCounterInstance extends SatelliteTable {
+  constructor(
+    readonly state: iSQL.DcpTemplateState,
+    readonly parent: TelemetryMetricHub,
+    readonly totalDomain: iSQL.PostgreSqlDomainSupplier,
+    readonly options?: {
+      readonly tableName?: iSQL.SqlTableName;
+      readonly labelsDomain?: iSQL.PostgreSqlDomainSupplier;
+    },
+  ) {
+    super(
+      state,
+      parent,
+      options?.tableName || "telemetry_metric_counter",
+      (table) => {
+        return {
+          all: [
+            totalDomain(state).tableColumn(table, {
+              columnName: "total",
+              isNotNullable: true,
+            }),
+            (options?.labelsDomain || telemtryMetricLabelsDomain)(state)
+              .tableColumn(table),
+          ],
+        };
+      },
+    );
+  }
+}
+
+export class TelemetryMetricGaugeInstance extends SatelliteTable {
+  constructor(
+    readonly state: iSQL.DcpTemplateState,
+    readonly parent: TelemetryMetricHub,
+    readonly valueDomain: iSQL.PostgreSqlDomainSupplier,
+    readonly options?: {
+      readonly tableName?: iSQL.SqlTableName;
+      readonly labelsDomain?: iSQL.PostgreSqlDomainSupplier;
+    },
+  ) {
+    super(
+      state,
+      parent,
+      options?.tableName || "telemetry_metric_gauge",
+      (table) => {
+        return {
+          all: [
+            valueDomain(state).tableColumn(table, {
+              columnName: "value",
+              isNotNullable: true,
+            }),
+            (options?.labelsDomain || telemtryMetricLabelsDomain)(state)
+              .tableColumn(table),
+          ],
+        };
+      },
+    );
+  }
+}
+
+export class TelemetryMetricInfoInstance extends SatelliteTable {
+  constructor(
+    readonly state: iSQL.DcpTemplateState,
+    readonly parent: TelemetryMetricHub,
+    readonly valueDomain: iSQL.PostgreSqlDomainSupplier,
+    readonly options?: {
+      readonly tableName?: iSQL.SqlTableName;
+      readonly labelsDomain?: iSQL.PostgreSqlDomainSupplier;
+    },
+  ) {
+    super(
+      state,
+      parent,
+      options?.tableName || "telemetry_metric_info",
+      (table) => {
+        return {
+          all: [
+            (options?.labelsDomain || telemtryMetricLabelsDomain)(state)
+              .tableColumn(table),
+          ],
+        };
+      },
+    );
+  }
+}
+
 export class ExceptionHub extends HubTable {
   constructor(readonly state: iSQL.DcpTemplateState) {
     super(state, "exception", [{
@@ -405,6 +540,16 @@ export class ExceptionSpanLink extends LinkTable {
     readonly span: TelemetrySpanHub,
   ) {
     super(state, "exception_telemetry_span", [exception, span]);
+  }
+}
+
+export class ExceptionMetricLink extends LinkTable {
+  constructor(
+    readonly state: iSQL.DcpTemplateState,
+    readonly exception: ExceptionHub,
+    readonly metric: TelemetryMetricHub,
+  ) {
+    super(state, "exception_telemetry_metric", [exception, metric]);
   }
 }
 
