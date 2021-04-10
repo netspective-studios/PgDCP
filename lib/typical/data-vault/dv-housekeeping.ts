@@ -7,6 +7,10 @@ export interface HousekeepingEntities {
   readonly exceptionDiags: dve.ExceptionDiagnostics;
   readonly exceptionHttpClient: dve.ExceptionHttpClient;
   readonly telemetrySpanHub: dvt.TelemetrySpanHub;
+  readonly telemetryMetricHub: dvt.TelemetryMetricHub;
+  readonly telemetryMetricGaugeInstance: dvt.TelemetryMetricGaugeInstance;
+  readonly telemetryMetricCounterInstance: dvt.TelemetryMetricCounterInstance;
+  readonly telemetryMetricInfoInstance: dvt.TelemetryMetricInfoInstance;
   readonly exceptSpanLink: dvt.ExceptionSpanLink;
 
   readonly tables: () => SQLa.SqlTable[];
@@ -19,6 +23,21 @@ export function typicalHousekeepingEntities(
   const exceptionDiags = new dve.ExceptionDiagnostics(state, exceptionHub);
   const exceptionHttpClient = new dve.ExceptionHttpClient(state, exceptionHub);
   const telemetrySpanHub = new dvt.TelemetrySpanHub(state);
+  const telemetryMetricHub = new dvt.TelemetryMetricHub(state);
+  const telemetryMetricGaugeInstance = new dvt.TelemetryMetricGaugeInstance(
+    state,
+    telemetryMetricHub,
+    dvt.telemetryMetricRealValueDomain,
+  );
+  const telemetryMetricCounterInstance = new dvt.TelemetryMetricCounterInstance(
+    state,
+    telemetryMetricHub,
+    dvt.telemetryMetricRealValueDomain,
+  );
+  const telemetryMetricInfoInstance = new dvt.TelemetryMetricInfoInstance(
+    state,
+    telemetryMetricHub,
+  );
   const exceptSpanLink = new dvt.ExceptionSpanLink(
     state,
     exceptionHub,
@@ -30,6 +49,10 @@ export function typicalHousekeepingEntities(
     exceptionDiags,
     exceptionHttpClient,
     telemetrySpanHub,
+    telemetryMetricHub,
+    telemetryMetricGaugeInstance,
+    telemetryMetricCounterInstance,
+    telemetryMetricInfoInstance,
     exceptSpanLink,
     tables: () => {
       return [
@@ -37,6 +60,10 @@ export function typicalHousekeepingEntities(
         exceptionDiags,
         exceptionHttpClient,
         telemetrySpanHub,
+        telemetryMetricHub,
+        telemetryMetricGaugeInstance,
+        telemetryMetricCounterInstance,
+        telemetryMetricInfoInstance,
         exceptSpanLink,
       ];
     },
