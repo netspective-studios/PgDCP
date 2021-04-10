@@ -133,7 +133,6 @@ export class TelemetryMetricInfoInstance extends dv.SatelliteTable {
   constructor(
     readonly state: SQLa.DcpTemplateState,
     readonly parent: TelemetryMetricHub,
-    readonly valueDomain: SQLa.PostgreSqlDomainSupplier,
     readonly options?: {
       readonly tableName?: SQLa.SqlTableName;
       readonly labelsDomain?: SQLa.PostgreSqlDomainSupplier;
