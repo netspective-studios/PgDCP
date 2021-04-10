@@ -7,7 +7,6 @@ export const affinityGroup = new schemas.TypicalAffinityGroup(
 
 export function SQL(
   ctx: mod.DcpInterpolationContext,
-  assetSchema: mod.PostgreSqlSchema,
   options?: mod.InterpolationContextStateOptions,
 ): mod.DcpInterpolationResult {
   const state = ctx.prepareState(
@@ -20,7 +19,6 @@ export function SQL(
       },
   );
   const { qualifiedReference: sqr } = state.schema;
-  const { qualifiedReference: assetQR } = assetSchema;
   const { qualifiedReference: cqr } = schemas.confidential;
   const { qualifiedReference: lcqr } = schemas.lifecycle;
   const { qualifiedReference: exqr } = schemas.extensions;
@@ -73,18 +71,12 @@ export function SQL(
         DROP FUNCTION IF EXISTS ${sqr("gitlab_project_asset_http_request")};
         DROP FUNCTION IF EXISTS ${sqr("gitlab_project_commit_http_request")};
         DROP TABLE IF EXISTS ${cqr("gitlab_provenance")} CASCADE;
-        DROP TABLE IF EXISTS ${assetQR("gitlab_project_asset_text")} CASCADE;
-        DROP TABLE IF EXISTS ${assetQR("gitlab_project_asset_json")} CASCADE;
-        DROP TABLE IF EXISTS ${assetQR("gitlab_project_asset_content")} CASCADE;
     END;
     $$ LANGUAGE PLPGSQL;
 
     CREATE OR REPLACE FUNCTION ${lcf.unitTest(state).qName}() RETURNS SETOF TEXT AS $$
     BEGIN 
         RETURN NEXT has_table('${schemas.confidential.name}', 'gitlab_provenance');
-        RETURN NEXT has_table('${assetSchema.name}', 'gitlab_project_asset_json');
-        RETURN NEXT has_table('${assetSchema.name}', 'gitlab_project_asset_json');
-        RETURN NEXT has_table('${assetSchema.name}', 'gitlab_project_asset_content');
     END;
     $$ LANGUAGE plpgsql;`;
 }
