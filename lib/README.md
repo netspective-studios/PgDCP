@@ -91,6 +91,7 @@ Infrastructure TODOs:
     * Test that all extensions required are installed and will not throw runtime exceptions
     * Test that caller has permissions to all dependencies such as schemas, objects, and will not throw runtime exceptions
 * Add `[AGorS]_hook_*` for responding to external requests from CI/CD or other webhook consumers. The job of the hook might be something as simple as refreshing a materialized view or something more complicated such as rebuilding all schema objects.
+- See [Generating realistic user timestamps in SQL](https://www.narrator.ai/blog/generating-random-timestamps-in-sql/) for how to create synthetic timestamps for test data.
 
 Data Vault TODOs:
 
@@ -106,6 +107,11 @@ Data Vault TODOs:
 * Add OpenMetrics / OpenTelemetry Metric Hub that can store metrics which can be exposed as Prometheus endpoints via PostgREST.
 
 ## Activity Log
+
+### April 10, 2021
+
+* Remove legacy Just-based SQL assembler in favor of Deno TypeScript-based modules.
+* Refactor all TypeScript-based `SQLa` into `typical` and `data-vault` for proper separation of concerns.
 
 ### March 29, 2021
 
