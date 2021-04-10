@@ -60,7 +60,7 @@ export class DataVaultIdentity extends SQLaT.TypicalDomain {
       .TypicalTypedTableColumnInstance(
       this.schema,
       table,
-      this.defaultColumnName,
+      options?.columnName || this.defaultColumnName,
       this,
       {
         ...options, // TODO: properly merge in the items below, not just override them
