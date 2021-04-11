@@ -1,6 +1,5 @@
 import * as SQLa from "../../mod.ts";
 import { schemas, templates as tmpl } from "../mod.ts";
-import * as variant from "./variant.sql.ts";
 
 export const affinityGroup = new schemas.TypicalAffinityGroup("engine");
 
@@ -46,10 +45,7 @@ export function SQL(
         insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_label_store', ${schemas.lifecycle.name}.asset_version_initial_revision());
         insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_history', ${schemas.lifecycle.name}.asset_version_initial_revision());
 
-        CALL ${lcqr("variant_construct")}('${schemas.lifecycle.name}', 'configuration', 'lifecycle', 'main');
-        CALL ${lcqr("event_manager_construct")}('${schemas.lifecycle.name}', 'activity', 'event', 'lifecycle');
-        
-        CALL ${lcqr("variant_construct")}('${schemas.lib.name}','etc','config','project');
+        CALL ${lcqr("event_manager_construct")}('${schemas.lifecycle.name}', 'activity', 'event', 'lifecycle');       
     END;
     $$ LANGUAGE PLPGSQL;
 
@@ -101,7 +97,5 @@ export function SQL(
     BEGIN 
         RETURN NEXT ok(pg_version_num() > 13000, 
         format('PostgreSQL engine instance versions should be at least 13000 [%s]', pg_version()));
-    END;$$;
-
-${ctx.embed(ctx, state, (eic) => variant.SQL(eic))}`;
+    END;$$;`
 }
