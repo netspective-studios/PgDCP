@@ -3,6 +3,33 @@ import * as SQLa from "../sqla.ts";
 import * as interp from "../interpolate.ts";
 import * as tmpl from "./templates.ts";
 
+export class typicalQualifiedReferencesObserver
+  implements SQLa.DcpTemplateStateQualifiedReferencesObservation {
+  #referencesObserved = new Set<string>();
+
+  constructor() {
+  }
+
+  get referencesObserved(): string[] {
+    return Array.from(this.#referencesObserved);
+  }
+
+  observableQR(
+    ...groups: SQLa.SqlAffinityGroup[]
+  ): SQLa.ObservableQualifiedReferenceSupplier[] {
+    const result: SQLa.ObservableQualifiedReferenceSupplier[] = [];
+    for (const group of groups) {
+      const qrFn = group.qualifiedReference;
+      result.push((qualify) => {
+        const qr = qrFn(qualify);
+        this.#referencesObserved.add(qr);
+        return qr;
+      });
+    }
+    return result;
+  }
+}
+
 export function typicalDcpInterpolationContext(
   version: SQLa.DcpInterpolationContextVersion,
   defaultSchema: SQLa.PostgreSqlSchema,
@@ -75,6 +102,8 @@ export function typicalDcpInterpolationContext(
           e.searchPath.forEach((p) => stateSearchPath.push(p))
         );
       }
+      const qualifiedReferencesObserved =
+        new typicalQualifiedReferencesObserver();
       const dcpTS: SQLa.DcpTemplateState = {
         ic: dcpIC,
         ie,
@@ -94,6 +123,10 @@ export function typicalDcpInterpolationContext(
           ]
           : (options.headers?.standalone || []),
         extensions: options.extensions,
+        qualifiedReferencesObserved,
+        observableQR: (...groups) => {
+          return qualifiedReferencesObserved.observableQR(...groups);
+        },
         setSearchPathSql: (prepend?, append?) => {
           const include = (elements?: string | string[]): string[] => {
             return elements

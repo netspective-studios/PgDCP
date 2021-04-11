@@ -85,8 +85,12 @@ export type PostgreSqlDomainDefaultExpr = string;
 export type PostgreSqlDomainQualifiedName = string;
 export type PostgreSqlDomainCastExpr = string;
 
+export interface ObservableQualifiedReferenceSupplier {
+  (qualify: string): string;
+}
+
 export interface QualifiedReferenceSupplier {
-  readonly qualifiedReference: (qualify: string) => string;
+  readonly qualifiedReference: ObservableQualifiedReferenceSupplier;
 }
 
 export const isQualifiedReferenceSupplier = safety.typeGuard<
@@ -275,6 +279,16 @@ export interface PostgreSqlSchema extends SqlAffinityGroup {
   ) => PostgreSqlDomain;
 }
 
+export function isPostgreSqlSchema(
+  ag: SqlAffinityGroup,
+): ag is PostgreSqlSchema {
+  return "createSchemaSql" && "dropSchemaSql" in ag;
+}
+
+export interface DcpTemplateStateQualifiedReferencesObservation {
+  readonly referencesObserved: string[]; // TODO: give this a proper type
+}
+
 export interface DcpTemplateState extends interp.InterpolationState {
   readonly ic: DcpInterpolationContext;
   readonly schema: PostgreSqlSchema;
@@ -288,6 +302,11 @@ export interface DcpTemplateState extends interp.InterpolationState {
     prepend?: string | string[],
     append?: string | string[],
   ) => PostgreSqlStatement;
+  readonly qualifiedReferencesObserved:
+    DcpTemplateStateQualifiedReferencesObservation;
+  readonly observableQR: (
+    ...groups: SqlAffinityGroup[]
+  ) => ObservableQualifiedReferenceSupplier[];
 }
 
 export const isDcpTemplateState = safety.typeGuard<DcpTemplateState>(

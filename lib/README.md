@@ -258,6 +258,10 @@ Data Vault TODOs:
 
 ## Activity Log
 
+### April 11, 2021
+
+- Implement DcpTemplateState.observableQR() so that qualified references can be tracked. Now, whenever creating qualified references devs should use state.observableQR(...group/schema). When using observableQR(), the QRs are tracked and can be reported.
+
 ### April 10, 2021
 
 - Implement Active Context to indicate whether host is prod/devl/test/sandbox/etc. The dcp_context schema now has a table called 'context' which contains a singleton row table which configures the active database as a prod/test/sandbox/etc. database.
