@@ -18,8 +18,8 @@ export function SQL(
   );
   const { qualifiedReference: sqr } = state.schema;
   const { qualifiedReference: cqr } = schemas.confidential;
-  const { qualifiedReference: lcqr } = schemas.lifecycle;
   const { qualifiedReference: exqr } = schemas.extensions;
+  const { qualifiedReference: ctxqr } = schemas.context;
   const { lcFunctions: lcf } = state.affinityGroup;
 
   // deno-fmt-ignore
@@ -30,7 +30,7 @@ export function SQL(
 
       CREATE TABLE IF NOT EXISTS ${cqr("gitlab_provenance")} (
         identity ${cqr("gitlab_server_identity")} NOT NULL,
-        context ${lcqr("execution_context")} NOT NULL,
+        context ${ctxqr("execution_context")} NOT NULL,
         api_base_url text NOT NULL,
         secret_authn_token text NOT NULL,
         authn_token_created_at timestamptz NOT NULL,

@@ -260,6 +260,7 @@ Data Vault TODOs:
 
 ### April 10, 2021
 
+- Implement Active Context to indicate whether host is prod/devl/test/sandbox/etc. The dcp_context schema now has a table called 'context' which contains a singleton row table which configures the active database as a prod/test/sandbox/etc. database.
 - Remove legacy Just-based SQL assembler in favor of Deno TypeScript-based
   modules.
 - Refactor all TypeScript-based `SQLa` into `typical` and `data-vault` for

@@ -1,7 +1,6 @@
 import * as SQLa from "../../mod.ts";
 import { schemas, templates as tmpl } from "../mod.ts";
 import * as variant from "./variant.sql.ts";
-import * as lifecycle from "./lifecycle.sql.ts";
 
 export const affinityGroup = new schemas.TypicalAffinityGroup("engine");
 
@@ -29,13 +28,6 @@ export function SQL(
   const { lcFunctions: fn } = state.affinityGroup;
   // deno-fmt-ignore
   return SQLa.SQL(ctx, state)`
-    ${schemas.context.createSchemaSql(state)};
-    ${schemas.lib.createSchemaSql(state)};
-    ${schemas.lifecycle.createSchemaSql(state)};
-    ${schemas.confidential.createSchemaSql(state)};
-    ${schemas.assurance.createSchemaSql(state)};
-    ${schemas.experimental.createSchemaSql(state)};
-
     -- make sure everybody can use everything in the extensions schema
     grant usage on schema ${schemas.extensions.name} to public;
     grant execute on all functions in schema ${schemas.extensions.name} to public;
@@ -111,6 +103,5 @@ export function SQL(
         format('PostgreSQL engine instance versions should be at least 13000 [%s]', pg_version()));
     END;$$;
 
-${ctx.embed(ctx, state, (eic) => lifecycle.SQL(eic))}    
 ${ctx.embed(ctx, state, (eic) => variant.SQL(eic))}`;
 }

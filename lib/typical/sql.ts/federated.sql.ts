@@ -16,13 +16,15 @@ export function SQL(
       },
   );
   const { qualifiedReference: cqr } = schemas.confidential;
-  const { qualifiedReference: lcqr } = schemas.lifecycle;
+  const { qualifiedReference: ctxqr } = schemas.context;
   const { lcFunctions: fn } = state.affinityGroup;
+
+  // deno-fmt-ignore
   return SQLa.SQL(ctx, state)`
     CREATE OR REPLACE PROCEDURE ${fn.constructStorage(state).qName}() AS $$
     BEGIN
       CREATE TABLE IF NOT EXISTS ${cqr("fdw_postgres_authn")} (
-        context ${lcqr("execution_context")} NOT NULL,
+        context ${ctxqr("execution_context")} NOT NULL,
         identity text NOT NULL,
         host text NOT NULL,
         port integer NOT NULL,
@@ -47,9 +49,7 @@ export function SQL(
     END;
     $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE FUNCTION ${
-    fn.unitTest(state).qName
-  }() RETURNS SETOF TEXT AS $$
+    CREATE OR REPLACE FUNCTION ${fn.unitTest(state).qName}() RETURNS SETOF TEXT AS $$
     BEGIN 
         RETURN NEXT has_table('${schemas.confidential.name}', 'fdw_postgres_authn');
     END;
