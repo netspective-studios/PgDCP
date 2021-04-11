@@ -39,6 +39,28 @@ export const contentHashDomain: SQLa.PostgreSqlDomainSupplier = (state) => {
   });
 };
 
+export const ftsVectorsSupplierDomain: SQLa.PostgreSqlDomainSupplier = (
+  state,
+) => {
+  return state.schema.useDomain("fts_vector_supplier", (name, schema) => {
+    return new SQLaT.TypicalDomain(schema, name, "ltree");
+  });
+};
+
+export const ftsVectorsTextDomain: SQLa.PostgreSqlDomainSupplier = (
+  state,
+) => {
+  return state.schema.useDomain("fts_vector_text", (name, schema) => {
+    return new SQLaT.TypicalDomain(schema, name, "text");
+  });
+};
+
+export const ftsVectorsDomain: SQLa.PostgreSqlDomainSupplier = (state) => {
+  return state.schema.useDomain("fts_vector", (name, schema) => {
+    return new SQLaT.TypicalDomain(schema, name, "tsvector");
+  });
+};
+
 export class DataVaultIdentity extends SQLaT.TypicalDomain {
   constructor(
     readonly schema: SQLa.PostgreSqlSchema,
