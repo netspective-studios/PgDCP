@@ -25,7 +25,10 @@ export function SQL(
     ${schemas.experimental.createSchemaSql(state)};
 
     -- TODO: this should be created in ${lcf.constructStorage(state).qName}() but 
-    -- there are some dependents don't wait for it to be called so we create it here
+    --       there are some dependents don't wait for it to be called so we create 
+    --       it here
+    -- TODO: Add CHECK constraint to make sure execution_context can only have
+    --       valid values
     CREATE DOMAIN ${sqr("execution_context")} as ${exqr("ltree")};
 
     CREATE OR REPLACE PROCEDURE ${lcf.constructStorage(state).qName}() AS $$
@@ -39,6 +42,8 @@ export function SQL(
         host ${sqr("execution_host_identity")} NOT NULL,
         CONSTRAINT context_unq CHECK (singleton_id)
       );
+
+      -- TODO: add trigger to ensure that no improper values can be added into context
     END;
     $$ LANGUAGE PLPGSQL;
 
