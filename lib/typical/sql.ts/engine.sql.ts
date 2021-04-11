@@ -55,7 +55,6 @@ export function SQL(
       ${schemas.experimental.dropSchemaSql(state)};
       ${schemas.assurance.dropSchemaSql(state)};
       ${schemas.lib.dropSchemaSql(state)};
-      call variant_dcp_lifecycle_etc_destroy_all_objects();
     END;
     $$ LANGUAGE PLPGSQL;
 
