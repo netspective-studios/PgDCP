@@ -16,21 +16,23 @@ export function SQL(
         extensions: [schemas.extensions.ltreeExtn, schemas.extensions.httpExtn],
       },
   );
-  const { qualifiedReference: sqr } = state.schema;
-  const { qualifiedReference: cqr } = schemas.confidential;
-  const { qualifiedReference: exqr } = schemas.extensions;
-  const { qualifiedReference: ctxqr } = schemas.context;
+  const [sQR, cQR, exQR, ctxQR] = state.observableQR(
+    state.schema,
+    schemas.confidential,
+    schemas.extensions,
+    schemas.context,
+  );
   const { lcFunctions: lcf } = state.affinityGroup;
 
   // deno-fmt-ignore
   return SQLa.SQL(ctx, state)`
     CREATE OR REPLACE PROCEDURE ${lcf.constructStorage(state).qName}() AS $$
     BEGIN
-      CREATE DOMAIN ${cqr("gitlab_server_identity")} AS text;
+      CREATE DOMAIN ${cQR("gitlab_server_identity")} AS text;
 
-      CREATE TABLE IF NOT EXISTS ${cqr("gitlab_provenance")} (
-        identity ${cqr("gitlab_server_identity")} NOT NULL,
-        context ${ctxqr("execution_context")} NOT NULL,
+      CREATE TABLE IF NOT EXISTS ${cQR("gitlab_provenance")} (
+        identity ${cQR("gitlab_server_identity")} NOT NULL,
+        context ${ctxQR("execution_context")} NOT NULL,
         api_base_url text NOT NULL,
         secret_authn_token text NOT NULL,
         authn_token_created_at timestamptz NOT NULL,
@@ -47,17 +49,17 @@ export function SQL(
 
     CREATE OR REPLACE PROCEDURE ${lcf.constructIdempotent(state).qName}() AS $$
     BEGIN
-      CREATE OR REPLACE FUNCTION ${sqr("gitlab_project_asset_http_request")}(prov ${cqr("gitlab_provenance")}, project_id integer, asset_file_path text, branchOrTag text) returns ${exqr("http_request")} AS $innerFnBody$
+      CREATE OR REPLACE FUNCTION ${sQR("gitlab_project_asset_http_request")}(prov ${cQR("gitlab_provenance")}, project_id integer, asset_file_path text, branchOrTag text) returns ${exQR("http_request")} AS $innerFnBody$
       BEGIN
         return ('GET', format('%s/projects/%s/repository/files/%s?ref=%s', prov.api_base_url, project_id, asset_file_path, branchOrTag),
-             ARRAY[${exqr("http_header")}('PRIVATE-TOKEN', prov.secret_authn_token)], NULL, NULL)::${exqr("http_request")};
+             ARRAY[${exQR("http_header")}('PRIVATE-TOKEN', prov.secret_authn_token)], NULL, NULL)::${exQR("http_request")};
       END;
       $innerFnBody$ LANGUAGE PLPGSQL;
 
-      CREATE OR REPLACE FUNCTION ${sqr("gitlab_project_commit_http_request")}(prov ${cqr("gitlab_provenance")}, project_id integer, commit_id text) returns ${exqr("http_request")} AS $innerFnBody$
+      CREATE OR REPLACE FUNCTION ${sQR("gitlab_project_commit_http_request")}(prov ${cQR("gitlab_provenance")}, project_id integer, commit_id text) returns ${exQR("http_request")} AS $innerFnBody$
       BEGIN
         return ('GET', format('%s/projects/%s/repository/commits/%s', prov.api_base_url, project_id, commit_id),
-             ARRAY[${exqr("http_header")}('PRIVATE-TOKEN', prov.secret_authn_token)], NULL, NULL)::${exqr("http_request")};
+             ARRAY[${exQR("http_header")}('PRIVATE-TOKEN', prov.secret_authn_token)], NULL, NULL)::${exQR("http_request")};
       END;
       $innerFnBody$ LANGUAGE PLPGSQL;
     END;
@@ -66,9 +68,9 @@ export function SQL(
     CREATE OR REPLACE PROCEDURE ${lcf.destroyIdempotent(state).qName}() AS $$
     BEGIN
         DROP FUNCTION IF EXISTS ${lcf.unitTest(state).qName}();        
-        DROP FUNCTION IF EXISTS ${sqr("gitlab_project_asset_http_request")};
-        DROP FUNCTION IF EXISTS ${sqr("gitlab_project_commit_http_request")};
-        DROP TABLE IF EXISTS ${cqr("gitlab_provenance")} CASCADE;
+        DROP FUNCTION IF EXISTS ${sQR("gitlab_project_asset_http_request")};
+        DROP FUNCTION IF EXISTS ${sQR("gitlab_project_commit_http_request")};
+        DROP TABLE IF EXISTS ${cQR("gitlab_provenance")} CASCADE;
     END;
     $$ LANGUAGE PLPGSQL;
 

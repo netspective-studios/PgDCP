@@ -23,7 +23,7 @@ export function SQL(
       },
     ),
   };
-  const { qualifiedReference: lcqr } = schemas.lifecycle;
+  const [lcQR] = state.observableQR(schemas.lifecycle);
   const { lcFunctions: fn } = state.affinityGroup;
   // deno-fmt-ignore
   return SQLa.SQL(ctx, state)`
@@ -45,7 +45,7 @@ export function SQL(
         insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_label_store', ${schemas.lifecycle.name}.asset_version_initial_revision());
         insert into asset_version (nature, asset, version) values ('storage', '${schemas.lifecycle.name}.asset_version_history', ${schemas.lifecycle.name}.asset_version_initial_revision());
 
-        CALL ${lcqr("event_manager_construct")}('${schemas.lifecycle.name}', 'activity', 'event', 'lifecycle');       
+        CALL ${lcQR("event_manager_construct")}('${schemas.lifecycle.name}', 'activity', 'event', 'lifecycle');       
     END;
     $$ LANGUAGE PLPGSQL;
 

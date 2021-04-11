@@ -15,16 +15,18 @@ export function SQL(
         affinityGroup,
       },
   );
-  const { qualifiedReference: cqr } = schemas.confidential;
-  const { qualifiedReference: ctxqr } = schemas.context;
+  const [cQR, ctxQR] = state.observableQR(
+    schemas.confidential,
+    schemas.context,
+  );
   const { lcFunctions: fn } = state.affinityGroup;
 
   // deno-fmt-ignore
   return SQLa.SQL(ctx, state)`
     CREATE OR REPLACE PROCEDURE ${fn.constructStorage(state).qName}() AS $$
     BEGIN
-      CREATE TABLE IF NOT EXISTS ${cqr("fdw_postgres_authn")} (
-        context ${ctxqr("execution_context")} NOT NULL,
+      CREATE TABLE IF NOT EXISTS ${cQR("fdw_postgres_authn")} (
+        context ${ctxQR("execution_context")} NOT NULL,
         identity text NOT NULL,
         host text NOT NULL,
         port integer NOT NULL,
@@ -45,7 +47,7 @@ export function SQL(
     CREATE OR REPLACE PROCEDURE ${fn.destroyIdempotent(state).qName}() AS $$
     BEGIN
         DROP FUNCTION IF EXISTS ${fn.unitTest(state).qName}();        
-        DROP TABLE IF EXISTS ${cqr("fdw_postgres_authn")};
+        DROP TABLE IF EXISTS ${cQR("fdw_postgres_authn")};
     END;
     $$ LANGUAGE PLPGSQL;
 
