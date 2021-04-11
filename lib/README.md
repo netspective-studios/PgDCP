@@ -149,31 +149,17 @@ and incremented based on:
 
 Infrastructure TODOs:
 
-- Add `context` parameter to each lifecycle function like `construct_*`,
-  `destroy_*`, etc. so that the procedure can make a decision about how to
-  proceed in different runtime environments/contexts like sandbox, devl,
-  production, etc. Instead of making decisions about context at SQL generation
-  time, this would allow us to make decisions at runtime.
-  - We should create a `dcp_context` schema which would contain a table called
-    `execution_context` and contain global information about the database's
-    execution context.
-  - The `context` parameter should default to `dcp_context.execution_context`
+- Add `context` and `version` parameters to each lifecycle function like 
+  `construct_*`, `destroy_*`, etc. so that the procedure can make a decision
+  about how to proceed in different runtime environments/contexts like sandbox
+  devl, production, etc. and for a specific version of the object. Instead of 
+  making decisions about context at SQL generation time, this would allow us 
+  to make decisions at runtime.
+  - If the `context` and `version` parameters are NULL on the way into a
+    function, `context` parameter should default to `dcp_context.context.active`
     row that would "know" which database was currently running (e.g. sandbox,
-    devl, production, etc.)
-  - Create convention of custom data types called `schema_registration`,
-    `schema_configuration` and `schema_nature` in each schema and a single
-    function `registry` which will return a constant that groups the
-    config/nature and combine any other meta data, settings, etc. for a given
-    schema (make sure to use the PG catalog to stay
-    [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself)). Instead of
-    putting nature and dossier information into the name of the schema, we can
-    have well-typed definitions.
-    - `nature` would be used for settings that would not change often
-      - Add stateless, statful, enhance, unrecoverable, FDW, etc. would probably
-        be good for `nature` meta data
-    - `configuration` would be used for settings that could reasonably change
-      often
-      - Semver to version the schema might be good for `configuration` meta data
+    devl, production, etc.) and the `version` should default to the active
+    version.
 - Review
   [Sequential UUID Generators](https://www.2ndquadrant.com/en/blog/sequential-uuid-generators/)
   to create less expensive keys for Data Vault objects.
@@ -191,13 +177,6 @@ Infrastructure TODOs:
 - Add `plpgsql_check` into all PgTAP unit tests; consider adding a new AG
   lifecycle function call `lint_*` which would be called by
   `select * from runlint()`.
-- Add ability to automatically segregate views that consumers can use from
-  tables ("stores") that should be considered private and not used by
-  consumers/developers.
-  - Make the views all updatable in accessible schemas while tables' schemas
-    would be inaccessible and might even have
-    [create rule](https://www.postgresql.org/docs/13/sql-createrule.html) based
-    notices.
 - Create auto-generated SQL to enforce immutability of tables -- e.g. the
   version tables, events tables, should allow insert but not update/delete. See
   [this conversation](https://www.tek-tips.com/viewthread.cfm?qid=1116256).
@@ -229,8 +208,7 @@ Infrastructure TODOs:
   webhook consumers. The job of the hook might be something as simple as
   refreshing a materialized view or something more complicated such as
   rebuilding all schema objects.
-
-* See
+- See
   [Generating realistic user timestamps in
   SQL](https://www.narrator.ai/blog/generating-random-timestamps-in-sql/) for
   how to create synthetic timestamps for test data.
