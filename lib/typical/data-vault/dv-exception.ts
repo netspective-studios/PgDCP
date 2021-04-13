@@ -2,6 +2,12 @@ import * as SQLa from "../../mod.ts";
 import * as SQLaT from "../mod.ts";
 import * as dv from "./data-vault.ts";
 
+export interface ExceptionVault {
+  readonly hub: ExceptionHub;
+  readonly diags: ExceptionDiagnostics;
+  readonly httpClient: ExceptionHttpClient;
+}
+
 export class ExceptionHub extends dv.HubTable {
   constructor(readonly state: SQLa.DcpTemplateState) {
     super(state, "exception", [{

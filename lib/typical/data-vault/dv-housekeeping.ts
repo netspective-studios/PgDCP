@@ -3,16 +3,9 @@ import * as dve from "./dv-exception.ts";
 import * as dvt from "./dv-telemetry.ts";
 
 export interface HousekeepingEntities {
-  readonly exceptionHub: dve.ExceptionHub;
-  readonly exceptionDiags: dve.ExceptionDiagnostics;
-  readonly exceptionHttpClient: dve.ExceptionHttpClient;
-  readonly telemetrySpanHub: dvt.TelemetrySpanHub;
-  readonly telemetryMetricHub: dvt.TelemetryMetricHub;
-  readonly telemetryMetricGaugeInstance: dvt.TelemetryMetricGaugeInstance;
-  readonly telemetryMetricCounterInstance: dvt.TelemetryMetricCounterInstance;
-  readonly telemetryMetricInfoInstance: dvt.TelemetryMetricInfoInstance;
+  readonly exception: dve.ExceptionVault;
+  readonly telemetry: dvt.TelemetryVault;
   readonly exceptSpanLink: dvt.ExceptionSpanLink;
-
   readonly tables: () => SQLa.SqlTable[];
 }
 
@@ -45,14 +38,18 @@ export function typicalHousekeepingEntities(
   );
 
   return {
-    exceptionHub,
-    exceptionDiags,
-    exceptionHttpClient,
-    telemetrySpanHub,
-    telemetryMetricHub,
-    telemetryMetricGaugeInstance,
-    telemetryMetricCounterInstance,
-    telemetryMetricInfoInstance,
+    exception: {
+      hub: exceptionHub,
+      diags: exceptionDiags,
+      httpClient: exceptionHttpClient,
+    },
+    telemetry: {
+      spanHub: telemetrySpanHub,
+      metricHub: telemetryMetricHub,
+      metricGaugeInstance: telemetryMetricGaugeInstance,
+      metricCounterInstance: telemetryMetricCounterInstance,
+      metricInfoInstance: telemetryMetricInfoInstance,
+    },
     exceptSpanLink,
     tables: () => {
       return [

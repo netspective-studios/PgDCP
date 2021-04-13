@@ -3,6 +3,14 @@ import * as SQLaT from "../mod.ts";
 import * as dv from "./data-vault.ts";
 import * as dve from "./dv-exception.ts";
 
+export interface TelemetryVault {
+  readonly spanHub: TelemetrySpanHub;
+  readonly metricHub: TelemetryMetricHub;
+  readonly metricGaugeInstance: TelemetryMetricGaugeInstance;
+  readonly metricCounterInstance: TelemetryMetricCounterInstance;
+  readonly metricInfoInstance: TelemetryMetricInfoInstance;
+}
+
 export const telemetrySpanIdDomain: SQLa.PostgreSqlDomainSupplier = (state) => {
   return state.schema.useDomain("telemetry_span_id", (name, schema) => {
     return new SQLaT.TypicalDomain(schema, name, "text", {
