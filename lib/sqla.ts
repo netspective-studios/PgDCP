@@ -160,11 +160,27 @@ export interface SqlView extends QualifiedReferenceSupplier {
   readonly dropSql: PostgreSqlStatementSupplier;
 }
 
+export interface SqlTableLifecycleFunctions {
+  readonly upserted: PostgreSqlStoredRoutineSupplier;
+  readonly upsert: PostgreSqlStoredRoutineSupplier;
+}
+
+export interface SqlTableUpsertable {
+  readonly upsertedFunctionSQL: () => DcpInterpolationResult;
+  readonly upsertProcedureSQL: () => DcpInterpolationResult;
+}
+
+export const isSqlTableUpsertable = safety.typeGuard<SqlTableUpsertable>(
+  "upsertedFunctionSQL",
+  "upsertProcedureSQL",
+);
+
 export interface SqlTable extends QualifiedReferenceSupplier {
   readonly name: SqlTableName;
   readonly qName: PostgreSqlSchemaTableQualifiedName;
   readonly createSql: PostgreSqlStatementSupplier;
   readonly dropSql: PostgreSqlStatementSupplier;
+  readonly lcFunctions: SqlTableLifecycleFunctions;
 }
 
 export interface SqlTableColumnReference {

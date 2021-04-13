@@ -175,12 +175,14 @@ export function hubLtreeBusinessKeyDomain(
  * 
  * Ref: https://www.sciencedirect.com/topics/computer-science/data-vault-model
  */
-export class HubTable extends SQLaT.TypicalTable {
+export class HubTable extends SQLaT.TypicalTable
+  implements SQLa.SqlTableUpsertable {
   readonly hubIdDomain: SQLa.PostgreSqlDomain;
   readonly hubId: SQLa.TypedSqlTableColumn;
   readonly hubIdRefDomain: SQLa.PostgreSqlDomainReference;
   readonly keyColumns: SQLa.TypedSqlTableColumn[];
   readonly provDomain: SQLa.PostgreSqlDomain;
+  readonly provColumn: SQLa.TypedSqlTableColumn;
   readonly domainRefSupplier: SQLa.PostgreSqlDomainReferenceSupplier;
   readonly columns: SQLaT.TypicalTableColumns;
   readonly ag: SQLa.SqlAffinityGroup;
@@ -229,13 +231,14 @@ export class HubTable extends SQLaT.TypicalTable {
       );
     }
 
+    this.provColumn = this.provDomain.tableColumn(this);
     this.columns = {
       all: [
         this.hubId,
         ...this.keyColumns,
         loadedOnTimestampDomain(state).tableColumn(this),
         loadedByUserDomain(state).tableColumn(this),
-        this.provDomain.tableColumn(this),
+        this.provColumn,
       ],
       unique: [{
         name: `${this.name}_unq`,
@@ -243,18 +246,64 @@ export class HubTable extends SQLaT.TypicalTable {
       }],
     };
   }
+
+  upsertedFunctionSQL(): SQLa.DcpInterpolationResult {
+    const upsertSR = this.lcFunctions.upserted(this.state);
+    const embedState = {
+      ...this.state,
+      headers: [], // since we're embedding SQL, no headers needed
+    };
+
+    // deno-fmt-ignore
+    return SQLa.SQL(embedState.ic, embedState)`-- TODO: add observability_span_id text or observability parameter to tie in errors
+      CREATE OR REPLACE FUNCTION ${upsertSR.qName}(${this.keyColumns.map(kc => `${kc.name} ${kc.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) RETURNS ${this.qName} AS $${upsertSR.bodyBlockName}$
+      DECLARE 
+          inserted_row ${this.qName};
+      BEGIN
+          select * into inserted_row 
+            from ${this.qName} hub
+           where ${this.keyColumns.map((kc, idx) => `hub.${kc.name} = $${idx+1}`).join(' AND ')}
+             and hub.provenance = $${this.keyColumns.length+1};
+          if inserted_row is null then
+            insert into ${this.qName} (${this.keyColumns.map(kc => kc.name).join(', ')}, provenance)
+              values (${this.keyColumns.map((_, idx) => `$${idx+1}`).join(', ')}, $${this.keyColumns.length+1}) 
+              returning * into inserted_row;
+          end if;
+          return inserted_row;
+      END; $${upsertSR.bodyBlockName}$ LANGUAGE plpgsql;`;
+  }
+
+  upsertProcedureSQL(): SQLa.DcpInterpolationResult {
+    const upsertSR = this.lcFunctions.upsert(this.state);
+    const embedState = {
+      ...this.state,
+      headers: [], // since we're embedding SQL, no headers needed
+    };
+
+    // deno-fmt-ignore
+    return SQLa.SQL(embedState.ic, embedState)`-- TODO: add observability_span_id text or observability parameter to tie in errors
+      CREATE OR REPLACE PROCEDURE ${upsertSR.qName}(${this.keyColumns.map(kc => `${kc.name} ${kc.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) AS $${upsertSR.bodyBlockName}$
+      BEGIN
+          insert into ${this.qName} 
+                 (${this.keyColumns.map(kc => kc.name).join(', ')}, provenance)
+          values (${this.keyColumns.map((_, idx) => `$${idx+1}`).join(', ')}, $${this.keyColumns.length+1}) 
+              on conflict do nothing;
+      END; $${upsertSR.bodyBlockName}$ LANGUAGE plpgsql;`;
+  }
 }
 
 /**
  * LinkTable automates the creation of Data Vault 2.0 physical Link tables
  * which connect one or more Hubs together.
  */
-export class LinkTable extends SQLaT.TypicalTable {
+export class LinkTable extends SQLaT.TypicalTable
+  implements SQLa.SqlTableUpsertable {
   readonly linkIdDomain: SQLa.PostgreSqlDomain;
   readonly linkId: SQLa.TypedSqlTableColumn;
   readonly linkIdRefDomain: SQLa.PostgreSqlDomainReference;
   readonly hubColumns: SQLa.TypedSqlTableColumn[];
   readonly provDomain: SQLa.PostgreSqlDomain;
+  readonly provColumn: SQLa.TypedSqlTableColumn;
   readonly domainRefSupplier: SQLa.PostgreSqlDomainReferenceSupplier;
   readonly columns: SQLaT.TypicalTableColumns;
   readonly ag: SQLa.SqlAffinityGroup;
@@ -304,19 +353,64 @@ export class LinkTable extends SQLaT.TypicalTable {
       );
     }
 
+    this.provColumn = this.provDomain.tableColumn(this);
     this.columns = {
       all: [
         this.linkId,
         ...this.hubColumns,
         loadedOnTimestampDomain(state).tableColumn(this),
         loadedByUserDomain(state).tableColumn(this),
-        this.provDomain.tableColumn(this),
+        this.provColumn,
       ],
       unique: [{
         name: `${this.name}_unq`,
         columns: this.hubColumns,
       }],
     };
+  }
+
+  upsertedFunctionSQL(): SQLa.DcpInterpolationResult {
+    const upsertSR = this.lcFunctions.upserted(this.state);
+    const embedState = {
+      ...this.state,
+      headers: [], // since we're embedding SQL, no headers needed
+    };
+
+    // deno-fmt-ignore
+    return SQLa.SQL(embedState.ic, embedState)`-- TODO: add observability_span_id text or observability parameter to tie in errors
+      CREATE OR REPLACE FUNCTION ${upsertSR.qName}(${this.hubColumns.map(kc => `${kc.name} ${kc.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) RETURNS ${this.qName} AS $${upsertSR.bodyBlockName}$
+      DECLARE 
+          inserted_row ${this.qName};
+      BEGIN
+          select * into inserted_row 
+            from ${this.qName} link
+           where ${this.hubColumns.map((kc, idx) => `link.${kc.name} = $${idx+1}`).join(' AND ')}
+             and link.provenance = $${this.hubColumns.length+1};
+          if inserted_row is null then
+            insert into ${this.qName} (${this.hubColumns.map(kc => kc.name).join(', ')}, provenance)
+              values (${this.hubColumns.map((_, idx) => `$${idx+1}`).join(', ')}, $${this.hubColumns.length+1})
+              returning * into inserted_row;
+          end if;
+          return inserted_row;
+      END; $${upsertSR.bodyBlockName}$ LANGUAGE plpgsql;`;
+  }
+
+  upsertProcedureSQL(): SQLa.DcpInterpolationResult {
+    const upsertSR = this.lcFunctions.upsert(this.state);
+    const embedState = {
+      ...this.state,
+      headers: [], // since we're embedding SQL, no headers needed
+    };
+
+    // deno-fmt-ignore
+    return SQLa.SQL(embedState.ic, embedState)`-- TODO: add observability_span_id text or observability parameter to tie in errors
+      CREATE OR REPLACE PROCEDURE ${upsertSR.qName}(${this.hubColumns.map(kc => `${kc.name} ${kc.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) AS $${upsertSR.bodyBlockName}$
+      BEGIN
+          insert into ${this.qName} 
+                 (${this.hubColumns.map(kc => kc.name).join(', ')}, provenance)
+          values (${this.hubColumns.map((_, idx) => `$${idx+1}`).join(', ')}, $${this.hubColumns.length+1})
+              on conflict do nothing;
+      END; $${upsertSR.bodyBlockName}$ LANGUAGE plpgsql;`;
   }
 }
 
@@ -326,12 +420,14 @@ export class LinkTable extends SQLaT.TypicalTable {
  * 
  * Ref: https://www.sciencedirect.com/topics/computer-science/data-vault-satellite
  */
-export class SatelliteTable extends SQLaT.TypicalTable {
+export class SatelliteTable extends SQLaT.TypicalTable
+  implements SQLa.SqlTableUpsertable {
   readonly satIdDomain: SQLa.PostgreSqlDomain;
   readonly satId: SQLa.TypedSqlTableColumn;
   readonly parentId: SQLa.TypedSqlTableColumn;
   readonly satIdRefDomain: SQLa.PostgreSqlDomainReference;
   readonly provDomain: SQLa.PostgreSqlDomain;
+  readonly provColumn: SQLa.TypedSqlTableColumn;
   readonly domainRefSupplier: SQLa.PostgreSqlDomainReferenceSupplier;
   readonly columns: SQLaT.TypicalTableColumns;
   readonly attributes: SQLaT.TypicalTableColumns;
@@ -382,6 +478,7 @@ export class SatelliteTable extends SQLaT.TypicalTable {
         foreignKey: { table: this.parent, column: this.parent.linkId },
       });
     this.attributes = organicColumns(this);
+    this.provColumn = this.provDomain.tableColumn(this);
     this.columns = {
       all: [
         this.satId,
@@ -389,9 +486,56 @@ export class SatelliteTable extends SQLaT.TypicalTable {
         ...this.attributes.all,
         loadedOnTimestampDomain(state).tableColumn(this),
         loadedByUserDomain(state).tableColumn(this),
-        this.provDomain.tableColumn(this),
+        this.provColumn,
       ],
       unique: this.attributes.unique,
     };
+  }
+
+  upsertedFunctionSQL(): SQLa.DcpInterpolationResult {
+    const upsertSR = this.lcFunctions.upserted(this.state);
+    const embedState = {
+      ...this.state,
+      headers: [], // since we're embedding SQL, no headers needed
+    };
+    const satAttrs = this.attributes.all;
+
+    // deno-fmt-ignore
+    return SQLa.SQL(embedState.ic, embedState)`-- TODO: add observability_span_id text or observability parameter to tie in errors
+      CREATE OR REPLACE FUNCTION ${upsertSR.qName}(${this.parentId.name} ${this.parentId.dataType}, ${satAttrs.map(ac => `${ac.name} ${ac.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) RETURNS ${this.qName} AS $${upsertSR.bodyBlockName}$
+      DECLARE 
+          inserted_row ${this.qName};
+      BEGIN
+          select * into inserted_row 
+            from ${this.qName} sat
+           where ${satAttrs.map((kc, idx) => `sat.${kc.name} = $${idx+2}`).join(' AND ')}
+             and sat.provenance = $${satAttrs.length+2};
+          if inserted_row is null then
+            insert into ${this.qName} 
+                     (${this.parentId.name}, ${satAttrs.map(kc => kc.name).join(', ')}, provenance)
+              values ($1, ${satAttrs.map((_, idx) => `$${idx+2}`).join(', ')}, $${satAttrs.length+2})
+              returning * into inserted_row;
+          end if;
+          return inserted_row;
+      END; $${upsertSR.bodyBlockName}$ LANGUAGE plpgsql;`;
+  }
+
+  upsertProcedureSQL(): SQLa.DcpInterpolationResult {
+    const upsertSR = this.lcFunctions.upsert(this.state);
+    const embedState = {
+      ...this.state,
+      headers: [], // since we're embedding SQL, no headers needed
+    };
+    const satAttrs = this.attributes.all;
+
+    // deno-fmt-ignore
+    return SQLa.SQL(embedState.ic, embedState)`-- TODO: add observability_span_id text or observability parameter to tie in errors
+      CREATE OR REPLACE PROCEDURE ${upsertSR.qName}(${this.parentId.name} ${this.parentId.dataType}, ${satAttrs.map(ac => `${ac.name} ${ac.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) AS $${upsertSR.bodyBlockName}$
+      BEGIN
+          insert into ${this.qName} 
+                 (${this.parentId.name}, ${satAttrs.map(kc => kc.name).join(', ')}, provenance)
+          values ($1, ${satAttrs.map((_, idx) => `$${idx+2}`).join(', ')}, $${satAttrs.length+2})
+              on conflict do nothing;
+      END; $${upsertSR.bodyBlockName}$ LANGUAGE plpgsql;`;
   }
 }

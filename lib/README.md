@@ -236,6 +236,10 @@ Data Vault TODOs:
 
 ## Activity Log
 
+### April 12, 2021
+
+- Implement `(hub|link|sat)_(name)_upserted` function and `(hub|link|sat)_(name)_upsert` procedure for each Data Vault component.
+
 ### April 11, 2021
 
 - Implement DcpTemplateState.observableQR() so that qualified references can be tracked. Now, whenever creating qualified references devs should use state.observableQR(...group/schema). When using observableQR(), the QRs are tracked and can be reported.

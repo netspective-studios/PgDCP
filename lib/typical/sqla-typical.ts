@@ -211,6 +211,23 @@ export abstract class TypicalTable implements SQLa.SqlTable {
   readonly dropSql: SQLa.PostgreSqlStatementSupplier = () => {
     return `DROP TABLE IF EXISTS ${this.qName}`;
   };
+
+  readonly lcFunctions: SQLa.SqlTableLifecycleFunctions = {
+    upsert: () => {
+      return {
+        name: `${this.name}_upsert`,
+        qName: `${this.qName}_upsert`,
+        bodyBlockName: `${this.qName.replaceAll(/\./g, "_")}_upsert_body`,
+      };
+    },
+    upserted: () => {
+      return {
+        name: `${this.name}_upserted`,
+        qName: `${this.qName}_upserted`,
+        bodyBlockName: `${this.qName.replaceAll(/\./g, "_")}_upserted_body`,
+      };
+    },
+  };
 }
 
 export class TypicalTypedTableColumnInstance extends TypicalTableColumnInstance
