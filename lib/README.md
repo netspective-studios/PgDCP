@@ -149,6 +149,7 @@ and incremented based on:
 
 Infrastructure TODOs:
 
+- Add `SECURITY DEFINER` annotations to stored procedures that should always operate as the owner - for confidential data, this might be necessary because `SECURITY INVOKER` is the default.
 - PostgreSQL has limits for identifiers like table names and their constraints etc. (limit of 63 chars). Per the docs, 'The system uses no more than NAMEDATALEN-1 bytes of an identifier; longer names can be written in commands, but they will be truncated. We need to add validation of name lengths when emitting SQL so we do not generate improper SQL.
 - Add `context` and `version` parameters to each lifecycle function like 
   `construct_*`, `destroy_*`, etc. so that the procedure can make a decision
