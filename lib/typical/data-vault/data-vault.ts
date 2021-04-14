@@ -247,8 +247,9 @@ export class HubTable extends SQLaT.TypicalTable
     };
   }
 
-  upsertedFunctionSQL(): SQLa.DcpInterpolationResult {
-    const upsertSR = this.lcFunctions.upserted(this.state);
+  upsertRoutinesSQL(): SQLa.DcpInterpolationResult {
+    const upsertSR = this.lcFunctions.upsert(this.state);
+    const upsertedSR = this.lcFunctions.upserted(this.state);
     const embedState = {
       ...this.state,
       headers: [], // since we're embedding SQL, no headers needed
@@ -256,7 +257,7 @@ export class HubTable extends SQLaT.TypicalTable
 
     // deno-fmt-ignore
     return SQLa.SQL(embedState.ic, embedState)`-- TODO: add observability_span_id text or observability parameter to tie in errors
-      CREATE OR REPLACE FUNCTION ${upsertSR.qName}(${this.keyColumns.map(kc => `${kc.name} ${kc.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) RETURNS ${this.qName} AS $${upsertSR.bodyBlockName}$
+      CREATE OR REPLACE FUNCTION ${upsertedSR.qName}(${this.keyColumns.map(kc => `${kc.name} ${kc.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) RETURNS ${this.qName} AS $${upsertedSR.bodyBlockName}$
       DECLARE 
           inserted_row ${this.qName};
       BEGIN
@@ -270,18 +271,8 @@ export class HubTable extends SQLaT.TypicalTable
               returning * into inserted_row;
           end if;
           return inserted_row;
-      END; $${upsertSR.bodyBlockName}$ LANGUAGE plpgsql;`;
-  }
+      END; $${upsertedSR.bodyBlockName}$ LANGUAGE plpgsql;
 
-  upsertProcedureSQL(): SQLa.DcpInterpolationResult {
-    const upsertSR = this.lcFunctions.upsert(this.state);
-    const embedState = {
-      ...this.state,
-      headers: [], // since we're embedding SQL, no headers needed
-    };
-
-    // deno-fmt-ignore
-    return SQLa.SQL(embedState.ic, embedState)`-- TODO: add observability_span_id text or observability parameter to tie in errors
       CREATE OR REPLACE PROCEDURE ${upsertSR.qName}(${this.keyColumns.map(kc => `${kc.name} ${kc.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) AS $${upsertSR.bodyBlockName}$
       BEGIN
           insert into ${this.qName} 
@@ -369,8 +360,9 @@ export class LinkTable extends SQLaT.TypicalTable
     };
   }
 
-  upsertedFunctionSQL(): SQLa.DcpInterpolationResult {
-    const upsertSR = this.lcFunctions.upserted(this.state);
+  upsertRoutinesSQL(): SQLa.DcpInterpolationResult {
+    const upsertedSR = this.lcFunctions.upserted(this.state);
+    const upsertSR = this.lcFunctions.upsert(this.state);
     const embedState = {
       ...this.state,
       headers: [], // since we're embedding SQL, no headers needed
@@ -378,7 +370,7 @@ export class LinkTable extends SQLaT.TypicalTable
 
     // deno-fmt-ignore
     return SQLa.SQL(embedState.ic, embedState)`-- TODO: add observability_span_id text or observability parameter to tie in errors
-      CREATE OR REPLACE FUNCTION ${upsertSR.qName}(${this.hubColumns.map(kc => `${kc.name} ${kc.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) RETURNS ${this.qName} AS $${upsertSR.bodyBlockName}$
+      CREATE OR REPLACE FUNCTION ${upsertedSR.qName}(${this.hubColumns.map(kc => `${kc.name} ${kc.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) RETURNS ${this.qName} AS $${upsertedSR.bodyBlockName}$
       DECLARE 
           inserted_row ${this.qName};
       BEGIN
@@ -392,18 +384,8 @@ export class LinkTable extends SQLaT.TypicalTable
               returning * into inserted_row;
           end if;
           return inserted_row;
-      END; $${upsertSR.bodyBlockName}$ LANGUAGE plpgsql;`;
-  }
+      END; $${upsertedSR.bodyBlockName}$ LANGUAGE plpgsql;
 
-  upsertProcedureSQL(): SQLa.DcpInterpolationResult {
-    const upsertSR = this.lcFunctions.upsert(this.state);
-    const embedState = {
-      ...this.state,
-      headers: [], // since we're embedding SQL, no headers needed
-    };
-
-    // deno-fmt-ignore
-    return SQLa.SQL(embedState.ic, embedState)`-- TODO: add observability_span_id text or observability parameter to tie in errors
       CREATE OR REPLACE PROCEDURE ${upsertSR.qName}(${this.hubColumns.map(kc => `${kc.name} ${kc.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) AS $${upsertSR.bodyBlockName}$
       BEGIN
           insert into ${this.qName} 
@@ -492,8 +474,9 @@ export class SatelliteTable extends SQLaT.TypicalTable
     };
   }
 
-  upsertedFunctionSQL(): SQLa.DcpInterpolationResult {
-    const upsertSR = this.lcFunctions.upserted(this.state);
+  upsertRoutinesSQL(): SQLa.DcpInterpolationResult {
+    const upsertedSR = this.lcFunctions.upserted(this.state);
+    const upsertSR = this.lcFunctions.upsert(this.state);
     const embedState = {
       ...this.state,
       headers: [], // since we're embedding SQL, no headers needed
@@ -502,7 +485,7 @@ export class SatelliteTable extends SQLaT.TypicalTable
 
     // deno-fmt-ignore
     return SQLa.SQL(embedState.ic, embedState)`-- TODO: add observability_span_id text or observability parameter to tie in errors
-      CREATE OR REPLACE FUNCTION ${upsertSR.qName}(${this.parentId.name} ${this.parentId.dataType}, ${satAttrs.map(ac => `${ac.name} ${ac.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) RETURNS ${this.qName} AS $${upsertSR.bodyBlockName}$
+      CREATE OR REPLACE FUNCTION ${upsertedSR.qName}(${this.parentId.name} ${this.parentId.dataType}, ${satAttrs.map(ac => `${ac.name} ${ac.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) RETURNS ${this.qName} AS $${upsertedSR.bodyBlockName}$
       DECLARE 
           inserted_row ${this.qName};
       BEGIN
@@ -517,19 +500,8 @@ export class SatelliteTable extends SQLaT.TypicalTable
               returning * into inserted_row;
           end if;
           return inserted_row;
-      END; $${upsertSR.bodyBlockName}$ LANGUAGE plpgsql;`;
-  }
+      END; $${upsertedSR.bodyBlockName}$ LANGUAGE plpgsql;
 
-  upsertProcedureSQL(): SQLa.DcpInterpolationResult {
-    const upsertSR = this.lcFunctions.upsert(this.state);
-    const embedState = {
-      ...this.state,
-      headers: [], // since we're embedding SQL, no headers needed
-    };
-    const satAttrs = this.attributes.all;
-
-    // deno-fmt-ignore
-    return SQLa.SQL(embedState.ic, embedState)`-- TODO: add observability_span_id text or observability parameter to tie in errors
       CREATE OR REPLACE PROCEDURE ${upsertSR.qName}(${this.parentId.name} ${this.parentId.dataType}, ${satAttrs.map(ac => `${ac.name} ${ac.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) AS $${upsertSR.bodyBlockName}$
       BEGIN
           insert into ${this.qName} 

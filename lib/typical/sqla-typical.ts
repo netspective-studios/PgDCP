@@ -1,10 +1,13 @@
 import * as SQLa from "../sqla.ts";
 
 export class TypicalSchemaExtension implements SQLa.PostgreSqlExtension {
+  readonly searchPath: SQLa.PostgreSqlSchema[];
+
   constructor(
     readonly name: SQLa.PostgreSqlExtensionName,
     readonly schema: SQLa.PostgreSqlSchema,
   ) {
+    this.searchPath = [this.schema];
   }
 
   readonly createSql: SQLa.PostgreSqlStatementSupplier = () => {
@@ -14,8 +17,6 @@ export class TypicalSchemaExtension implements SQLa.PostgreSqlExtension {
   readonly dropSql: SQLa.PostgreSqlStatementSupplier = () => {
     return `DROP EXTENSION IF EXISTS ${this.name}`;
   };
-
-  readonly searchPath = [this.schema];
 }
 
 export function tableColumnName(
@@ -26,6 +27,20 @@ export function tableColumnName(
 }
 
 export class TypicalTableColumnInstance implements SQLa.SqlTableColumn {
+  readonly isNotNullable?: boolean;
+  readonly defaultSqlExpr?: SQLa.PostgreSqlDomainDefaultExpr;
+  readonly isPrimaryKey?: boolean;
+  readonly foreignKeyDecl?: SQLa.SqlTableColumnForeignKeyExpr;
+  readonly tableConstraintsSql?:
+    | SQLa.PostgreSqlStatementSupplier
+    | SQLa.PostgreSqlStatementSupplier[];
+  readonly tableIndexesSql?:
+    | SQLa.PostgreSqlStatementSupplier
+    | SQLa.PostgreSqlStatementSupplier[];
+  readonly foreignKey?: SQLa.SqlTableColumnReference;
+  readonly tableQualifiedName: SQLa.SqlTableColumnQualifiedName;
+  readonly schemaQualifiedName: SQLa.SqlTableColumnQualifiedName;
+
   constructor(
     readonly schema: SQLa.PostgreSqlSchema,
     readonly table: SQLa.SqlTable,
@@ -33,22 +48,19 @@ export class TypicalTableColumnInstance implements SQLa.SqlTableColumn {
     readonly dataType: SQLa.PostgreSqlDomainDataType,
     readonly options?: SQLa.SqlTableColumnOptions,
   ) {
+    this.isNotNullable = this.options?.isNotNullable;
+    this.defaultSqlExpr = this.options?.defaultSqlExpr;
+    this.isPrimaryKey = this.options?.isPrimaryKey;
+    this.foreignKeyDecl = this.options?.foreignKeyDecl;
+    this.tableConstraintsSql = this.options?.tableConstraintsSql;
+    this.tableIndexesSql = this.options?.tableIndexesSql;
+    this.foreignKey = this.options?.foreignKey;
+    this.tableQualifiedName = this.table
+      .qualifiedReference(tableColumnName(this.name));
+    this.schemaQualifiedName = this.schema
+      .qualifiedReference(this.table
+        .qualifiedReference(tableColumnName(this.name)));
   }
-
-  readonly isNotNullable = this.options?.isNotNullable;
-  readonly isPrimaryKey = this.options?.isPrimaryKey;
-  readonly foreignKeyDecl = this.options?.foreignKeyDecl;
-  readonly foreignKey = this.options?.foreignKey;
-  readonly defaultSqlExpr = this.options?.defaultSqlExpr;
-  readonly tableConstraintsSql = this.options?.tableConstraintsSql;
-  readonly tableIndexesSql = this.options?.tableIndexesSql;
-
-  readonly tableQualifiedName: SQLa.SqlTableColumnQualifiedName = this.table
-    .qualifiedReference(tableColumnName(this.name));
-
-  readonly schemaQualifiedName: SQLa.SqlTableColumnQualifiedName = this.schema
-    .qualifiedReference(this.table
-      .qualifiedReference(tableColumnName(this.name)));
 
   readonly tableColumnDeclSql: SQLa.PostgreSqlStatementSupplier = () => {
     const options: string[] = [];
@@ -96,10 +108,12 @@ export interface SqlTableCreationComponents {
 }
 
 export abstract class TypicalView implements SQLa.SqlView {
+  readonly qName: SQLa.PostgreSqlSchemaViewQualifiedName;
   constructor(
     readonly state: SQLa.DcpTemplateState,
     readonly name: SQLa.SqlViewName,
   ) {
+    this.qName = this.state.schema.qualifiedReference(this.name);
   }
 
   // this is a special template literal function named SQL so that Visual
@@ -117,9 +131,6 @@ export abstract class TypicalView implements SQLa.SqlView {
     return interpolated;
   }
 
-  qName: SQLa.PostgreSqlSchemaViewQualifiedName = this.state.schema
-    .qualifiedReference(this.name);
-
   qualifiedReference(qualify: string) {
     return `${this.name}.${qualify}`;
   }
@@ -132,14 +143,14 @@ export abstract class TypicalView implements SQLa.SqlView {
 }
 
 export abstract class TypicalTable implements SQLa.SqlTable {
+  readonly qName: SQLa.PostgreSqlSchemaTableQualifiedName;
   constructor(
     readonly state: SQLa.DcpTemplateState,
     readonly name: SQLa.SqlTableName,
   ) {
+    this.qName = this.state.schema
+      .qualifiedReference(this.name);
   }
-
-  qName: SQLa.PostgreSqlSchemaTableQualifiedName = this.state.schema
-    .qualifiedReference(this.name);
 
   qualifiedReference(qualify: string) {
     return `${this.name}.${qualify}`;
@@ -243,17 +254,19 @@ export class TypicalTypedTableColumnInstance extends TypicalTableColumnInstance
       schema,
       table,
       name,
-      domain.dataType,
-      options,
+      domain.qName, // for a typed-column, the data type is the domain's name
+      { ...options, castSql: domain.castSql },
     );
   }
-
-  // for a typed-column, the data type is the domain's name
-  readonly dataType = this.domain.qName;
-  readonly castSql = this.domain.castSql;
 }
 
 export class TypicalDomain implements SQLa.PostgreSqlDomain {
+  readonly isNotNullable?: boolean;
+  readonly defaultSqlExpr?: SQLa.PostgreSqlDomainDefaultExpr;
+  readonly defaultColumnName: SQLa.SqlTableColumnNameFlexible;
+  readonly qName: SQLa.PostgreSqlDomainQualifiedName;
+  readonly tableColumn: SQLa.TypedSqlTableColumnSupplier;
+
   constructor(
     readonly schema: SQLa.PostgreSqlSchema,
     readonly name: SQLa.PostgreSqlDomainName,
@@ -266,14 +279,24 @@ export class TypicalDomain implements SQLa.PostgreSqlDomain {
       ) => SQLa.SqlTableColumnOptions | undefined;
     },
   ) {
+    this.defaultColumnName = this.options?.defaultColumnName || this.name;
+    this.isNotNullable = this.options?.isNotNullable;
+    this.defaultSqlExpr = this.options?.defaultSqlExpr;
+    this.qName = this.schema
+      .qualifiedReference(this.name);
+    this.tableColumn = this.options?.tableColumn ||
+      ((table, options?): SQLa.TypedSqlTableColumn => {
+        return new TypicalTypedTableColumnInstance(
+          this.schema,
+          table,
+          options?.columnName || this.defaultColumnName,
+          this,
+          this.options?.overrideTableColOptions
+            ? this.options?.overrideTableColOptions(options)
+            : options,
+        );
+      });
   }
-
-  readonly defaultColumnName = this.options?.defaultColumnName || this.name;
-  readonly isNotNullable = this.options?.isNotNullable;
-  readonly defaultSqlExpr = this.options?.defaultSqlExpr;
-
-  readonly qName: SQLa.PostgreSqlDomainQualifiedName = this.schema
-    .qualifiedReference(this.name);
 
   readonly castSql = (
     expr: SQLa.PostgreSqlDomainCastExpr,
@@ -281,7 +304,7 @@ export class TypicalDomain implements SQLa.PostgreSqlDomain {
     return `(${expr})::${this.qName}`;
   };
 
-  readonly createSql: SQLa.PostgreSqlStatementSupplier = (state) => {
+  readonly createSql: SQLa.PostgreSqlStatementSupplier = () => {
     const options: string[] = [];
     if (this.isNotNullable) options.push("NOT NULL");
     if (this.defaultSqlExpr) {
@@ -294,20 +317,6 @@ export class TypicalDomain implements SQLa.PostgreSqlDomain {
   readonly dropSql: SQLa.PostgreSqlStatementSupplier = () => {
     return `DROP DOMAIN IF EXISTS ${this.schema.qualifiedReference(this.name)}`;
   };
-
-  readonly tableColumn: SQLa.TypedSqlTableColumnSupplier =
-    this.options?.tableColumn ||
-    ((table, options?): SQLa.TypedSqlTableColumn => {
-      return new TypicalTypedTableColumnInstance(
-        this.schema,
-        table,
-        options?.columnName || this.defaultColumnName,
-        this,
-        this.options?.overrideTableColOptions
-          ? this.options?.overrideTableColOptions(options)
-          : options,
-      );
-    });
 }
 
 export class TypicalDomainReference implements SQLa.PostgreSqlDomainReference {
@@ -331,12 +340,13 @@ export class TypicalDomainReference implements SQLa.PostgreSqlDomainReference {
 
 export class TypicalPostgreSqlSchemaStoredRoutine
   implements SQLa.PostgreSqlStoredRoutine {
+  readonly qName: SQLa.PostgreSqlStoredRoutineQualifiedName;
+  readonly bodyBlockName: SQLa.PostgreSqlStoredRoutineBodyCodeBlockName;
   constructor(
     readonly ag: SQLa.SqlAffinityGroup,
     readonly name: string,
   ) {
+    this.qName = this.ag.qualifiedReference(this.name);
+    this.bodyBlockName = `${this.qName.replaceAll(/\./g, "_")}_body`;
   }
-
-  readonly qName = this.ag.qualifiedReference(this.name);
-  readonly bodyBlockName = `${this.qName.replaceAll(/\./g, "_")}_body`;
 }

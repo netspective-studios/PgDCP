@@ -149,14 +149,21 @@ and incremented based on:
 
 Infrastructure TODOs:
 
-- Add `SECURITY DEFINER` annotations to stored procedures that should always operate as the owner - for confidential data, this might be necessary because `SECURITY INVOKER` is the default.
-- PostgreSQL has limits for identifiers like table names and their constraints etc. (limit of 63 chars). Per the docs, 'The system uses no more than NAMEDATALEN-1 bytes of an identifier; longer names can be written in commands, but they will be truncated. We need to add validation of name lengths when emitting SQL so we do not generate improper SQL.
-- Add `context` and `version` parameters to each lifecycle function like 
+- Automate ideas from [Evolutionary Database Design](https://martinfowler.com/articles/evodb.html).
+- Add `SECURITY DEFINER` annotations to stored procedures that should always
+  operate as the owner - for confidential data, this might be necessary because
+  `SECURITY INVOKER` is the default.
+- PostgreSQL has limits for identifiers like table names and their constraints
+  etc. (limit of 63 chars). Per the docs, 'The system uses no more than
+  NAMEDATALEN-1 bytes of an identifier; longer names can be written in commands,
+  but they will be truncated. We need to add validation of name lengths when
+  emitting SQL so we do not generate improper SQL.
+- Add `context` and `version` parameters to each lifecycle function like
   `construct_*`, `destroy_*`, etc. so that the procedure can make a decision
   about how to proceed in different runtime environments/contexts like sandbox
-  devl, production, etc. and for a specific version of the object. Instead of 
-  making decisions about context at SQL generation time, this would allow us 
-  to make decisions at runtime.
+  devl, production, etc. and for a specific version of the object. Instead of
+  making decisions about context at SQL generation time, this would allow us to
+  make decisions at runtime.
   - If the `context` and `version` parameters are NULL on the way into a
     function, `context` parameter should default to `dcp_context.context.active`
     row that would "know" which database was currently running (e.g. sandbox,
@@ -217,6 +224,10 @@ Infrastructure TODOs:
 
 Data Vault TODOs:
 
+- Review [Loading Dimensions from a Data Vault Model](https://danischnider.wordpress.com/2015/11/12/loading-dimensions-from-a-data-vault-model/)
+  to implement techniques for PITs and current/historical views. 
+- Review [Data Vault Queries and Join Elimination](https://danischnider.wordpress.com/2019/12/27/data-vault-queries-and-join-elimination/)
+  to help improve performance by reducing joins.  
 - Add `active`, `version`, `effective_at` and `expired_at` columns to
   `SatelliteTable` for storing history.
   - Add rule to check that every satellite has at least one record so that outer
@@ -235,20 +246,33 @@ Data Vault TODOs:
 - Add OpenTelemetry Log Hub that can integrate Exceptions, Traces, and Spans
 - Add OpenMetrics / OpenTelemetry Metric Hub that can store metrics which can be
   exposed as Prometheus endpoints via PostgREST.
+- See what parts of [Evolutionary Database Design](https://martinfowler.com/articles/evodb.html)
+  need to be implemented as part of Data Vault automation.  
 
 ## Activity Log
 
+### April 14, 2021
+
+- Fix lint errors generated from upgrading to Deno 1.9.
+
 ### April 12, 2021
 
-- Implement `(hub|link|sat)_(name)_upserted` function and `(hub|link|sat)_(name)_upsert` procedure for each Data Vault component.
+- Implement `(hub|link|sat)_(name)_upserted` function and
+  `(hub|link|sat)_(name)_upsert` procedure for each Data Vault component.
 
 ### April 11, 2021
 
-- Implement DcpTemplateState.observableQR() so that qualified references can be tracked. Now, whenever creating qualified references devs should use state.observableQR(...group/schema). When using observableQR(), the QRs are tracked and can be reported.
+- Implement DcpTemplateState.observableQR() so that qualified references can be
+  tracked. Now, whenever creating qualified references devs should use
+  state.observableQR(...group/schema). When using observableQR(), the QRs are
+  tracked and can be reported.
 
 ### April 10, 2021
 
-- Implement Active Context to indicate whether host is prod/devl/test/sandbox/etc. The dcp_context schema now has a table called 'context' which contains a singleton row table which configures the active database as a prod/test/sandbox/etc. database.
+- Implement Active Context to indicate whether host is
+  prod/devl/test/sandbox/etc. The dcp_context schema now has a table called
+  'context' which contains a singleton row table which configures the active
+  database as a prod/test/sandbox/etc. database.
 - Remove legacy Just-based SQL assembler in favor of Deno TypeScript-based
   modules.
 - Refactor all TypeScript-based `SQLa` into `typical` and `data-vault` for

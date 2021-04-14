@@ -166,13 +166,11 @@ export interface SqlTableLifecycleFunctions {
 }
 
 export interface SqlTableUpsertable {
-  readonly upsertedFunctionSQL: () => DcpInterpolationResult;
-  readonly upsertProcedureSQL: () => DcpInterpolationResult;
+  readonly upsertRoutinesSQL: () => DcpInterpolationResult;
 }
 
 export const isSqlTableUpsertable = safety.typeGuard<SqlTableUpsertable>(
-  "upsertedFunctionSQL",
-  "upsertProcedureSQL",
+  "upsertRoutinesSQL",
 );
 
 export interface SqlTable extends QualifiedReferenceSupplier {
@@ -198,6 +196,9 @@ export interface SqlTableColumnOptions extends PostgreSqlDomainColumnOptions {
   readonly tableIndexesSql?:
     | PostgreSqlStatementSupplier
     | PostgreSqlStatementSupplier[];
+  readonly castSql?: (
+    expr: PostgreSqlDomainCastExpr,
+  ) => PostgreSqlDomainCastExpr;
 }
 
 export interface SqlTableColumn extends SqlTableColumnOptions {

@@ -161,17 +161,15 @@ export class TypicalSqlLifecycleFunctions
 
 export class TypicalAffinityGroup implements SQLa.SqlAffinityGroup {
   readonly lcFunctions: SQLa.PostgreSqlLifecycleFunctions;
+  readonly qName: SQLa.SqlAffinityAncestorizedGroupName;
 
   constructor(
     readonly name: SQLa.PostgreSqlSchemaName,
     readonly parent?: SQLa.SqlAffinityGroup,
   ) {
     this.lcFunctions = new TypicalSqlLifecycleFunctions(this);
+    this.qName = this.parent ? `${this.parent.qName}_${this.name}` : this.name;
   }
-
-  readonly qName: SQLa.SqlAffinityAncestorizedGroupName = this.parent
-    ? `${this.parent.qName}_${this.name}`
-    : this.name;
 
   readonly qualifiedReference = (qualify: string) => {
     return `${this.qName}_${qualify}`;
@@ -184,6 +182,7 @@ export class TypicalAffinityGroup implements SQLa.SqlAffinityGroup {
 
 export class TypicalSchema implements SQLa.PostgreSqlSchema {
   readonly lcFunctions: SQLa.PostgreSqlLifecycleFunctions;
+  readonly qName: SQLa.SqlAffinityAncestorizedGroupName;
   readonly #domainsCreated = new Map<
     SQLa.PostgreSqlDomainName,
     SQLa.PostgreSqlDomain
@@ -193,10 +192,9 @@ export class TypicalSchema implements SQLa.PostgreSqlSchema {
     readonly name: SQLa.PostgreSqlSchemaName,
   ) {
     this.lcFunctions = new TypicalSqlLifecycleFunctions(this);
+    // schemas, unlike affinity groups, do not have ancestors
+    this.qName = this.name;
   }
-
-  // schemas, unlike affinity groups, do not have ancestors
-  readonly qName: SQLa.SqlAffinityAncestorizedGroupName = this.name;
 
   readonly qualifiedReference = (qualify: string) => {
     return `${this.name}.${qualify}`;
