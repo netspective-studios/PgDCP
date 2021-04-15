@@ -251,6 +251,10 @@ Data Vault TODOs:
 
 ## Activity Log
 
+### April 15, 2021
+
+- Add `OPERATOR(dcp_extensions.=)` equality comparison for columns that require it (like `ltree`)
+
 ### April 14, 2021
 
 - Fix lint errors generated from upgrading to Deno 1.9.

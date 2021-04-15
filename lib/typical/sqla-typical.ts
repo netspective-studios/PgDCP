@@ -40,6 +40,7 @@ export class TypicalTableColumnInstance implements SQLa.SqlTableColumn {
   readonly foreignKey?: SQLa.SqlTableColumnReference;
   readonly tableQualifiedName: SQLa.SqlTableColumnQualifiedName;
   readonly schemaQualifiedName: SQLa.SqlTableColumnQualifiedName;
+  readonly operatorSql?: SQLa.PostgreSqlOperatorExprs;
 
   constructor(
     readonly schema: SQLa.PostgreSqlSchema,
@@ -55,6 +56,7 @@ export class TypicalTableColumnInstance implements SQLa.SqlTableColumn {
     this.tableConstraintsSql = this.options?.tableConstraintsSql;
     this.tableIndexesSql = this.options?.tableIndexesSql;
     this.foreignKey = this.options?.foreignKey;
+    this.operatorSql = this.options?.operatorSql;
     this.tableQualifiedName = this.table
       .qualifiedReference(tableColumnName(this.name));
     this.schemaQualifiedName = this.schema
@@ -86,6 +88,15 @@ export class TypicalTableColumnInstance implements SQLa.SqlTableColumn {
     expr: SQLa.PostgreSqlDomainCastExpr,
   ): SQLa.PostgreSqlDomainCastExpr => {
     return `(${expr})::${this.dataType}`;
+  };
+
+  readonly compareEqualSql = (
+    left: SQLa.SqlTableColumnQualifiedName,
+    right: SQLa.PostgreSqlCompareColumnExpr,
+  ): SQLa.PostgreSqlCompareColumnExpr => {
+    return this.operatorSql
+      ? `${left} ${this.operatorSql.equal} ${right}`
+      : `${left} = ${right}`;
   };
 }
 

@@ -84,6 +84,8 @@ export type PostgreSqlDomainDataType = string;
 export type PostgreSqlDomainDefaultExpr = string;
 export type PostgreSqlDomainQualifiedName = string;
 export type PostgreSqlDomainCastExpr = string;
+export type PostgreSqlOperatorExpr = string;
+export type PostgreSqlCompareColumnExpr = string;
 
 export interface ObservableQualifiedReferenceSupplier {
   (qualify: string): string;
@@ -117,6 +119,10 @@ export interface PostgreSqlExtension {
   readonly createSql: PostgreSqlStatementSupplier;
   readonly dropSql: PostgreSqlStatementSupplier;
   readonly searchPath: PostgreSqlSchema[];
+}
+
+export interface PostgreSqlOperatorExprs {
+  readonly equal: PostgreSqlOperatorExpr;
 }
 
 export interface PostgreSqlDomainColumnOptions {
@@ -199,6 +205,7 @@ export interface SqlTableColumnOptions extends PostgreSqlDomainColumnOptions {
   readonly castSql?: (
     expr: PostgreSqlDomainCastExpr,
   ) => PostgreSqlDomainCastExpr;
+  readonly operatorSql?: PostgreSqlOperatorExprs;
 }
 
 export interface SqlTableColumn extends SqlTableColumnOptions {
@@ -210,6 +217,10 @@ export interface SqlTableColumn extends SqlTableColumnOptions {
   readonly castSql: (
     expr: PostgreSqlDomainCastExpr,
   ) => PostgreSqlDomainCastExpr;
+  readonly compareEqualSql: (
+    left: SqlTableColumnQualifiedName,
+    right: PostgreSqlCompareColumnExpr,
+  ) => PostgreSqlCompareColumnExpr;
 }
 
 export const isSqlTableColumn = safety.typeGuard<SqlTableColumn>(

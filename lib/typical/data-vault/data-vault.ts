@@ -165,6 +165,14 @@ export function hubLtreeBusinessKeyDomain(
       return new SQLaT.TypicalDomain(schema, name, "ltree", {
         defaultColumnName,
         isNotNullable: true,
+        overrideTableColOptions: (options?) => {
+          return {
+            ...options,
+            operatorSql: {
+              equal: `OPERATOR(${schemas.extensions.qualifiedReference("=")})`,
+            },
+          };
+        },
       });
     });
   };
@@ -261,10 +269,9 @@ export class HubTable extends SQLaT.TypicalTable
       DECLARE 
           inserted_row ${this.qName};
       BEGIN
-          set search_path to ${schemas.extensions.name}; -- TODO: Need to remove this later
           select * into inserted_row 
             from ${this.qName} hub
-           where ${this.keyColumns.map((kc, idx) => `hub.${kc.name} = $${idx+1}`).join(' AND ')}
+           where ${this.keyColumns.map((kc, idx) => kc.compareEqualSql(`hub.${kc.name}`, `$${idx+1}`)).join(' AND ')}
              and hub.provenance = $${this.keyColumns.length+1};
           if inserted_row is null then
             insert into ${this.qName} (${this.keyColumns.map(kc => kc.name).join(', ')}, provenance)
@@ -375,10 +382,9 @@ export class LinkTable extends SQLaT.TypicalTable
       DECLARE 
           inserted_row ${this.qName};
       BEGIN
-          set search_path to ${schemas.extensions.name}; -- TODO: Need to remove this later
           select * into inserted_row 
             from ${this.qName} link
-           where ${this.hubColumns.map((kc, idx) => `link.${kc.name} = $${idx+1}`).join(' AND ')}
+           where ${this.hubColumns.map((kc, idx) => kc.compareEqualSql(`link.${kc.name}`, `$${idx+1}`)).join(' AND ')}
              and link.provenance = $${this.hubColumns.length+1};
           if inserted_row is null then
             insert into ${this.qName} (${this.hubColumns.map(kc => kc.name).join(', ')}, provenance)
@@ -491,10 +497,9 @@ export class SatelliteTable extends SQLaT.TypicalTable
       DECLARE 
           inserted_row ${this.qName};
       BEGIN
-          set search_path to ${schemas.extensions.name}; -- TODO: Need to remove this later
           select * into inserted_row 
             from ${this.qName} sat
-           where ${satAttrs.map((kc, idx) => `sat.${kc.name} = $${idx+2}`).join(' AND ')}
+           where ${satAttrs.map((kc, idx) => kc.compareEqualSql(`sat.${kc.name}`, `$${idx+2}`)).join(' AND ')}
              and sat.provenance = $${satAttrs.length+2};
           if inserted_row is null then
             insert into ${this.qName} 
