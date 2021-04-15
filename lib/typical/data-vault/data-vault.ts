@@ -261,6 +261,7 @@ export class HubTable extends SQLaT.TypicalTable
       DECLARE 
           inserted_row ${this.qName};
       BEGIN
+          set search_path to ${schemas.extensions.name}; -- TODO: Need to remove this later
           select * into inserted_row 
             from ${this.qName} hub
            where ${this.keyColumns.map((kc, idx) => `hub.${kc.name} = $${idx+1}`).join(' AND ')}
@@ -374,6 +375,7 @@ export class LinkTable extends SQLaT.TypicalTable
       DECLARE 
           inserted_row ${this.qName};
       BEGIN
+          set search_path to ${schemas.extensions.name}; -- TODO: Need to remove this later
           select * into inserted_row 
             from ${this.qName} link
            where ${this.hubColumns.map((kc, idx) => `link.${kc.name} = $${idx+1}`).join(' AND ')}
@@ -489,6 +491,7 @@ export class SatelliteTable extends SQLaT.TypicalTable
       DECLARE 
           inserted_row ${this.qName};
       BEGIN
+          set search_path to ${schemas.extensions.name}; -- TODO: Need to remove this later
           select * into inserted_row 
             from ${this.qName} sat
            where ${satAttrs.map((kc, idx) => `sat.${kc.name} = $${idx+2}`).join(' AND ')}
