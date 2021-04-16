@@ -38,6 +38,24 @@ export function SQL(
             image_is_valid BOOLEAN,
             image_status_msg TEXT
         );
+        CREATE TYPE ${sQR("image_content")} AS (
+            provenance TEXT,
+            image bytea,
+            image_format TEXT,
+            image_width INTEGER,
+            image_height INTEGER,
+            image_size_bytes INTEGER,
+            image_format_original TEXT,
+            image_size_original INTEGER,
+            image_width_original INTEGER,
+            image_height_original INTEGER,
+            image_file_extension_original TEXT,
+            image_hash TEXT, -- TODO: create proper domain
+            is_transformed BOOLEAN,
+            image_is_valid BOOLEAN,
+            image_file_extension TEXT,
+            image_status_msg TEXT
+        );
     EXCEPTION
         WHEN DUPLICATE_OBJECT THEN
             RAISE NOTICE 'type "image_meta_data" already exists, skipping';
@@ -68,6 +86,60 @@ export function SQL(
             return provenance, "unknown", -1, -1, -1, False, repr(error)
         $innerFn$ LANGUAGE plpython3u;
         comment on function ${sQR("inspect_image_meta_data")}(provenance text, image bytea) is 'Given a binary image, detect its format and size';
+        
+        CREATE OR REPLACE FUNCTION ${sQR("optimize_image")}(provenance text,original_image bytea, optimize_size integer) RETURNS ${sQR("image_content")} AS $innerFn$
+        from io import BytesIO
+        import PIL
+        from PIL import Image
+        import math
+        import imagehash
+        try:
+            optimized_image = original_image
+            mem_file = BytesIO()
+            mem_file.write(original_image)
+            img = Image.open(mem_file)
+            image_hash = imagehash.average_hash(img)
+            img.verify()
+            image_format_original = img.format
+            image_file_extension_original = '.'+image_format_original.lower()
+            image_width_original, image_height_original = img.size
+            image_size_original = mem_file.getbuffer().nbytes
+            allowed_images = ['PNG', 'JPEG', 'JPG', 'jpg','png','jpeg']
+            is_transformed = False
+            if image_size_original > optimize_size and image_format_original in allowed_images:
+                is_transformed = True
+                rgb_im = Image.open(mem_file).convert("RGB")
+                Qmin, Qmax = 25, 96
+                Qacc = -1
+                while Qmin <= Qmax:
+                    m = math.floor((Qmin + Qmax) / 2)
+                    buffer = io.BytesIO()
+                    rgb_im.save(buffer, format="JPEG", quality=m)
+                    s = buffer.getbuffer().nbytes
+                    if s <= optimize_size:
+                        Qacc = m
+                        Qmin = m + 1
+                    elif s > optimize_size:
+                        Qmax = m - 1
+                image_format = 'JPEG'
+                image_file_extension = '.jpeg'
+                buffer = io.BytesIO()
+                if Qacc > -1:
+                    rgb_im.save(buffer, format="JPEG", quality=Qacc)
+                else:
+                    rgb_im.save(buffer, format="JPEG", quality=50)
+                size_bytes = buffer.getbuffer().nbytes
+                optimized_image = buffer.getvalue()
+            else:
+                size_bytes = image_size_original
+                image_format = image_format_original
+                image_file_extension = image_file_extension_original
+            img.close()
+            return provenance,optimized_image,image_format,image_width_original,image_height_original,size_bytes,image_format_original, image_size_original,image_width_original, image_height_original,image_file_extension_original,image_hash,is_transformed,True,image_file_extension,repr(img)
+        except Exception as error:
+            return provenance,original_image,"unknown",-1,-1,-1,"unknown",-1,-1,-1,"unknown","unknown",False,False,"unknown",repr(error)
+        $innerFn$ LANGUAGE plpython3u;
+        comment on function ${sQR("optimize_image")}(provenance text,original_image bytea, optimize_size integer) is 'Given a  compressed binary image, detect its format and size';
 
         CREATE OR REPLACE FUNCTION ${fn.unitTest(state).qName}() RETURNS SETOF TEXT LANGUAGE plpgsql AS $unitTestFn$
         DECLARE
