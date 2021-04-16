@@ -270,6 +270,8 @@ export interface PostgreSqlLifecycleFunctions {
   readonly constructDomains: PostgreSqlStoredRoutineSupplier;
   readonly constructStorage: PostgreSqlStoredRoutineSupplier;
   readonly constructIdempotent: PostgreSqlStoredRoutineSupplier;
+  readonly constructShield: PostgreSqlStoredRoutineSupplier;
+  readonly destroyShield: PostgreSqlStoredRoutineSupplier;
   readonly destroyStorage: PostgreSqlStoredRoutineSupplier;
   readonly destroyIdempotent: PostgreSqlStoredRoutineSupplier;
   readonly deployProvenanceHttpRequest: PostgreSqlStoredRoutineSupplier;

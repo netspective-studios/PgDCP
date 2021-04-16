@@ -16,6 +16,7 @@ export function SQL(
         extensions: [schemas.extensions.pgCryptoExtn],
       },
   );
+  const [lQR] = state.observableQR(schemas.lib);
   const { lcFunctions: fn } = state.affinityGroup;
   return SQLa.SQL(ctx, state)`
     -- We want all our object creations to be idempotent whenever possible
@@ -55,7 +56,7 @@ export function SQL(
           extract(epoch from now() + interval '7 days'),
           account.oid,
           account.rolname
-        )::jwt_token_postgraphile;
+        )::${lQR("jwt_token_postgraphile")};
         ELSE
         RETURN NULL;
         END IF;

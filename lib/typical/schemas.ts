@@ -18,6 +18,16 @@ export class TypicalSqlLifecycleFunctions
     );
   };
 
+  readonly constructShield: SQLa.PostgreSqlStoredRoutineSupplier = (
+    _,
+    override?,
+  ) => {
+    return new SQLaT.TypicalPostgreSqlSchemaStoredRoutine(
+      lifecycle,
+      `${override || this.ag.qName}_construct_shield`,
+    );
+  };
+
   readonly constructDomains: SQLa.PostgreSqlStoredRoutineSupplier = (
     _,
     override?,
@@ -35,6 +45,16 @@ export class TypicalSqlLifecycleFunctions
     return new SQLaT.TypicalPostgreSqlSchemaStoredRoutine(
       lifecycle,
       `${override || this.ag.qName}_construct_idempotent`,
+    );
+  };
+
+  readonly destroyShield: SQLa.PostgreSqlStoredRoutineSupplier = (
+    _,
+    override?,
+  ) => {
+    return new SQLaT.TypicalPostgreSqlSchemaStoredRoutine(
+      lifecycle,
+      `${override || this.ag.qName}_destroy_shield`,
     );
   };
 

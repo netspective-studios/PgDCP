@@ -47,8 +47,8 @@ export function SQL(
     BEGIN
         call create_role_if_not_exists(role_name);
         EXECUTE FORMAT('GRANT USAGE ON SCHEMA %I TO %I', dcp_schema_name, role_name);
-        EXECUTE FORMAT('GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA %I TO %I', dcp_schema_name, role_name);
-        EXECUTE FORMAT('GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA %I TO %I', dcp_schema_name, role_name);
+        EXECUTE FORMAT('GRANT SELECT ON ALL TABLES IN SCHEMA %I TO %I', dcp_schema_name, role_name);
+        EXECUTE FORMAT('GRANT SELECT ON ALL SEQUENCES IN SCHEMA %I TO %I', dcp_schema_name, role_name);
         -- Grants the same privileges as exists in the current schema for all future table or views that are created after calling this function.
         EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT SELECT ON TABLES TO %I', dcp_schema_name, role_name);
         
@@ -59,8 +59,10 @@ export function SQL(
     CREATE OR REPLACE FUNCTION create_database_user_with_role(user_name NAME, user_passwd TEXT, role_name text) RETURNS smallint AS $BODY$
     BEGIN
         -- escape properly to prevent SQL injection
-        EXECUTE FORMAT('CREATE USER %I LOGIN PASSWORD ''%I''', user_name, user_passwd);
-        EXECUTE FORMAT('GRANT %I TO %I', role_name, user_name);
+        IF NOT EXISTS ( SELECT FROM pg_roles WHERE  rolname = user_name) THEN
+          EXECUTE FORMAT('CREATE USER %I LOGIN PASSWORD ''%I''', user_name, user_passwd);
+          EXECUTE FORMAT('GRANT %I TO %I', role_name, user_name);
+        END IF;
         RETURN 1;
     END;
     $BODY$ LANGUAGE plpgsql STRICT VOLATILE SECURITY DEFINER COST 100;
