@@ -89,6 +89,11 @@ procedures within _affinity groups_ (or _schemas_):
     functions that have dependencies.
   - Each function is responsible for logging info, warn, error, and exception
     logs into the event/activity storage system.
+- `[AGorS]_construct_shield`. Responsible for the creation of stored procedures that
+  handle the authorization for roles and users and grant of privileges on all kinds of
+  objects in the Postgres database.
+- `[AGorS]_destroy_shield`. Responsible for revoking all the privileges of a role as well
+  dropping a role or user when required.
 - `[AGorS]_destroy_storage`. Responsible for the destruction of all storage
   assets created by `[AGorS]_construct_storage`.
 - `[AGorS]_destroy_idempotent`. Responsible for the destruction of all
@@ -203,7 +208,7 @@ Infrastructure TODOs:
 - Go through all `[AGorS]_destroy_storage` and `[AGorS]_destroy_idempotent`
   procedures in all `*.sql.ts` templates to ensure storage is properly separated
   from idempotent functionality.
-  - Add, to all *_destroy() functions the requirement that it be a specific user
+  - Add, to all \*\_destroy() functions the requirement that it be a specific user
     that is calling the destruction (e.g. "dcp_destroyer") and that user is
     highly restricted.
 - Add health checks standard functions that applications and service consumers
@@ -225,9 +230,9 @@ Infrastructure TODOs:
 Data Vault TODOs:
 
 - Review [Loading Dimensions from a Data Vault Model](https://danischnider.wordpress.com/2015/11/12/loading-dimensions-from-a-data-vault-model/)
-  to implement techniques for PITs and current/historical views. 
+  to implement techniques for PITs and current/historical views.
 - Review [Data Vault Queries and Join Elimination](https://danischnider.wordpress.com/2019/12/27/data-vault-queries-and-join-elimination/)
-  to help improve performance by reducing joins.  
+  to help improve performance by reducing joins.
 - Add `active`, `version`, `effective_at` and `expired_at` columns to
   `SatelliteTable` for storing history.
   - Add rule to check that every satellite has at least one record so that outer
@@ -247,9 +252,15 @@ Data Vault TODOs:
 - Add OpenMetrics / OpenTelemetry Metric Hub that can store metrics which can be
   exposed as Prometheus endpoints via PostgREST.
 - See what parts of [Evolutionary Database Design](https://martinfowler.com/articles/evodb.html)
-  need to be implemented as part of Data Vault automation.  
+  need to be implemented as part of Data Vault automation.
 
 ## Activity Log
+
+### April 16,2021
+
+- Add lifecycle functions `construct_shield` and `destroy_shield` to `sqla.ts` and `schema.ts`
+- Corrected the `create_read_only_privileges_dcp_schema_role` procedure in `shield.ts` to provide GRANTS for SELECT only
+- Added qualifier reference to the return type of `authenticate_postgraphile_pg_native` function
 
 ### April 15, 2021
 
