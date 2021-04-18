@@ -187,6 +187,55 @@ export interface SqlTable extends QualifiedReferenceSupplier {
   readonly lcFunctions: SqlTableLifecycleFunctions;
 }
 
+export type SqlTableDelimitedTextColumnHeader = string;
+export type SqlTableDelimitedTextColumnContent = string;
+export type SqlTableDelimitedTextHeaderRow =
+  SqlTableDelimitedTextColumnHeader[];
+export type SqlTableDelimitedTextContentRow =
+  SqlTableDelimitedTextColumnContent[];
+
+export interface SqlTableColumnFilter<
+  C extends SqlTableColumn,
+  T extends SqlTable,
+> {
+  (column: C, table: T): boolean;
+}
+
+export interface SqlTableDelimitedTextColumnOptions<T extends SqlTable> {
+  keepColumn: SqlTableColumnFilter<SqlTableColumn, T>;
+  columnValue?: (
+    value: unknown,
+    c: SqlTableColumn,
+    table: T,
+  ) => SqlTableDelimitedTextColumnContent;
+  defaultValue?: (
+    column: SqlTableColumn,
+    table: T,
+  ) => SqlTableDelimitedTextColumnContent;
+}
+
+export interface SqlTableDelimitedTextColumnContentOptions<T extends SqlTable>
+  extends SqlTableDelimitedTextColumnOptions<T> {
+  onColumnNotFound?: (
+    column: SqlTableColumn,
+    table: T,
+  ) => SqlTableDelimitedTextColumnContent;
+}
+
+export interface SqlTableDelimitedTextSupplier<
+  T extends SqlTable,
+  C extends Record<string, unknown>,
+> {
+  readonly table: T;
+  readonly header: (
+    options?: SqlTableDelimitedTextColumnOptions<T>,
+  ) => SqlTableDelimitedTextHeaderRow;
+  readonly content: (
+    row: C,
+    options?: SqlTableDelimitedTextColumnContentOptions<T>,
+  ) => SqlTableDelimitedTextContentRow;
+}
+
 export interface SqlTableColumnReference {
   readonly table: SqlTable;
   readonly column: SqlTableColumn;

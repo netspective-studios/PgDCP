@@ -1,3 +1,4 @@
+import { inflect, path } from "../deps.ts";
 import * as SQLa from "../sqla.ts";
 
 export class TypicalSchemaExtension implements SQLa.PostgreSqlExtension {
@@ -250,6 +251,147 @@ export abstract class TypicalTable implements SQLa.SqlTable {
       };
     },
   };
+}
+
+export function typicalDelimitedTextSupplier<
+  C extends Record<string, unknown>,
+  T extends TypicalTable,
+>(
+  table: T,
+  defaultOptions: SQLa.SqlTableDelimitedTextColumnOptions<T> = {
+    keepColumn: () => {
+      return true;
+    },
+  },
+): SQLa.SqlTableDelimitedTextSupplier<T, C> {
+  const prepare = (
+    options: SQLa.SqlTableDelimitedTextColumnOptions<T> = defaultOptions,
+  ): {
+    column: SQLa.SqlTableColumn;
+    inflectableColName: inflect.InflectableValue;
+    defaultValue: SQLa.SqlTableDelimitedTextColumnContent;
+  }[] => {
+    const keep = options?.keepColumn
+      ? table.columns.all.filter((c) => options?.keepColumn(c, table))
+      : table.columns.all;
+    return keep.map((c) => {
+      return {
+        column: c,
+        inflectableColName: inflect.snakeCaseValue(
+          typeof c.name === "string" ? c.name : c.name(),
+        ),
+        defaultValue: options?.defaultValue
+          ? options?.defaultValue(c, table)
+          : ``,
+      };
+    });
+  };
+  const supplier: SQLa.SqlTableDelimitedTextSupplier<T, C> = {
+    table,
+    header: (options?) => {
+      const keep = prepare(options);
+      return keep.map((k) => `"${k.inflectableColName.inflect()}"`);
+    },
+    content: (row, options?) => {
+      const keep = prepare(options);
+      return keep.map((k) => {
+        const ccName = inflect.toCamelCase(k.inflectableColName);
+        const foundCamelCaseEntry = Object.entries(row).find((e) => {
+          return e[0] == ccName;
+        });
+        if (foundCamelCaseEntry) {
+          const columnValue = foundCamelCaseEntry[1];
+          return options?.columnValue
+            ? (options.columnValue(columnValue, k.column, table))
+            : (defaultOptions?.columnValue
+              ? defaultOptions.columnValue(columnValue, k.column, table)
+              : JSON.stringify(columnValue));
+        } else {
+          return options?.onColumnNotFound
+            ? options?.onColumnNotFound(k.column, table)
+            : k.defaultValue;
+        }
+      });
+    },
+  };
+  return supplier;
+}
+
+export interface SqlTableDelimitedTextWriterOptions {
+  readonly columnDelim: string;
+  readonly recordDelim: string;
+  readonly destPath: string;
+  readonly fileName: string;
+  readonly emitHeader: boolean;
+}
+
+export function typicalSqlTableDelimitedTextWriterOptions(
+  destPath: string,
+  fileName: string,
+  inherit?: Partial<SqlTableDelimitedTextWriterOptions>,
+): SqlTableDelimitedTextWriterOptions {
+  return {
+    destPath,
+    fileName,
+    columnDelim: inherit?.columnDelim || ",",
+    recordDelim: inherit?.recordDelim || "\n",
+    emitHeader: typeof inherit?.emitHeader === "undefined"
+      ? true
+      : inherit.emitHeader,
+  };
+}
+
+export class SqlTableDelimitedTextWriter<
+  C extends Record<string, unknown>,
+  T extends TypicalTable,
+> {
+  readonly stream: Deno.File;
+  protected rowIndex = 0;
+
+  constructor(
+    readonly supplier: SQLa.SqlTableDelimitedTextSupplier<T, C>,
+    readonly options: SqlTableDelimitedTextWriterOptions,
+  ) {
+    this.stream = Deno.openSync(path.join(options.destPath, options.fileName), {
+      create: true,
+      append: true,
+    });
+    if (this.options.emitHeader) {
+      this.stream.writeSync(
+        new TextEncoder().encode(
+          supplier.header().join(this.options.columnDelim),
+        ),
+      );
+    }
+  }
+
+  close(): void {
+    this.stream.close();
+  }
+
+  write(
+    row: C,
+    options?: SQLa.SqlTableDelimitedTextColumnContentOptions<T>,
+  ): SQLa.SqlTableDelimitedTextContentRow {
+    const content = this.supplier.content(row, options);
+    const te = new TextEncoder();
+    if (this.rowIndex == 0) {
+      if (this.options.emitHeader) {
+        this.stream.writeSync(te.encode(this.options.recordDelim));
+      }
+      this.stream.writeSync(te.encode(
+        content.join(this.options.columnDelim),
+      ));
+    } else {
+      this.stream.writeSync(
+        te.encode(
+          this.options.recordDelim + content.join(this.options.columnDelim),
+        ),
+      );
+    }
+    this.rowIndex++;
+    return content;
+  }
 }
 
 export class TypicalTypedTableColumnInstance extends TypicalTableColumnInstance

@@ -178,6 +178,20 @@ export function hubLtreeBusinessKeyDomain(
   };
 }
 
+export function hubTemporalBusinessKeyDomain(
+  name: SQLa.PostgreSqlDomainName,
+  defaultColumnName: SQLa.SqlTableColumnNameFlexible,
+): SQLa.PostgreSqlDomainSupplier {
+  return (state) => {
+    return state.schema.useDomain(name, (name, schema) => {
+      return new SQLaT.TypicalDomain(schema, name, "timestamptz", {
+        defaultColumnName,
+        isNotNullable: true,
+      });
+    });
+  };
+}
+
 /**
  * HubTable automates the creation of Data Vault 2.0 physical Hub tables.
  * 
@@ -291,6 +305,13 @@ export class HubTable extends SQLaT.TypicalTable
   }
 }
 
+export const keepHubColumnInDelimitedText: SQLa.SqlTableColumnFilter<
+  SQLa.SqlTableColumn,
+  HubTable
+> = (column, table) => {
+  return table.keyColumns.find((kc) => kc == column) ? true : false;
+};
+
 /**
  * LinkTable automates the creation of Data Vault 2.0 physical Link tables
  * which connect one or more Hubs together.
@@ -403,6 +424,13 @@ export class LinkTable extends SQLaT.TypicalTable
       END; $${upsertSR.bodyBlockName}$ LANGUAGE plpgsql;`;
   }
 }
+
+export const keepLinkColumnInDelimitedText: SQLa.SqlTableColumnFilter<
+  SQLa.SqlTableColumn,
+  LinkTable
+> = (column, table) => {
+  return table.hubColumns.find((kc) => kc == column) ? true : false;
+};
 
 /**
  * SatelliteTable automates the creation of Data Vault 2.0 physical Satellite
@@ -519,3 +547,10 @@ export class SatelliteTable extends SQLaT.TypicalTable
       END; $${upsertSR.bodyBlockName}$ LANGUAGE plpgsql;`;
   }
 }
+
+export const keepSatelliteColumnInDelimitedText: SQLa.SqlTableColumnFilter<
+  SQLa.SqlTableColumn,
+  SatelliteTable
+> = (column, table) => {
+  return table.attributes.all.find((kc) => kc == column) ? true : false;
+};
