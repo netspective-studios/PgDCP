@@ -372,7 +372,7 @@ export class SqlTableDelimitedTextWriter<
   write(
     row: C,
     options?: SQLa.SqlTableDelimitedTextColumnContentOptions<T>,
-  ): SQLa.SqlTableDelimitedTextContentRow {
+  ): [C, SQLa.SqlTableDelimitedTextContentRow] {
     const content = this.supplier.content(row, options);
     const te = new TextEncoder();
     if (this.rowIndex == 0) {
@@ -390,7 +390,7 @@ export class SqlTableDelimitedTextWriter<
       );
     }
     this.rowIndex++;
-    return content;
+    return [row, content];
   }
 }
 
