@@ -1,4 +1,4 @@
-import { inflect, path } from "../deps.ts";
+import { fs, inflect, path } from "../deps.ts";
 import * as SQLa from "../sqla.ts";
 
 export class TypicalSchemaExtension implements SQLa.PostgreSqlExtension {
@@ -352,6 +352,7 @@ export class SqlTableDelimitedTextWriter<
     readonly supplier: SQLa.SqlTableDelimitedTextSupplier<T, C>,
     readonly options: SqlTableDelimitedTextWriterOptions,
   ) {
+    fs.ensureDirSync(options.destPath);
     this.stream = Deno.openSync(path.join(options.destPath, options.fileName), {
       create: true,
       append: true,
