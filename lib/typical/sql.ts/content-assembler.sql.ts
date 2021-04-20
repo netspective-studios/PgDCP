@@ -78,6 +78,11 @@ export function SQL(
     $$ LANGUAGE plpgsql STRICT IMMUTABLE ;
     comment on function url_brand(url TEXT) IS 'Given a URL, return the hostname only without "www." prefix';
     
+    CREATE OR REPLACE PROCEDURE ${lQR("set_curlopt_timeout")}() AS $$
+    BEGIN
+      Perform (SELECT ${exQR("http_set_curlopt")}('CURLOPT_TIMEOUT_MS', '25000'));
+    END; $$ LANGUAGE PLPGSQL;
+
     CREATE OR REPLACE PROCEDURE ${fn.destroyIdempotent(state).qName}() AS $$
     BEGIN
         DROP FUNCTION IF EXISTS ${fn.unitTest(state).qName}();
