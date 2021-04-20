@@ -50,8 +50,8 @@ export function SQL(
     CREATE OR REPLACE PROCEDURE ${lcf.constructIdempotent(state).qName}() AS $$
     BEGIN
       CREATE OR REPLACE FUNCTION ${sQR("gitlab_project_asset_http_request")}(prov ${cQR("gitlab_provenance")}, project_id integer, asset_file_path text, branchOrTag text) returns ${exQR("http_request")} AS $innerFnBody$
-      BEGIN
-        return ('GET', format('%s/projects/%s/repository/files/%s?ref=%s', prov.api_base_url, project_id, asset_file_path, branchOrTag),
+      BEGIN       
+        return ('GET', format('%s/projects/%s/repository/files/%s?ref=%s', prov.api_base_url, project_id,${exQR("urlencode")}(asset_file_path), branchOrTag),
              ARRAY[${exQR("http_header")}('PRIVATE-TOKEN', prov.secret_authn_token)], NULL, NULL)::${exQR("http_request")};
       END;
       $innerFnBody$ LANGUAGE PLPGSQL;
