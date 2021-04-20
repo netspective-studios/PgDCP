@@ -281,7 +281,7 @@ export class HubTable extends SQLaT.TypicalTable
     return SQLa.SQL(embedState.ic, embedState)`-- TODO: add observability_span_id text or observability parameter to tie in errors
       CREATE OR REPLACE FUNCTION ${upsertedSR.qName}(${this.keyColumns.map(kc => `${kc.name} ${kc.dataType}`).join(', ')}, ${this.provColumn.name} ${this.provColumn.dataType}) RETURNS ${this.qName} AS $${upsertedSR.bodyBlockName}$
       DECLARE 
-          inserted_row ${this.qName};
+        inserted_row ${this.qName};
       BEGIN
           select * into inserted_row 
             from ${this.qName} hub
