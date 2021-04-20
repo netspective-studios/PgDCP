@@ -11,7 +11,10 @@ export interface TelemetryVault {
   readonly metricInfoInstance: TelemetryMetricInfoInstance;
 }
 
-export const telemetrySpanIdDomain: SQLa.PostgreSqlDomainSupplier = (state) => {
+export type TelemetrySpanIdDomainValue = string;
+export const telemetrySpanIdDomain: SQLa.PostgreSqlDomainSupplier<
+  TelemetrySpanIdDomainValue
+> = (state) => {
   return state.schema.useDomain("telemetry_span_id", (name, schema) => {
     return new SQLaT.TypicalDomain(schema, name, "text", {
       defaultColumnName: "span_id",
@@ -33,7 +36,10 @@ export const telemetryMetricKeyDomain = dv.hubLtreeBusinessKeyDomain(
   "metric_key",
 );
 
-export const telemtryMetricLabelsDomain: SQLa.PostgreSqlDomainSupplier = (
+export type TelemetryMetricLabelsDomainValue = string;
+export const telemetryMetricLabelsDomain: SQLa.PostgreSqlDomainSupplier<
+  TelemetryMetricLabelsDomainValue
+> = (
   state,
 ) => {
   return state.schema.useDomain("telemetry_metric_labels", (name, schema) => {
@@ -43,7 +49,10 @@ export const telemtryMetricLabelsDomain: SQLa.PostgreSqlDomainSupplier = (
   });
 };
 
-export const telemetryMetricIntValueDomain: SQLa.PostgreSqlDomainSupplier = (
+export type TelemetryMetricIntValueDomainValue = number;
+export const telemetryMetricIntValueDomain: SQLa.PostgreSqlDomainSupplier<
+  TelemetryMetricIntValueDomainValue
+> = (
   state,
 ) => {
   return state.schema.useDomain(
@@ -56,7 +65,10 @@ export const telemetryMetricIntValueDomain: SQLa.PostgreSqlDomainSupplier = (
   );
 };
 
-export const telemetryMetricRealValueDomain: SQLa.PostgreSqlDomainSupplier = (
+export type TelemetryMetricRealValueDomainValue = number;
+export const telemetryMetricRealValueDomain: SQLa.PostgreSqlDomainSupplier<
+  TelemetryMetricRealValueDomainValue
+> = (
   state,
 ) => {
   return state.schema.useDomain(
@@ -81,10 +93,12 @@ export class TelemetryMetricCounterInstance extends dv.SatelliteTable {
   constructor(
     readonly state: SQLa.DcpTemplateState,
     readonly parent: TelemetryMetricHub,
-    readonly totalDomain: SQLa.PostgreSqlDomainSupplier,
+    readonly totalDomain: SQLa.PostgreSqlDomainSupplier<number>,
     readonly options?: {
       readonly tableName?: SQLa.SqlTableName;
-      readonly labelsDomain?: SQLa.PostgreSqlDomainSupplier;
+      readonly labelsDomain?: SQLa.PostgreSqlDomainSupplier<
+        TelemetryMetricLabelsDomainValue
+      >;
     },
   ) {
     super(
@@ -98,7 +112,7 @@ export class TelemetryMetricCounterInstance extends dv.SatelliteTable {
               columnName: "total",
               isNotNullable: true,
             }),
-            (options?.labelsDomain || telemtryMetricLabelsDomain)(state)
+            (options?.labelsDomain || telemetryMetricLabelsDomain)(state)
               .tableColumn(table),
           ],
         };
@@ -111,10 +125,12 @@ export class TelemetryMetricGaugeInstance extends dv.SatelliteTable {
   constructor(
     readonly state: SQLa.DcpTemplateState,
     readonly parent: TelemetryMetricHub,
-    readonly valueDomain: SQLa.PostgreSqlDomainSupplier,
+    readonly valueDomain: SQLa.PostgreSqlDomainSupplier<number>,
     readonly options?: {
       readonly tableName?: SQLa.SqlTableName;
-      readonly labelsDomain?: SQLa.PostgreSqlDomainSupplier;
+      readonly labelsDomain?: SQLa.PostgreSqlDomainSupplier<
+        TelemetryMetricLabelsDomainValue
+      >;
     },
   ) {
     super(
@@ -128,7 +144,7 @@ export class TelemetryMetricGaugeInstance extends dv.SatelliteTable {
               columnName: "value",
               isNotNullable: true,
             }),
-            (options?.labelsDomain || telemtryMetricLabelsDomain)(state)
+            (options?.labelsDomain || telemetryMetricLabelsDomain)(state)
               .tableColumn(table),
           ],
         };
@@ -143,7 +159,9 @@ export class TelemetryMetricInfoInstance extends dv.SatelliteTable {
     readonly parent: TelemetryMetricHub,
     readonly options?: {
       readonly tableName?: SQLa.SqlTableName;
-      readonly labelsDomain?: SQLa.PostgreSqlDomainSupplier;
+      readonly labelsDomain?: SQLa.PostgreSqlDomainSupplier<
+        TelemetryMetricLabelsDomainValue
+      >;
     },
   ) {
     super(
@@ -153,7 +171,7 @@ export class TelemetryMetricInfoInstance extends dv.SatelliteTable {
       (table) => {
         return {
           all: [
-            (options?.labelsDomain || telemtryMetricLabelsDomain)(state)
+            (options?.labelsDomain || telemetryMetricLabelsDomain)(state)
               .tableColumn(table),
           ],
         };

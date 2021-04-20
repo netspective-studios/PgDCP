@@ -125,38 +125,41 @@ export interface PostgreSqlOperatorExprs {
   readonly equal: PostgreSqlOperatorExpr;
 }
 
-export interface PostgreSqlDomainColumnOptions {
+export interface PostgreSqlDomainColumnOptions<TypeScriptValue> {
   readonly isNotNullable?: boolean;
   readonly defaultSqlExpr?: PostgreSqlDomainDefaultExpr;
+  readonly defaultStaticValue?: () => TypeScriptValue;
+  readonly defaultDelimitedTextValue?: () => string;
 }
 
-export interface PostgreSqlDomain extends PostgreSqlDomainColumnOptions {
+export interface PostgreSqlDomain<TypeScriptValue>
+  extends PostgreSqlDomainColumnOptions<TypeScriptValue> {
   readonly name: PostgreSqlDomainName;
   readonly qName: PostgreSqlDomainQualifiedName;
   readonly dataType: PostgreSqlDomainDataType;
   readonly defaultColumnName: SqlTableColumnNameFlexible;
   readonly createSql: PostgreSqlStatementSupplier;
   readonly dropSql: PostgreSqlStatementSupplier;
-  readonly tableColumn: TypedSqlTableColumnSupplier;
+  readonly tableColumn: TypedSqlTableColumnSupplier<TypeScriptValue>;
   readonly castSql: (
     expr: PostgreSqlDomainCastExpr,
   ) => PostgreSqlDomainCastExpr;
 }
 
-export interface PostgreSqlDomainSupplier {
-  (state: DcpTemplateState): PostgreSqlDomain;
+export interface PostgreSqlDomainSupplier<TypeScriptValue> {
+  (state: DcpTemplateState): PostgreSqlDomain<TypeScriptValue>;
 }
 
-export interface PostgreSqlDomainReference {
-  readonly prime: PostgreSqlDomain;
-  readonly reference: PostgreSqlDomain;
+export interface PostgreSqlDomainReference<TypeScriptValue> {
+  readonly prime: PostgreSqlDomain<TypeScriptValue>;
+  readonly reference: PostgreSqlDomain<TypeScriptValue>;
 }
 
-export interface PostgreSqlDomainReferenceSupplier {
+export interface PostgreSqlDomainReferenceSupplier<TypeScriptValue> {
   (
-    domain: PostgreSqlDomain,
+    domain: PostgreSqlDomain<TypeScriptValue>,
     state: DcpTemplateState,
-  ): PostgreSqlDomainReference;
+  ): PostgreSqlDomainReference<TypeScriptValue>;
 }
 
 export interface SqlView extends QualifiedReferenceSupplier {
@@ -189,37 +192,64 @@ export interface SqlTable extends QualifiedReferenceSupplier {
 
 export type SqlTableDelimitedTextColumnHeader = string;
 export type SqlTableDelimitedTextColumnContent = string;
-export type SqlTableDelimitedTextHeaderRow =
-  SqlTableDelimitedTextColumnHeader[];
-export type SqlTableDelimitedTextContentRow =
-  SqlTableDelimitedTextColumnContent[];
+export type SqlTableDelimitedTextHeaderRow = {
+  readonly header: SqlTableDelimitedTextColumnHeader;
+  readonly column: SqlTableColumn<unknown>;
+}[];
+export interface SqlTableDelimitedTextContentRow {
+  readonly rowIndex: number;
+  readonly row: {
+    readonly value: SqlTableDelimitedTextColumnContent;
+    readonly column: SqlTableColumn<unknown>;
+  }[];
+}
 
 export interface SqlTableColumnFilter<
-  C extends SqlTableColumn,
+  C extends SqlTableColumn<unknown>,
   T extends SqlTable,
 > {
   (column: C, table: T): boolean;
 }
 
+export interface SqlTableDelimitedTextColumnValueSupplier<
+  // deno-lint-ignore no-explicit-any
+  C extends SqlTableColumn<any>,
+  T extends SqlTable,
+> {
+  (column: C, table: T): SqlTableDelimitedTextColumnContent;
+}
+
+export interface SqlTableDelimitedTextColumnValueDecorator<
+  // deno-lint-ignore no-explicit-any
+  C extends SqlTableColumn<any>,
+  T extends SqlTable,
+> {
+  (value: unknown, column: C, table: T): SqlTableDelimitedTextColumnContent;
+}
+
 export interface SqlTableDelimitedTextColumnOptions<T extends SqlTable> {
-  keepColumn: SqlTableColumnFilter<SqlTableColumn, T>;
-  columnValue?: (
-    value: unknown,
-    c: SqlTableColumn,
-    table: T,
-  ) => SqlTableDelimitedTextColumnContent;
-  defaultValue?: (
-    column: SqlTableColumn,
-    table: T,
-  ) => SqlTableDelimitedTextColumnContent;
+  // deno-lint-ignore no-explicit-any
+  keepColumn: SqlTableColumnFilter<SqlTableColumn<any>, T>;
+  columnValue?: SqlTableDelimitedTextColumnValueDecorator<
+    // deno-lint-ignore no-explicit-any
+    SqlTableColumn<any>,
+    T
+  >;
+  defaultValue?: SqlTableDelimitedTextColumnValueSupplier<
+    // deno-lint-ignore no-explicit-any
+    SqlTableColumn<any>,
+    T
+  >;
 }
 
 export interface SqlTableDelimitedTextColumnContentOptions<T extends SqlTable>
   extends SqlTableDelimitedTextColumnOptions<T> {
-  onColumnNotFound?: (
-    column: SqlTableColumn,
-    table: T,
-  ) => SqlTableDelimitedTextColumnContent;
+  onColumnNotFound?: SqlTableDelimitedTextColumnValueSupplier<
+    // deno-lint-ignore no-explicit-any
+    SqlTableColumn<any>,
+    T
+  >;
+  primaryKeysPopulator: () => SqlTableDelimitedTextColumnContent[];
 }
 
 export interface SqlTableDelimitedTextSupplier<
@@ -232,18 +262,20 @@ export interface SqlTableDelimitedTextSupplier<
   ) => SqlTableDelimitedTextHeaderRow;
   readonly content: (
     row: C,
+    rowIndex: number,
     options?: SqlTableDelimitedTextColumnContentOptions<T>,
   ) => SqlTableDelimitedTextContentRow;
 }
 
-export interface SqlTableColumnReference {
+export interface SqlTableColumnReference<TypeScriptValue> {
   readonly table: SqlTable;
-  readonly column: SqlTableColumn;
+  readonly column: SqlTableColumn<TypeScriptValue>;
 }
 
-export interface SqlTableColumnOptions extends PostgreSqlDomainColumnOptions {
+export interface SqlTableColumnOptions<TypeScriptValue>
+  extends PostgreSqlDomainColumnOptions<TypeScriptValue> {
   readonly isPrimaryKey?: boolean;
-  readonly foreignKey?: SqlTableColumnReference;
+  readonly foreignKey?: SqlTableColumnReference<unknown>;
   readonly foreignKeyDecl?: SqlTableColumnForeignKeyExpr;
   readonly tableConstraintsSql?:
     | PostgreSqlStatementSupplier
@@ -257,7 +289,8 @@ export interface SqlTableColumnOptions extends PostgreSqlDomainColumnOptions {
   readonly operatorSql?: PostgreSqlOperatorExprs;
 }
 
-export interface SqlTableColumn extends SqlTableColumnOptions {
+export interface SqlTableColumn<TypeScriptValue>
+  extends SqlTableColumnOptions<TypeScriptValue> {
   readonly name: SqlTableColumnNameFlexible;
   readonly tableQualifiedName: SqlTableColumnQualifiedName;
   readonly schemaQualifiedName: SqlTableColumnQualifiedName;
@@ -272,34 +305,37 @@ export interface SqlTableColumn extends SqlTableColumnOptions {
   ) => PostgreSqlCompareColumnExpr;
 }
 
-export const isSqlTableColumn = safety.typeGuard<SqlTableColumn>(
+export const isSqlTableColumn = safety.typeGuard<SqlTableColumn<unknown>>(
   "tableColumnDeclSql",
 );
 
-export interface TypedSqlTableColumn extends SqlTableColumn {
-  readonly domain: PostgreSqlDomain;
+export interface TypedSqlTableColumn<TypeScriptValue>
+  extends SqlTableColumn<TypeScriptValue> {
+  readonly domain: PostgreSqlDomain<TypeScriptValue>;
 }
 
-export const isTypedSqlTableColumn = safety.typeGuard<TypedSqlTableColumn>(
+export const isTypedSqlTableColumn = safety.typeGuard<
+  TypedSqlTableColumn<unknown>
+>(
   "tableColumnDeclSql",
   "domain",
 );
 
-export interface SqlTableColumnSupplier {
+export interface SqlTableColumnSupplier<TypeScriptValue> {
   (
     table: SqlTable,
     columnName: SqlTableColumnNameFlexible,
-    options?: SqlTableColumnOptions,
-  ): SqlTableColumn;
+    options?: SqlTableColumnOptions<TypeScriptValue>,
+  ): SqlTableColumn<TypeScriptValue>;
 }
 
-export interface TypedSqlTableColumnSupplier {
+export interface TypedSqlTableColumnSupplier<TypeScriptValue> {
   (
     table: SqlTable,
-    options?: SqlTableColumnOptions & {
+    options?: SqlTableColumnOptions<TypeScriptValue> & {
       columnName?: SqlTableColumnNameFlexible;
     },
-  ): TypedSqlTableColumn;
+  ): TypedSqlTableColumn<TypeScriptValue>;
 }
 
 export interface PostgreSqlStoredRoutine {
@@ -348,14 +384,16 @@ export interface PostgreSqlSchema extends SqlAffinityGroup {
   readonly createSchemaSql: PostgreSqlStatementSupplier;
   readonly dropSchemaSql: PostgreSqlStatementSupplier;
   readonly extension: (name: PostgreSqlExtensionName) => PostgreSqlExtension;
-  readonly domainsUsed: PostgreSqlDomain[];
+  readonly domainsUsed: PostgreSqlDomain<unknown>[];
   readonly useDomain: (
     name: PostgreSqlDomainName,
     onCreate: (
       name: PostgreSqlDomainName,
       schema: PostgreSqlSchema,
-    ) => PostgreSqlDomain,
-  ) => PostgreSqlDomain;
+      // deno-lint-ignore no-explicit-any
+    ) => PostgreSqlDomain<any>,
+    // deno-lint-ignore no-explicit-any
+  ) => PostgreSqlDomain<any>;
 }
 
 export function isPostgreSqlSchema(

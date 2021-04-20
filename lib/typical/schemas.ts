@@ -205,7 +205,7 @@ export class TypicalSchema implements SQLa.PostgreSqlSchema {
   readonly qName: SQLa.SqlAffinityAncestorizedGroupName;
   readonly #domainsCreated = new Map<
     SQLa.PostgreSqlDomainName,
-    SQLa.PostgreSqlDomain
+    SQLa.PostgreSqlDomain<unknown>
   >();
 
   constructor(
@@ -238,8 +238,8 @@ export class TypicalSchema implements SQLa.PostgreSqlSchema {
     return new SQLaT.TypicalSchemaExtension(name, this);
   };
 
-  get domainsUsed(): SQLa.PostgreSqlDomain[] {
-    const used: SQLa.PostgreSqlDomain[] = [];
+  get domainsUsed(): SQLa.PostgreSqlDomain<unknown>[] {
+    const used: SQLa.PostgreSqlDomain<unknown>[] = [];
     for (const d of this.#domainsCreated.values()) {
       used.push(d);
     }
@@ -251,8 +251,10 @@ export class TypicalSchema implements SQLa.PostgreSqlSchema {
     onCreate: (
       name: SQLa.PostgreSqlDomainName,
       schema: SQLa.PostgreSqlSchema,
-    ) => SQLa.PostgreSqlDomain,
-  ): SQLa.PostgreSqlDomain => {
+      // deno-lint-ignore no-explicit-any
+    ) => SQLa.PostgreSqlDomain<any>,
+    // deno-lint-ignore no-explicit-any
+  ): SQLa.PostgreSqlDomain<any> => {
     let domain = this.#domainsCreated.get(name);
     if (!domain) {
       domain = onCreate(name, this);

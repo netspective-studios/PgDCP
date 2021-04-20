@@ -1,19 +1,31 @@
+import { uuid } from "../../deps.ts";
 import * as SQLa from "../../mod.ts";
 import * as SQLaT from "../mod.ts";
 import { schemas } from "../mod.ts";
 
-export const loadedOnTimestampDomain: SQLa.PostgreSqlDomainSupplier = (
+export const loadedOnTimestampDomain: SQLa.PostgreSqlDomainSupplier<Date> = (
   state,
 ) => {
   return state.schema.useDomain("loaded_at_timestamptz", (name, schema) => {
     return new SQLaT.TypicalDomain(schema, name, "timestamptz", {
       defaultColumnName: "loaded_at",
       defaultSqlExpr: "current_timestamp",
+      defaultStaticValue: () => {
+        return new Date();
+      },
+      defaultDelimitedTextValue: () => {
+        return new Date().toISOString();
+      },
     });
   });
 };
 
-export const loadedByUserDomain: SQLa.PostgreSqlDomainSupplier = (state) => {
+export type LoadedByUserDomainValue = string;
+export const loadedByUserDomain: SQLa.PostgreSqlDomainSupplier<
+  LoadedByUserDomainValue
+> = (
+  state,
+) => {
   return state.schema.useDomain("loaded_by_db_user_name", (name, schema) => {
     return new SQLaT.TypicalDomain(schema, name, "name", {
       defaultColumnName: "loaded_by",
@@ -22,7 +34,10 @@ export const loadedByUserDomain: SQLa.PostgreSqlDomainSupplier = (state) => {
   });
 };
 
-export const provenanceUriDomain: SQLa.PostgreSqlDomainSupplier = (state) => {
+export type ProvenanceUriDomainValue = string;
+export const provenanceUriDomain: SQLa.PostgreSqlDomainSupplier<
+  ProvenanceUriDomainValue
+> = (state) => {
   return state.schema.useDomain("provenance_uri", (name, schema) => {
     return new SQLaT.TypicalDomain(schema, name, "text", {
       defaultColumnName: "provenance",
@@ -31,7 +46,10 @@ export const provenanceUriDomain: SQLa.PostgreSqlDomainSupplier = (state) => {
   });
 };
 
-export const contentHashDomain: SQLa.PostgreSqlDomainSupplier = (state) => {
+export type ContentHashDomainValue = string;
+export const contentHashDomain: SQLa.PostgreSqlDomainSupplier<
+  ContentHashDomainValue
+> = (state) => {
   return state.schema.useDomain("content_hash", (name, schema) => {
     return new SQLaT.TypicalDomain(schema, name, "text", {
       isNotNullable: true,
@@ -39,7 +57,10 @@ export const contentHashDomain: SQLa.PostgreSqlDomainSupplier = (state) => {
   });
 };
 
-export const ftsVectorsSupplierDomain: SQLa.PostgreSqlDomainSupplier = (
+export type FtsVectorsSupplierDomainValue = string;
+export const ftsVectorsSupplierDomain: SQLa.PostgreSqlDomainSupplier<
+  FtsVectorsSupplierDomainValue
+> = (
   state,
 ) => {
   return state.schema.useDomain("fts_vector_supplier", (name, schema) => {
@@ -47,7 +68,10 @@ export const ftsVectorsSupplierDomain: SQLa.PostgreSqlDomainSupplier = (
   });
 };
 
-export const ftsVectorsTextDomain: SQLa.PostgreSqlDomainSupplier = (
+export type FtsVectorsTextDomainValue = string;
+export const ftsVectorsTextDomain: SQLa.PostgreSqlDomainSupplier<
+  FtsVectorsTextDomainValue
+> = (
   state,
 ) => {
   return state.schema.useDomain("fts_vector_text", (name, schema) => {
@@ -55,13 +79,18 @@ export const ftsVectorsTextDomain: SQLa.PostgreSqlDomainSupplier = (
   });
 };
 
-export const ftsVectorsDomain: SQLa.PostgreSqlDomainSupplier = (state) => {
+export type FtsVectorsDomainValue = string;
+export const ftsVectorsDomain: SQLa.PostgreSqlDomainSupplier<
+  FtsVectorsDomainValue
+> = (state) => {
   return state.schema.useDomain("fts_vector", (name, schema) => {
     return new SQLaT.TypicalDomain(schema, name, "tsvector");
   });
 };
 
-export class DataVaultIdentity extends SQLaT.TypicalDomain {
+export type DataVaultIdentityValue = string;
+export class DataVaultIdentity
+  extends SQLaT.TypicalDomain<DataVaultIdentityValue> {
   constructor(
     readonly schema: SQLa.PostgreSqlSchema,
     readonly name: SQLa.PostgreSqlDomainName,
@@ -71,14 +100,24 @@ export class DataVaultIdentity extends SQLaT.TypicalDomain {
       defaultColumnName,
       isNotNullable: true,
       defaultSqlExpr: "gen_random_uuid()",
+      defaultStaticValue: () => {
+        return uuid.v4.generate();
+      },
+      defaultDelimitedTextValue: () => {
+        return this.options?.defaultStaticValue
+          ? this.options?.defaultStaticValue()
+          : ``;
+      },
     });
   }
 
-  readonly tableColumn: SQLa.TypedSqlTableColumnSupplier = (
+  readonly tableColumn: SQLa.TypedSqlTableColumnSupplier<
+    DataVaultIdentityValue
+  > = (
     table,
     options?,
-  ): SQLa.TypedSqlTableColumn => {
-    const column: SQLa.TypedSqlTableColumn = new SQLaT
+  ): SQLa.TypedSqlTableColumn<DataVaultIdentityValue> => {
+    const column: SQLa.TypedSqlTableColumn<DataVaultIdentityValue> = new SQLaT
       .TypicalTypedTableColumnInstance(
       this.schema,
       table,
@@ -101,7 +140,10 @@ export type HubName = string;
 export type LinkName = string;
 export type SatelliteName = string;
 
-export function hubIdDomain(name: HubName): SQLa.PostgreSqlDomainSupplier {
+export type HubIdDomainValue = string;
+export function hubIdDomain(
+  name: HubName,
+): SQLa.PostgreSqlDomainSupplier<HubIdDomainValue> {
   return (state) => {
     return state.schema.useDomain(`hub_${name}_id`, (name, schema) => {
       return new DataVaultIdentity(schema, name, "hub_id");
@@ -109,7 +151,10 @@ export function hubIdDomain(name: HubName): SQLa.PostgreSqlDomainSupplier {
   };
 }
 
-export function linkIdDomain(name: LinkName): SQLa.PostgreSqlDomainSupplier {
+export type LinkIdDomainValue = string;
+export function linkIdDomain(
+  name: LinkName,
+): SQLa.PostgreSqlDomainSupplier<LinkIdDomainValue> {
   return (state) => {
     return state.schema.useDomain(`link_${name}_id`, (name, schema) => {
       return new DataVaultIdentity(schema, name, "link_id");
@@ -117,9 +162,10 @@ export function linkIdDomain(name: LinkName): SQLa.PostgreSqlDomainSupplier {
   };
 }
 
+export type SatelliteIdDomainValue = string;
 export function satelliteIdDomain(
   name: SatelliteName,
-): SQLa.PostgreSqlDomainSupplier {
+): SQLa.PostgreSqlDomainSupplier<SatelliteIdDomainValue> {
   return (state) => {
     return state.schema.useDomain(`sat_${name}_id`, (name, schema) => {
       return new DataVaultIdentity(schema, name, "sat_id");
@@ -127,10 +173,11 @@ export function satelliteIdDomain(
   };
 }
 
+export type HubTextBusinessKeyDomainValue = string;
 export function hubTextBusinessKeyDomain(
   name: SQLa.PostgreSqlDomainName,
   defaultColumnName: SQLa.SqlTableColumnNameFlexible,
-): SQLa.PostgreSqlDomainSupplier {
+): SQLa.PostgreSqlDomainSupplier<HubTextBusinessKeyDomainValue> {
   return (state) => {
     return state.schema.useDomain(name, (name, schema) => {
       return new SQLaT.TypicalDomain(schema, name, "text", {
@@ -141,10 +188,11 @@ export function hubTextBusinessKeyDomain(
   };
 }
 
+export type HubUriBusinessKeyDomainValue = string;
 export function hubUriBusinessKeyDomain(
   name: SQLa.PostgreSqlDomainName,
   defaultColumnName: SQLa.SqlTableColumnNameFlexible,
-): SQLa.PostgreSqlDomainSupplier {
+): SQLa.PostgreSqlDomainSupplier<HubUriBusinessKeyDomainValue> {
   return (state) => {
     return state.schema.useDomain(name, (name, schema) => {
       return new SQLaT.TypicalDomain(schema, name, "text", {
@@ -156,10 +204,11 @@ export function hubUriBusinessKeyDomain(
   };
 }
 
+export type HubLtreeBusinessKeyDomainValue = string;
 export function hubLtreeBusinessKeyDomain(
   name: SQLa.PostgreSqlDomainName,
   defaultColumnName: SQLa.SqlTableColumnNameFlexible,
-): SQLa.PostgreSqlDomainSupplier {
+): SQLa.PostgreSqlDomainSupplier<HubLtreeBusinessKeyDomainValue> {
   return (state) => {
     return state.schema.useDomain(name, (name, schema) => {
       return new SQLaT.TypicalDomain(schema, name, "ltree", {
@@ -178,10 +227,11 @@ export function hubLtreeBusinessKeyDomain(
   };
 }
 
+export type HubTemporalBusinessKeyDomainValue = Date;
 export function hubTemporalBusinessKeyDomain(
   name: SQLa.PostgreSqlDomainName,
   defaultColumnName: SQLa.SqlTableColumnNameFlexible,
-): SQLa.PostgreSqlDomainSupplier {
+): SQLa.PostgreSqlDomainSupplier<HubTemporalBusinessKeyDomainValue> {
   return (state) => {
     return state.schema.useDomain(name, (name, schema) => {
       return new SQLaT.TypicalDomain(schema, name, "timestamptz", {
@@ -199,13 +249,15 @@ export function hubTemporalBusinessKeyDomain(
  */
 export class HubTable extends SQLaT.TypicalTable
   implements SQLa.SqlTableUpsertable {
-  readonly hubIdDomain: SQLa.PostgreSqlDomain;
-  readonly hubId: SQLa.TypedSqlTableColumn;
-  readonly hubIdRefDomain: SQLa.PostgreSqlDomainReference;
-  readonly keyColumns: SQLa.TypedSqlTableColumn[];
-  readonly provDomain: SQLa.PostgreSqlDomain;
-  readonly provColumn: SQLa.TypedSqlTableColumn;
-  readonly domainRefSupplier: SQLa.PostgreSqlDomainReferenceSupplier;
+  readonly hubIdDomain: SQLa.PostgreSqlDomain<HubIdDomainValue>;
+  readonly hubId: SQLa.TypedSqlTableColumn<HubIdDomainValue>;
+  readonly hubIdRefDomain: SQLa.PostgreSqlDomainReference<HubIdDomainValue>;
+  readonly keyColumns: SQLa.TypedSqlTableColumn<unknown>[];
+  readonly provDomain: SQLa.PostgreSqlDomain<ProvenanceUriDomainValue>;
+  readonly provColumn: SQLa.TypedSqlTableColumn<ProvenanceUriDomainValue>;
+  readonly domainRefSupplier: SQLa.PostgreSqlDomainReferenceSupplier<
+    HubIdDomainValue
+  >;
   readonly columns: SQLaT.TypicalTableColumns;
   readonly ag: SQLa.SqlAffinityGroup;
   readonly lcf: SQLa.PostgreSqlLifecycleFunctions;
@@ -214,13 +266,16 @@ export class HubTable extends SQLaT.TypicalTable
     readonly state: SQLa.DcpTemplateState,
     readonly hubName: HubName,
     readonly keys: {
-      domain: SQLa.PostgreSqlDomainSupplier;
+      // deno-lint-ignore no-explicit-any
+      domain: SQLa.PostgreSqlDomainSupplier<any>;
       columnName?: SQLa.SqlTableColumnNameFlexible;
     }[],
     options?: {
-      hubIdDomain?: SQLa.PostgreSqlDomain;
-      provDomain?: SQLa.PostgreSqlDomain;
-      domainRefSupplier?: SQLa.PostgreSqlDomainReferenceSupplier;
+      hubIdDomain?: SQLa.PostgreSqlDomain<HubIdDomainValue>;
+      provDomain?: SQLa.PostgreSqlDomain<ProvenanceUriDomainValue>;
+      domainRefSupplier?: SQLa.PostgreSqlDomainReferenceSupplier<
+        HubIdDomainValue
+      >;
       parentAffinityGroup?: SQLa.SqlAffinityGroup;
     },
   ) {
@@ -306,10 +361,10 @@ export class HubTable extends SQLaT.TypicalTable
 }
 
 export const keepHubColumnInDelimitedText: SQLa.SqlTableColumnFilter<
-  SQLa.SqlTableColumn,
+  SQLa.SqlTableColumn<HubIdDomainValue>,
   HubTable
-> = (column, table) => {
-  return table.keyColumns.find((kc) => kc == column) ? true : false;
+> = () => {
+  return true;
 };
 
 /**
@@ -318,13 +373,15 @@ export const keepHubColumnInDelimitedText: SQLa.SqlTableColumnFilter<
  */
 export class LinkTable extends SQLaT.TypicalTable
   implements SQLa.SqlTableUpsertable {
-  readonly linkIdDomain: SQLa.PostgreSqlDomain;
-  readonly linkId: SQLa.TypedSqlTableColumn;
-  readonly linkIdRefDomain: SQLa.PostgreSqlDomainReference;
-  readonly hubColumns: SQLa.TypedSqlTableColumn[];
-  readonly provDomain: SQLa.PostgreSqlDomain;
-  readonly provColumn: SQLa.TypedSqlTableColumn;
-  readonly domainRefSupplier: SQLa.PostgreSqlDomainReferenceSupplier;
+  readonly linkIdDomain: SQLa.PostgreSqlDomain<LinkIdDomainValue>;
+  readonly linkId: SQLa.TypedSqlTableColumn<LinkIdDomainValue>;
+  readonly linkIdRefDomain: SQLa.PostgreSqlDomainReference<LinkIdDomainValue>;
+  readonly hubColumns: SQLa.TypedSqlTableColumn<HubIdDomainValue>[];
+  readonly provDomain: SQLa.PostgreSqlDomain<ProvenanceUriDomainValue>;
+  readonly provColumn: SQLa.TypedSqlTableColumn<ProvenanceUriDomainValue>;
+  readonly domainRefSupplier: SQLa.PostgreSqlDomainReferenceSupplier<
+    LinkIdDomainValue
+  >;
   readonly columns: SQLaT.TypicalTableColumns;
   readonly ag: SQLa.SqlAffinityGroup;
   readonly lcf: SQLa.PostgreSqlLifecycleFunctions;
@@ -334,9 +391,11 @@ export class LinkTable extends SQLaT.TypicalTable
     readonly linkName: LinkName,
     readonly hubs: HubTable[],
     options?: {
-      hubIdDomain?: SQLa.PostgreSqlDomain;
-      provDomain?: SQLa.PostgreSqlDomain;
-      domainRefSupplier?: SQLa.PostgreSqlDomainReferenceSupplier;
+      hubIdDomain?: SQLa.PostgreSqlDomain<LinkIdDomainValue>;
+      provDomain?: SQLa.PostgreSqlDomain<LinkIdDomainValue>;
+      domainRefSupplier?: SQLa.PostgreSqlDomainReferenceSupplier<
+        LinkIdDomainValue
+      >;
       parentAffinityGroup?: SQLa.SqlAffinityGroup;
     },
   ) {
@@ -426,10 +485,10 @@ export class LinkTable extends SQLaT.TypicalTable
 }
 
 export const keepLinkColumnInDelimitedText: SQLa.SqlTableColumnFilter<
-  SQLa.SqlTableColumn,
+  SQLa.SqlTableColumn<LinkIdDomainValue>,
   LinkTable
-> = (column, table) => {
-  return table.hubColumns.find((kc) => kc == column) ? true : false;
+> = () => {
+  return true;
 };
 
 /**
@@ -440,13 +499,17 @@ export const keepLinkColumnInDelimitedText: SQLa.SqlTableColumnFilter<
  */
 export class SatelliteTable extends SQLaT.TypicalTable
   implements SQLa.SqlTableUpsertable {
-  readonly satIdDomain: SQLa.PostgreSqlDomain;
-  readonly satId: SQLa.TypedSqlTableColumn;
-  readonly parentId: SQLa.TypedSqlTableColumn;
-  readonly satIdRefDomain: SQLa.PostgreSqlDomainReference;
-  readonly provDomain: SQLa.PostgreSqlDomain;
-  readonly provColumn: SQLa.TypedSqlTableColumn;
-  readonly domainRefSupplier: SQLa.PostgreSqlDomainReferenceSupplier;
+  readonly satIdDomain: SQLa.PostgreSqlDomain<SatelliteIdDomainValue>;
+  readonly satId: SQLa.TypedSqlTableColumn<SatelliteIdDomainValue>;
+  readonly parentId: SQLa.TypedSqlTableColumn<SatelliteIdDomainValue>;
+  readonly satIdRefDomain: SQLa.PostgreSqlDomainReference<
+    SatelliteIdDomainValue
+  >;
+  readonly provDomain: SQLa.PostgreSqlDomain<ProvenanceUriDomainValue>;
+  readonly provColumn: SQLa.TypedSqlTableColumn<ProvenanceUriDomainValue>;
+  readonly domainRefSupplier: SQLa.PostgreSqlDomainReferenceSupplier<
+    SatelliteIdDomainValue
+  >;
   readonly columns: SQLaT.TypicalTableColumns;
   readonly attributes: SQLaT.TypicalTableColumns;
   readonly ag: SQLa.SqlAffinityGroup;
@@ -460,9 +523,11 @@ export class SatelliteTable extends SQLaT.TypicalTable
       table: SatelliteTable,
     ) => SQLaT.TypicalTableColumns,
     options?: {
-      satIdDomain?: SQLa.PostgreSqlDomain;
-      provDomain?: SQLa.PostgreSqlDomain;
-      domainRefSupplier?: SQLa.PostgreSqlDomainReferenceSupplier;
+      satIdDomain?: SQLa.PostgreSqlDomain<SatelliteIdDomainValue>;
+      provDomain?: SQLa.PostgreSqlDomain<SatelliteIdDomainValue>;
+      domainRefSupplier?: SQLa.PostgreSqlDomainReferenceSupplier<
+        SatelliteIdDomainValue
+      >;
       parentAffinityGroup?: SQLa.SqlAffinityGroup;
     },
   ) {
@@ -549,8 +614,8 @@ export class SatelliteTable extends SQLaT.TypicalTable
 }
 
 export const keepSatelliteColumnInDelimitedText: SQLa.SqlTableColumnFilter<
-  SQLa.SqlTableColumn,
+  SQLa.SqlTableColumn<SatelliteIdDomainValue>,
   SatelliteTable
-> = (column, table) => {
-  return table.attributes.all.find((kc) => kc == column) ? true : false;
+> = () => {
+  return true;
 };

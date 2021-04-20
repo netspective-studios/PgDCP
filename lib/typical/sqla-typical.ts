@@ -27,9 +27,12 @@ export function tableColumnName(
   return typeof name === "string" ? name : name(suggestion);
 }
 
-export class TypicalTableColumnInstance implements SQLa.SqlTableColumn {
+export class TypicalTableColumnInstance<TypeScriptValue>
+  implements SQLa.SqlTableColumn<TypeScriptValue> {
   readonly isNotNullable?: boolean;
   readonly defaultSqlExpr?: SQLa.PostgreSqlDomainDefaultExpr;
+  readonly defaultStaticValue?: () => TypeScriptValue;
+  readonly defaultDelimitedTextValue?: () => string;
   readonly isPrimaryKey?: boolean;
   readonly foreignKeyDecl?: SQLa.SqlTableColumnForeignKeyExpr;
   readonly tableConstraintsSql?:
@@ -38,7 +41,7 @@ export class TypicalTableColumnInstance implements SQLa.SqlTableColumn {
   readonly tableIndexesSql?:
     | SQLa.PostgreSqlStatementSupplier
     | SQLa.PostgreSqlStatementSupplier[];
-  readonly foreignKey?: SQLa.SqlTableColumnReference;
+  readonly foreignKey?: SQLa.SqlTableColumnReference<unknown>;
   readonly tableQualifiedName: SQLa.SqlTableColumnQualifiedName;
   readonly schemaQualifiedName: SQLa.SqlTableColumnQualifiedName;
   readonly operatorSql?: SQLa.PostgreSqlOperatorExprs;
@@ -48,10 +51,12 @@ export class TypicalTableColumnInstance implements SQLa.SqlTableColumn {
     readonly table: SQLa.SqlTable,
     readonly name: SQLa.SqlTableColumnNameFlexible,
     readonly dataType: SQLa.PostgreSqlDomainDataType,
-    readonly options?: SQLa.SqlTableColumnOptions,
+    readonly options?: SQLa.SqlTableColumnOptions<TypeScriptValue>,
   ) {
     this.isNotNullable = this.options?.isNotNullable;
     this.defaultSqlExpr = this.options?.defaultSqlExpr;
+    this.defaultStaticValue = this.options?.defaultStaticValue;
+    this.defaultDelimitedTextValue = this.options?.defaultDelimitedTextValue;
     this.isPrimaryKey = this.options?.isPrimaryKey;
     this.foreignKeyDecl = this.options?.foreignKeyDecl;
     this.tableConstraintsSql = this.options?.tableConstraintsSql;
@@ -106,15 +111,15 @@ export interface TableColumnsSupplier {
 }
 
 export interface TypicalTableColumns {
-  readonly all: SQLa.SqlTableColumn[];
+  readonly all: SQLa.SqlTableColumn<unknown>[];
   readonly unique?: {
     name: SQLa.SqlTableConstraintName;
-    columns: SQLa.SqlTableColumn[];
+    columns: SQLa.SqlTableColumn<unknown>[];
   }[];
 }
 
 export interface SqlTableCreationComponents {
-  readonly columns: SQLa.SqlTableColumn[];
+  readonly columns: SQLa.SqlTableColumn<unknown>[];
   readonly constraints?: SQLa.PostgreSqlStatement[];
   readonly appendix?: SQLa.PostgreSqlStatement[];
 }
@@ -211,7 +216,7 @@ export abstract class TypicalTable implements SQLa.SqlTable {
   createSql(state: SQLa.DcpTemplateState): SQLa.PostgreSqlStatement {
     const components = this.prepareCreateComponents(state);
     const columns = this.columns;
-    const sqlRemarks = (c: SQLa.SqlTableColumn) => {
+    const sqlRemarks = (c: SQLa.SqlTableColumn<unknown>) => {
       const domainReminders = [];
       if (SQLa.isTypedSqlTableColumn(c)) {
         domainReminders.push(c.domain.dataType);
@@ -267,7 +272,7 @@ export function typicalDelimitedTextSupplier<
   const prepare = (
     options: SQLa.SqlTableDelimitedTextColumnOptions<T> = defaultOptions,
   ): {
-    column: SQLa.SqlTableColumn;
+    column: SQLa.SqlTableColumn<unknown>;
     inflectableColName: inflect.InflectableValue;
     defaultValue: SQLa.SqlTableDelimitedTextColumnContent;
   }[] => {
@@ -281,8 +286,8 @@ export function typicalDelimitedTextSupplier<
           typeof c.name === "string" ? c.name : c.name(),
         ),
         defaultValue: options?.defaultValue
-          ? options?.defaultValue(c, table)
-          : ``,
+          ? options.defaultValue(c, table)
+          : (c.defaultDelimitedTextValue ? c.defaultDelimitedTextValue() : ``),
       };
     });
   };
@@ -290,28 +295,45 @@ export function typicalDelimitedTextSupplier<
     table,
     header: (options?) => {
       const keep = prepare(options);
-      return keep.map((k) => `"${k.inflectableColName.inflect()}"`);
-    },
-    content: (row, options?) => {
-      const keep = prepare(options);
       return keep.map((k) => {
-        const ccName = inflect.toCamelCase(k.inflectableColName);
-        const foundCamelCaseEntry = Object.entries(row).find((e) => {
-          return e[0] == ccName;
-        });
-        if (foundCamelCaseEntry) {
-          const columnValue = foundCamelCaseEntry[1];
-          return options?.columnValue
-            ? (options.columnValue(columnValue, k.column, table))
-            : (defaultOptions?.columnValue
-              ? defaultOptions.columnValue(columnValue, k.column, table)
-              : JSON.stringify(columnValue));
-        } else {
-          return options?.onColumnNotFound
-            ? options?.onColumnNotFound(k.column, table)
-            : k.defaultValue;
-        }
+        return {
+          header: `"${k.inflectableColName.inflect()}"`,
+          column: k.column,
+        };
       });
+    },
+    content: (row, rowIndex, options?) => {
+      const keep = prepare(options);
+      return {
+        rowIndex,
+        row: keep.map((k) => {
+          const ccName = inflect.toCamelCase(k.inflectableColName);
+          const foundCamelCaseEntry = Object.entries(row).find((e) => {
+            return e[0] == ccName;
+          });
+          if (foundCamelCaseEntry) {
+            let columnValue = foundCamelCaseEntry[1];
+            if (columnValue === null || typeof columnValue === "undefined") {
+              columnValue = k.defaultValue;
+            }
+            return {
+              value: options?.columnValue
+                ? (options.columnValue(columnValue, k.column, table))
+                : (defaultOptions?.columnValue
+                  ? defaultOptions.columnValue(columnValue, k.column, table)
+                  : JSON.stringify(columnValue)),
+              column: k.column,
+            };
+          } else {
+            return {
+              value: options?.onColumnNotFound
+                ? options.onColumnNotFound(k.column, table)
+                : k.defaultValue,
+              column: k.column,
+            };
+          }
+        }),
+      };
     },
   };
   return supplier;
@@ -355,12 +377,13 @@ export class SqlTableDelimitedTextWriter<
     fs.ensureDirSync(options.destPath);
     this.stream = Deno.openSync(path.join(options.destPath, options.fileName), {
       create: true,
-      append: true,
+      write: true,
+      append: false,
     });
     if (this.options.emitHeader) {
       this.stream.writeSync(
         new TextEncoder().encode(
-          supplier.header().join(this.options.columnDelim),
+          supplier.header().map((c) => c.header).join(this.options.columnDelim),
         ),
       );
     }
@@ -373,73 +396,96 @@ export class SqlTableDelimitedTextWriter<
   write(
     row: C,
     options?: SQLa.SqlTableDelimitedTextColumnContentOptions<T>,
-  ): [C, SQLa.SqlTableDelimitedTextContentRow] {
-    const content = this.supplier.content(row, options);
+  ): SQLa.SqlTableDelimitedTextContentRow {
+    const content = this.supplier.content(row, this.rowIndex, options);
     const te = new TextEncoder();
-    if (this.rowIndex == 0) {
-      if (this.options.emitHeader) {
-        this.stream.writeSync(te.encode(this.options.recordDelim));
-      }
-      this.stream.writeSync(te.encode(
-        content.join(this.options.columnDelim),
-      ));
-    } else {
-      this.stream.writeSync(
-        te.encode(
-          this.options.recordDelim + content.join(this.options.columnDelim),
-        ),
-      );
+    if ((this.rowIndex == 0 && this.options.emitHeader) || this.rowIndex > 0) {
+      this.stream.writeSync(te.encode(this.options.recordDelim));
     }
+    this.stream.writeSync(te.encode(
+      content.row.map((c) => c.value).join(this.options.columnDelim),
+    ));
     this.rowIndex++;
-    return [row, content];
+    return content;
+  }
+
+  writeReturning<R extends Record<string, unknown>>(
+    row: C,
+    ...returning: (keyof R)[]
+  ): [R, SQLa.SqlTableDelimitedTextContentRow] {
+    const content = this.write(row);
+    const result: Record<string, unknown> = {};
+    for (const r of returning) {
+      content.row.forEach((c) => {
+        const inflectableColName = inflect.snakeCaseValue(
+          typeof c.column.name === "string" ? c.column.name : c.column.name(),
+        );
+        const camelCaseColName = inflect.toCamelCase(inflectableColName);
+        if (inflectableColName.inflect() == r || r == camelCaseColName) {
+          result[camelCaseColName] = c.value;
+        }
+      });
+    }
+    return [result as R, content];
   }
 }
 
-export class TypicalTypedTableColumnInstance extends TypicalTableColumnInstance
-  implements SQLa.TypedSqlTableColumn {
+export class TypicalTypedTableColumnInstance<TypeScriptValue>
+  extends TypicalTableColumnInstance<TypeScriptValue>
+  implements SQLa.TypedSqlTableColumn<TypeScriptValue> {
   constructor(
     readonly schema: SQLa.PostgreSqlSchema,
     readonly table: SQLa.SqlTable,
     readonly name: SQLa.SqlTableColumnNameFlexible,
-    readonly domain: SQLa.PostgreSqlDomain,
-    readonly options?: SQLa.SqlTableColumnOptions,
+    readonly domain: SQLa.PostgreSqlDomain<TypeScriptValue>,
+    readonly options?: SQLa.SqlTableColumnOptions<TypeScriptValue>,
   ) {
     super(
       schema,
       table,
       name,
       domain.qName, // for a typed-column, the data type is the domain's name
-      { ...options, castSql: domain.castSql },
+      {
+        defaultStaticValue: domain.defaultStaticValue,
+        defaultDelimitedTextValue: domain.defaultDelimitedTextValue,
+        ...options, // if the above are provided in column options, they'll override
+        castSql: domain.castSql,
+      },
     );
   }
 }
 
-export class TypicalDomain implements SQLa.PostgreSqlDomain {
+export class TypicalDomain<TypeScriptValue>
+  implements SQLa.PostgreSqlDomain<TypeScriptValue> {
   readonly isNotNullable?: boolean;
   readonly defaultSqlExpr?: SQLa.PostgreSqlDomainDefaultExpr;
+  readonly defaultStaticValue?: () => TypeScriptValue;
+  readonly defaultDelimitedTextValue?: () => string;
   readonly defaultColumnName: SQLa.SqlTableColumnNameFlexible;
   readonly qName: SQLa.PostgreSqlDomainQualifiedName;
-  readonly tableColumn: SQLa.TypedSqlTableColumnSupplier;
+  readonly tableColumn: SQLa.TypedSqlTableColumnSupplier<TypeScriptValue>;
 
   constructor(
     readonly schema: SQLa.PostgreSqlSchema,
     readonly name: SQLa.PostgreSqlDomainName,
     readonly dataType: SQLa.PostgreSqlDomainDataType,
-    readonly options?: SQLa.PostgreSqlDomainColumnOptions & {
+    readonly options?: SQLa.PostgreSqlDomainColumnOptions<TypeScriptValue> & {
       readonly defaultColumnName?: SQLa.SqlTableColumnNameFlexible;
-      readonly tableColumn?: SQLa.TypedSqlTableColumnSupplier;
+      readonly tableColumn?: SQLa.TypedSqlTableColumnSupplier<TypeScriptValue>;
       readonly overrideTableColOptions?: (
-        options?: SQLa.SqlTableColumnOptions,
-      ) => SQLa.SqlTableColumnOptions | undefined;
+        options?: SQLa.SqlTableColumnOptions<TypeScriptValue>,
+      ) => SQLa.SqlTableColumnOptions<TypeScriptValue> | undefined;
     },
   ) {
     this.defaultColumnName = this.options?.defaultColumnName || this.name;
     this.isNotNullable = this.options?.isNotNullable;
     this.defaultSqlExpr = this.options?.defaultSqlExpr;
+    this.defaultStaticValue = this.options?.defaultStaticValue;
+    this.defaultDelimitedTextValue = this.options?.defaultDelimitedTextValue;
     this.qName = this.schema
       .qualifiedReference(this.name);
     this.tableColumn = this.options?.tableColumn ||
-      ((table, options?): SQLa.TypedSqlTableColumn => {
+      ((table, options?): SQLa.TypedSqlTableColumn<TypeScriptValue> => {
         return new TypicalTypedTableColumnInstance(
           this.schema,
           table,
@@ -473,14 +519,15 @@ export class TypicalDomain implements SQLa.PostgreSqlDomain {
   };
 }
 
-export class TypicalDomainReference implements SQLa.PostgreSqlDomainReference {
+export class TypicalDomainReference<TypeScriptValue>
+  implements SQLa.PostgreSqlDomainReference<TypeScriptValue> {
   constructor(
     readonly schema: SQLa.PostgreSqlSchema,
-    readonly prime: SQLa.PostgreSqlDomain,
+    readonly prime: SQLa.PostgreSqlDomain<TypeScriptValue>,
   ) {
   }
 
-  get reference(): SQLa.PostgreSqlDomain {
+  get reference(): SQLa.PostgreSqlDomain<TypeScriptValue> {
     return new TypicalDomain(
       this.schema,
       `${this.prime.name}_ref`,
