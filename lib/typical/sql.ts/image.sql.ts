@@ -45,11 +45,13 @@ export function SQL(
             image_width INTEGER,
             image_height INTEGER,
             image_size_bytes INTEGER,
+            mime_type TEXT,
             image_format_original TEXT,
             image_size_original INTEGER,
             image_width_original INTEGER,
             image_height_original INTEGER,
             image_file_extension_original TEXT,
+            mime_type_original TEXT,
             image_hash TEXT, -- TODO: create proper domain
             is_transformed BOOLEAN,
             image_is_valid BOOLEAN,
@@ -101,6 +103,7 @@ export function SQL(
             image_hash = imagehash.average_hash(img)
             img.verify()
             image_format_original = img.format
+            mime_type_original = Image.MIME[image_format_original]
             image_file_extension_original = '.'+image_format_original.lower()
             image_width_original, image_height_original = img.size
             image_size_original = mem_file.getbuffer().nbytes
@@ -123,6 +126,7 @@ export function SQL(
                         Qmax = m - 1
                 image_format = 'JPEG'
                 image_file_extension = '.jpeg'
+                mime_type = Image.MIME[image_format]
                 buffer = io.BytesIO()
                 if Qacc > -1:
                     rgb_im.save(buffer, format="JPEG", quality=Qacc)
@@ -134,10 +138,11 @@ export function SQL(
                 size_bytes = image_size_original
                 image_format = image_format_original
                 image_file_extension = image_file_extension_original
+                mime_type = mime_type_original
             img.close()
-            return provenance,optimized_image,image_format,image_width_original,image_height_original,size_bytes,image_format_original, image_size_original,image_width_original, image_height_original,image_file_extension_original,image_hash,is_transformed,True,image_file_extension,repr(img)
+            return provenance,optimized_image,image_format,image_width_original,image_height_original,size_bytes,mime_type,image_format_original, image_size_original,image_width_original, image_height_original,image_file_extension_original,mime_type_original,image_hash,is_transformed,True,image_file_extension,repr(img)
         except Exception as error:
-            return provenance,original_image,"unknown",-1,-1,-1,"unknown",-1,-1,-1,"unknown","unknown",False,False,"unknown",repr(error)
+            return provenance,original_image,"unknown",-1,-1,-1,"unknown","unknown",-1,-1,-1,"unknown","unknown","unknown",False,False,"unknown",repr(error)
         $innerFn$ LANGUAGE plpython3u;
         comment on function ${sQR("optimize_image")}(provenance text,original_image bytea, optimize_size integer) is 'Given a  compressed binary image, detect its format and size';
 
