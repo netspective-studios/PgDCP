@@ -3,7 +3,10 @@ import * as SQLa from "../../mod.ts";
 import * as SQLaT from "../mod.ts";
 import { schemas } from "../mod.ts";
 
-export const loadedOnTimestampDomain: SQLa.PostgreSqlDomainSupplier<Date> = (
+export type LoadedAtTimestampDomainValue = Date;
+export const loadedAtTimestampDomain: SQLa.PostgreSqlDomainSupplier<
+  LoadedAtTimestampDomainValue
+> = (
   state,
 ) => {
   return state.schema.useDomain("loaded_at_timestamptz", (name, schema) => {
@@ -242,6 +245,15 @@ export function hubTemporalBusinessKeyDomain(
   };
 }
 
+export interface HubRecord<KeyType, IdType extends HubIdDomainValue> {
+  readonly hubId?: IdType;
+  readonly key: KeyType;
+  readonly loadedAt?: LoadedAtTimestampDomainValue;
+  readonly loadedBy?: LoadedByUserDomainValue;
+  readonly provenance?: ProvenanceUriDomainValue;
+  readonly [index: string]: unknown;
+}
+
 /**
  * HubTable automates the creation of Data Vault 2.0 physical Hub tables.
  * 
@@ -313,7 +325,7 @@ export class HubTable extends SQLaT.TypicalTable
       all: [
         this.hubId,
         ...this.keyColumns,
-        loadedOnTimestampDomain(state).tableColumn(this),
+        loadedAtTimestampDomain(state).tableColumn(this),
         loadedByUserDomain(state).tableColumn(this),
         this.provColumn,
       ],
@@ -366,6 +378,14 @@ export const keepHubColumnInDelimitedText: SQLa.SqlTableColumnFilter<
 > = () => {
   return true;
 };
+
+export interface LinkRecord<IdType extends LinkIdDomainValue> {
+  readonly linkId?: IdType;
+  readonly loadedAt?: LoadedAtTimestampDomainValue;
+  readonly loadedBy?: LoadedByUserDomainValue;
+  readonly provenance?: ProvenanceUriDomainValue;
+  readonly [index: string]: unknown;
+}
 
 /**
  * LinkTable automates the creation of Data Vault 2.0 physical Link tables
@@ -437,7 +457,7 @@ export class LinkTable extends SQLaT.TypicalTable
       all: [
         this.linkId,
         ...this.hubColumns,
-        loadedOnTimestampDomain(state).tableColumn(this),
+        loadedAtTimestampDomain(state).tableColumn(this),
         loadedByUserDomain(state).tableColumn(this),
         this.provColumn,
       ],
@@ -490,6 +510,14 @@ export const keepLinkColumnInDelimitedText: SQLa.SqlTableColumnFilter<
 > = () => {
   return true;
 };
+
+export interface SatelliteRecord<IdType extends SatelliteIdDomainValue> {
+  readonly satId?: IdType;
+  readonly loadedAt?: LoadedAtTimestampDomainValue;
+  readonly loadedBy?: LoadedByUserDomainValue;
+  readonly provenance?: ProvenanceUriDomainValue;
+  readonly [index: string]: unknown;
+}
 
 /**
  * SatelliteTable automates the creation of Data Vault 2.0 physical Satellite
@@ -567,7 +595,7 @@ export class SatelliteTable extends SQLaT.TypicalTable
         this.satId,
         this.parentId,
         ...this.attributes.all,
-        loadedOnTimestampDomain(state).tableColumn(this),
+        loadedAtTimestampDomain(state).tableColumn(this),
         loadedByUserDomain(state).tableColumn(this),
         this.provColumn,
       ],
