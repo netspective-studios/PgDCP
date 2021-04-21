@@ -127,6 +127,7 @@ export function SQL(
                 image_format = 'JPEG'
                 image_file_extension = '.jpeg'
                 mime_type = Image.MIME[image_format]
+                image_width, image_height = rgb_im.size
                 buffer = io.BytesIO()
                 if Qacc > -1:
                     rgb_im.save(buffer, format="JPEG", quality=Qacc)
@@ -139,8 +140,10 @@ export function SQL(
                 image_format = image_format_original
                 image_file_extension = image_file_extension_original
                 mime_type = mime_type_original
+                image_width = image_width_original
+                image_height = image_height_original
             img.close()
-            return provenance,optimized_image,image_format,image_width_original,image_height_original,size_bytes,mime_type,image_format_original, image_size_original,image_width_original, image_height_original,image_file_extension_original,mime_type_original,image_hash,is_transformed,True,image_file_extension,repr(img)
+            return provenance,optimized_image,image_format,image_width,image_height,size_bytes,mime_type,image_format_original, image_size_original,image_width_original, image_height_original,image_file_extension_original,mime_type_original,image_hash,is_transformed,True,image_file_extension,repr(img)
         except Exception as error:
             return provenance,original_image,"unknown",-1,-1,-1,"unknown","unknown",-1,-1,-1,"unknown","unknown","unknown",False,False,"unknown",repr(error)
         $innerFn$ LANGUAGE plpython3u;
