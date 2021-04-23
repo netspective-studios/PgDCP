@@ -12,6 +12,9 @@ export function SQL(
     options || { schema: schemas.lib, affinityGroup },
   );
   const { lcFunctions: fn } = state.affinityGroup;
+  const [lQR] = state.observableQR(
+    schemas.lib,
+  );
   return SQLa.SQL(ctx, state)`
     -- PostgreSQL treats users and roles as synonyms. We treat roles as permissions
     -- policies and users as authenticatable entities. It's just nomenclature but
@@ -29,11 +32,11 @@ export function SQL(
     $$ LANGUAGE plpgsql;
     comment on procedure create_role_if_not_exists(role_name TEXT) IS 'Create the role_name (without login privileges) if it does not already exist';
 
-    call create_role_if_not_exists('no_access_role');
+    call ${lQR("create_role_if_not_exists")}('no_access_role');
 
     CREATE OR REPLACE PROCEDURE create_all_privileges_dcp_schema_role(dcp_schema_name NAME, role_name text) AS $$ 
     BEGIN
-        call create_role_if_not_exists(role_name);
+        call ${lQR("create_role_if_not_exists")}(role_name);
         EXECUTE FORMAT('GRANT USAGE ON SCHEMA %I TO %I', dcp_schema_name, role_name);
         EXECUTE FORMAT('GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA %I TO %I', dcp_schema_name, role_name);
         EXECUTE FORMAT('GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA %I TO %I', dcp_schema_name, role_name);
@@ -45,7 +48,7 @@ export function SQL(
 
     CREATE OR REPLACE PROCEDURE create_read_only_privileges_dcp_schema_role(dcp_schema_name TEXT, role_name TEXT) AS $$ 
     BEGIN
-        call create_role_if_not_exists(role_name);
+        call ${lQR("create_role_if_not_exists")}(role_name);
         EXECUTE FORMAT('GRANT USAGE ON SCHEMA %I TO %I', dcp_schema_name, role_name);
         EXECUTE FORMAT('GRANT SELECT ON ALL TABLES IN SCHEMA %I TO %I', dcp_schema_name, role_name);
         EXECUTE FORMAT('GRANT SELECT ON ALL SEQUENCES IN SCHEMA %I TO %I', dcp_schema_name, role_name);
@@ -88,7 +91,7 @@ export function SQL(
 
     CREATE OR REPLACE PROCEDURE drop_role_and_user_if_exists(role_name text, user_name NAME) AS $$
     BEGIN
-        EXECUTE FORMAT('DROP OWNED BY %I', role_name);
+        EXECUTE FORMAT('DROP OWNED BY %I CASCADE', role_name);
         EXECUTE FORMAT('DROP ROLE IF EXISTS %I', role_name);
         EXECUTE FORMAT('DROP USER IF EXISTS %I', user_name);
     END;
