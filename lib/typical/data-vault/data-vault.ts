@@ -207,6 +207,38 @@ export function hubUriBusinessKeyDomain(
   };
 }
 
+export type HubUrlBusinessKeyDomainValue = string;
+export function hubUrlBusinessKeyDomain(
+  name: SQLa.PostgreSqlDomainName,
+  defaultColumnName: SQLa.SqlTableColumnNameFlexible,
+): SQLa.PostgreSqlDomainSupplier<HubUrlBusinessKeyDomainValue> {
+  return (state) => {
+    return state.schema.useDomain(name, (name, schema) => {
+      return new SQLaT.TypicalDomain(schema, name, "text", {
+        defaultColumnName,
+        isNotNullable: true,
+        // TODO: add a constraint to verify that it's a valid URL
+      });
+    });
+  };
+}
+
+export type HubEmailAddressBusinessKeyDomainValue = string;
+export function hubEmailAddressBusinessKeyDomain(
+  name: SQLa.PostgreSqlDomainName,
+  defaultColumnName: SQLa.SqlTableColumnNameFlexible,
+): SQLa.PostgreSqlDomainSupplier<HubEmailAddressBusinessKeyDomainValue> {
+  return (state) => {
+    return state.schema.useDomain(name, (name, schema) => {
+      return new SQLaT.TypicalDomain(schema, name, "text", {
+        defaultColumnName,
+        isNotNullable: true,
+        // TODO: add a constraint to verify that it's a valid email-address
+      });
+    });
+  };
+}
+
 export type HubLtreeBusinessKeyDomainValue = string;
 export function hubLtreeBusinessKeyDomain(
   name: SQLa.PostgreSqlDomainName,
@@ -245,13 +277,16 @@ export function hubTemporalBusinessKeyDomain(
   };
 }
 
-export interface HubRecord<KeyType, IdType extends HubIdDomainValue> {
-  readonly hubId?: IdType;
-  readonly key: KeyType;
+export interface HubRecord {
+  readonly hubId?: HubIdDomainValue;
   readonly loadedAt?: LoadedAtTimestampDomainValue;
   readonly loadedBy?: LoadedByUserDomainValue;
   readonly provenance?: ProvenanceUriDomainValue;
-  readonly [index: string]: unknown;
+  readonly [index: string]: unknown; // this is necessary for extending subinterfaces
+}
+
+export interface SingleKeyHubRecord<T> extends HubRecord {
+  readonly key: T;
 }
 
 /**
@@ -259,7 +294,8 @@ export interface HubRecord<KeyType, IdType extends HubIdDomainValue> {
  * 
  * Ref: https://www.sciencedirect.com/topics/computer-science/data-vault-model
  */
-export class HubTable extends SQLaT.TypicalTable
+export class HubTable<R extends HubRecord = HubRecord>
+  extends SQLaT.TypicalTable
   implements SQLa.SqlTableUpsertable {
   readonly hubIdDomain: SQLa.PostgreSqlDomain<HubIdDomainValue>;
   readonly hubId: SQLa.TypedSqlTableColumn<HubIdDomainValue>;
@@ -336,6 +372,45 @@ export class HubTable extends SQLaT.TypicalTable
     };
   }
 
+  values(): SQLa.SqlTableDelimitedTextContentRows<R> {
+    const index = new Map<string, SQLa.SqlTableDelimitedTextContentRow<R>>();
+    const rows: SQLa.SqlTableDelimitedTextContentRow<R>[] = [];
+    return {
+      rows: rows,
+      insert: (row) => {
+        const uniqueKeyValues: string[] = [];
+        row.row.forEach((r) => {
+          if (this.keyColumns.find((kc) => kc === r.column)) {
+            uniqueKeyValues.push(r.value);
+          }
+        });
+        const uniqueKey = uniqueKeyValues.join("::");
+        const exists = index.get(uniqueKey);
+        if (exists) {
+          return [true, exists];
+        }
+        rows.push(row);
+        index.set(uniqueKey, row);
+        return [false, row];
+      },
+    };
+  }
+
+  delimitedTextWriter(
+    destPath: string,
+    fileName = `${this.name}.csv`,
+  ): SQLaT.SqlTableDelimitedTextWriter<R, HubTable<R>> {
+    return new SQLaT.SqlTableDelimitedTextWriter(
+      this,
+      SQLaT.typicalDelimitedTextSupplier<R, HubTable<R>>(this, {
+        keepColumn: keepHubColumnInDelimitedText,
+      }),
+      SQLaT.typicalSqlTableDelimitedTextWriterOptions(destPath, fileName, {
+        values: this.values(),
+      }),
+    );
+  }
+
   upsertRoutinesSQL(): SQLa.DcpInterpolationResult {
     const upsertSR = this.lcFunctions.upsert(this.state);
     const upsertedSR = this.lcFunctions.upserted(this.state);
@@ -373,14 +448,14 @@ export class HubTable extends SQLaT.TypicalTable
 }
 
 export const keepHubColumnInDelimitedText: SQLa.SqlTableColumnFilter<
-  SQLa.SqlTableColumn<HubIdDomainValue>,
-  HubTable
+  SQLa.SqlTableColumn<unknown>,
+  HubTable<any>
 > = () => {
   return true;
 };
 
-export interface LinkRecord<IdType extends LinkIdDomainValue> {
-  readonly linkId?: IdType;
+export interface LinkRecord {
+  readonly linkId?: LinkIdDomainValue;
   readonly loadedAt?: LoadedAtTimestampDomainValue;
   readonly loadedBy?: LoadedByUserDomainValue;
   readonly provenance?: ProvenanceUriDomainValue;
@@ -391,7 +466,8 @@ export interface LinkRecord<IdType extends LinkIdDomainValue> {
  * LinkTable automates the creation of Data Vault 2.0 physical Link tables
  * which connect one or more Hubs together.
  */
-export class LinkTable extends SQLaT.TypicalTable
+export class LinkTable<R extends LinkRecord = LinkRecord>
+  extends SQLaT.TypicalTable
   implements SQLa.SqlTableUpsertable {
   readonly linkIdDomain: SQLa.PostgreSqlDomain<LinkIdDomainValue>;
   readonly linkId: SQLa.TypedSqlTableColumn<LinkIdDomainValue>;
@@ -409,7 +485,7 @@ export class LinkTable extends SQLaT.TypicalTable
   constructor(
     readonly state: SQLa.DcpTemplateState,
     readonly linkName: LinkName,
-    readonly hubs: HubTable[],
+    readonly hubs: HubTable<any>[],
     options?: {
       hubIdDomain?: SQLa.PostgreSqlDomain<LinkIdDomainValue>;
       provDomain?: SQLa.PostgreSqlDomain<LinkIdDomainValue>;
@@ -468,6 +544,45 @@ export class LinkTable extends SQLaT.TypicalTable
     };
   }
 
+  values(): SQLa.SqlTableDelimitedTextContentRows<R> {
+    const index = new Map<string, SQLa.SqlTableDelimitedTextContentRow<R>>();
+    const rows: SQLa.SqlTableDelimitedTextContentRow<R>[] = [];
+    return {
+      rows: rows,
+      insert: (row) => {
+        const uniqueKeyValues: string[] = [];
+        row.row.forEach((r) => {
+          if (this.hubColumns.find((kc) => kc === r.column)) {
+            uniqueKeyValues.push(r.value);
+          }
+        });
+        const uniqueKey = uniqueKeyValues.join("::");
+        const exists = index.get(uniqueKey);
+        if (exists) {
+          return [true, exists];
+        }
+        rows.push(row);
+        index.set(uniqueKey, row);
+        return [false, row];
+      },
+    };
+  }
+
+  delimitedTextWriter(
+    destPath: string,
+    fileName = `${this.name}.csv`,
+  ): SQLaT.SqlTableDelimitedTextWriter<R, LinkTable<R>> {
+    return new SQLaT.SqlTableDelimitedTextWriter(
+      this,
+      SQLaT.typicalDelimitedTextSupplier<R, LinkTable<R>>(this, {
+        keepColumn: keepLinkColumnInDelimitedText,
+      }),
+      SQLaT.typicalSqlTableDelimitedTextWriterOptions(destPath, fileName, {
+        values: this.values(),
+      }),
+    );
+  }
+
   upsertRoutinesSQL(): SQLa.DcpInterpolationResult {
     const upsertedSR = this.lcFunctions.upserted(this.state);
     const upsertSR = this.lcFunctions.upsert(this.state);
@@ -505,14 +620,43 @@ export class LinkTable extends SQLaT.TypicalTable
 }
 
 export const keepLinkColumnInDelimitedText: SQLa.SqlTableColumnFilter<
-  SQLa.SqlTableColumn<LinkIdDomainValue>,
-  LinkTable
+  SQLa.SqlTableColumn<any>,
+  LinkTable<any>
 > = () => {
   return true;
 };
 
-export interface SatelliteRecord<IdType extends SatelliteIdDomainValue> {
-  readonly satId?: IdType;
+export type SatelliteParentType = HubTable<any> | LinkTable<any>;
+
+export interface SatelliteParentSupplier<P extends SatelliteParentType> {
+  readonly parent: P;
+  readonly parentId: (
+    satellite: SQLa.SqlTable,
+  ) => SQLa.TypedSqlTableColumn<HubIdDomainValue | LinkIdDomainValue>;
+  readonly domainRefSupplier: SQLa.PostgreSqlDomainReferenceSupplier<
+    SatelliteIdDomainValue
+  >;
+  readonly provDomain: SQLa.PostgreSqlDomain<ProvenanceUriDomainValue>;
+}
+
+export function satelliteParentHub(
+  hub: HubTable<any>,
+): SatelliteParentSupplier<HubTable> {
+  return {
+    parent: hub,
+    parentId: (satellite) => {
+      return hub.hubIdRefDomain.reference.tableColumn(satellite, {
+        isNotNullable: true,
+        foreignKey: { table: hub, column: hub.hubId },
+      });
+    },
+    domainRefSupplier: hub.domainRefSupplier,
+    provDomain: hub.provDomain,
+  };
+}
+
+export interface SatelliteRecord {
+  readonly satId?: SatelliteIdDomainValue;
   readonly loadedAt?: LoadedAtTimestampDomainValue;
   readonly loadedBy?: LoadedByUserDomainValue;
   readonly provenance?: ProvenanceUriDomainValue;
@@ -525,8 +669,10 @@ export interface SatelliteRecord<IdType extends SatelliteIdDomainValue> {
  * 
  * Ref: https://www.sciencedirect.com/topics/computer-science/data-vault-satellite
  */
-export class SatelliteTable extends SQLaT.TypicalTable
-  implements SQLa.SqlTableUpsertable {
+export class SatelliteTable<
+  SatelliteParentType,
+  SatRecordType extends SatelliteRecord = SatelliteRecord,
+> extends SQLaT.TypicalTable implements SQLa.SqlTableUpsertable {
   readonly satIdDomain: SQLa.PostgreSqlDomain<SatelliteIdDomainValue>;
   readonly satId: SQLa.TypedSqlTableColumn<SatelliteIdDomainValue>;
   readonly parentId: SQLa.TypedSqlTableColumn<SatelliteIdDomainValue>;
@@ -545,10 +691,10 @@ export class SatelliteTable extends SQLaT.TypicalTable
 
   constructor(
     readonly state: SQLa.DcpTemplateState,
-    readonly parent: HubTable | LinkTable,
+    readonly parent: SatelliteParentSupplier<any>,
     readonly satelliteName: SatelliteName,
     readonly organicColumns: (
-      table: SatelliteTable,
+      table: SatelliteTable<SatelliteParentType, SatRecordType>,
     ) => SQLaT.TypicalTableColumns,
     options?: {
       satIdDomain?: SQLa.PostgreSqlDomain<SatelliteIdDomainValue>;
@@ -579,15 +725,7 @@ export class SatelliteTable extends SQLaT.TypicalTable
     this.provDomain = options?.provDomain || parent.provDomain;
 
     this.satId = this.satIdDomain.tableColumn(this);
-    this.parentId = this.parent instanceof HubTable
-      ? this.parent.hubIdRefDomain.reference.tableColumn(this, {
-        isNotNullable: true,
-        foreignKey: { table: this.parent, column: this.parent.hubId },
-      })
-      : this.parent.linkIdRefDomain.reference.tableColumn(this, {
-        isNotNullable: true,
-        foreignKey: { table: this.parent, column: this.parent.linkId },
-      });
+    this.parentId = this.parent.parentId(this);
     this.attributes = organicColumns(this);
     this.provColumn = this.provDomain.tableColumn(this);
     this.columns = {
@@ -601,6 +739,65 @@ export class SatelliteTable extends SQLaT.TypicalTable
       ],
       unique: this.attributes.unique,
     };
+  }
+
+  values(): SQLa.SqlTableDelimitedTextContentRows<SatRecordType> {
+    const indexes = new Map<
+      string,
+      Map<string, SQLa.SqlTableDelimitedTextContentRow<SatRecordType>>
+    >();
+    const rows: SQLa.SqlTableDelimitedTextContentRow<SatRecordType>[] = [];
+    return {
+      rows: rows,
+      insert: (row) => {
+        if (this.columns.unique) {
+          for (const unqIndex of this.columns.unique) {
+            const uniqueKeyValues: string[] = [];
+            row.row.forEach((r) => {
+              if (unqIndex.columns.find((uc) => uc === r.column)) {
+                uniqueKeyValues.push(r.value);
+              }
+            });
+            let index = indexes.get(unqIndex.name);
+            if (!index) {
+              index = new Map();
+              indexes.set(unqIndex.name, index);
+            }
+            const uniqueKey = uniqueKeyValues.join("::");
+            const exists = index.get(uniqueKey);
+            if (exists) {
+              return [true, exists];
+            }
+            rows.push(row);
+            index.set(uniqueKey, row);
+          }
+        } else {
+          rows.push(row);
+        }
+        return [false, row];
+      },
+    };
+  }
+
+  delimitedTextWriter(
+    destPath: string,
+    fileName = `${this.name}.csv`,
+  ): SQLaT.SqlTableDelimitedTextWriter<
+    SatRecordType,
+    SatelliteTable<SatelliteParentType, SatRecordType>
+  > {
+    return new SQLaT.SqlTableDelimitedTextWriter(
+      this,
+      SQLaT.typicalDelimitedTextSupplier<
+        SatRecordType,
+        SatelliteTable<SatelliteParentType, SatRecordType>
+      >(this, {
+        keepColumn: keepSatelliteColumnInDelimitedText,
+      }),
+      SQLaT.typicalSqlTableDelimitedTextWriterOptions(destPath, fileName, {
+        values: this.values(),
+      }),
+    );
   }
 
   upsertRoutinesSQL(): SQLa.DcpInterpolationResult {
@@ -642,8 +839,8 @@ export class SatelliteTable extends SQLaT.TypicalTable
 }
 
 export const keepSatelliteColumnInDelimitedText: SQLa.SqlTableColumnFilter<
-  SQLa.SqlTableColumn<SatelliteIdDomainValue>,
-  SatelliteTable
+  SQLa.SqlTableColumn<any>,
+  SatelliteTable<any, any>
 > = () => {
   return true;
 };

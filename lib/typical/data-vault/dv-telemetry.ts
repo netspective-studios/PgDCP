@@ -23,9 +23,11 @@ export const telemetrySpanIdDomain: SQLa.PostgreSqlDomainSupplier<
   });
 };
 
-export class TelemetrySpanHub extends dv.HubTable {
-  constructor(readonly state: SQLa.DcpTemplateState) {
-    super(state, "telemetry_span", [{
+export class TelemetrySpanHub extends dv.HubTable<
+  dv.HubRecord & { readonly spanId: TelemetrySpanIdDomainValue }
+> {
+  constructor(readonly state: SQLa.DcpTemplateState, name = "telemetry_span") {
+    super(state, name, [{
       domain: telemetrySpanIdDomain,
     }]);
   }
@@ -33,7 +35,7 @@ export class TelemetrySpanHub extends dv.HubTable {
 
 export const telemetryMetricKeyDomain = dv.hubLtreeBusinessKeyDomain(
   "metric_key",
-  "metric_key",
+  "key",
 );
 
 export type TelemetryMetricLabelsDomainValue = string;
@@ -81,18 +83,28 @@ export const telemetryMetricRealValueDomain: SQLa.PostgreSqlDomainSupplier<
   );
 };
 
-export class TelemetryMetricHub extends dv.HubTable {
-  constructor(readonly state: SQLa.DcpTemplateState) {
-    super(state, "telemetry_metric", [{
+export class TelemetryMetricHub extends dv.HubTable<
+  dv.SingleKeyHubRecord<dv.HubLtreeBusinessKeyDomainValue>
+> {
+  constructor(
+    readonly state: SQLa.DcpTemplateState,
+    name = "telemetry_metric",
+  ) {
+    super(state, name, [{
       domain: telemetryMetricKeyDomain,
     }]);
   }
 }
 
-export class TelemetryMetricCounterInstance extends dv.SatelliteTable {
+export class TelemetryMetricCounterInstance extends dv.SatelliteTable<
+  TelemetryMetricHub,
+  dv.SatelliteRecord & {
+    readonly total: number;
+  }
+> {
   constructor(
     readonly state: SQLa.DcpTemplateState,
-    readonly parent: TelemetryMetricHub,
+    readonly parentHub: TelemetryMetricHub,
     readonly totalDomain: SQLa.PostgreSqlDomainSupplier<number>,
     readonly options?: {
       readonly tableName?: SQLa.SqlTableName;
@@ -103,7 +115,7 @@ export class TelemetryMetricCounterInstance extends dv.SatelliteTable {
   ) {
     super(
       state,
-      parent,
+      dv.satelliteParentHub(parentHub),
       options?.tableName || "telemetry_metric_counter",
       (table) => {
         return {
@@ -121,10 +133,15 @@ export class TelemetryMetricCounterInstance extends dv.SatelliteTable {
   }
 }
 
-export class TelemetryMetricGaugeInstance extends dv.SatelliteTable {
+export class TelemetryMetricGaugeInstance extends dv.SatelliteTable<
+  TelemetryMetricHub,
+  dv.SatelliteRecord & {
+    readonly value: number;
+  }
+> {
   constructor(
     readonly state: SQLa.DcpTemplateState,
-    readonly parent: TelemetryMetricHub,
+    readonly parentHub: TelemetryMetricHub,
     readonly valueDomain: SQLa.PostgreSqlDomainSupplier<number>,
     readonly options?: {
       readonly tableName?: SQLa.SqlTableName;
@@ -135,7 +152,7 @@ export class TelemetryMetricGaugeInstance extends dv.SatelliteTable {
   ) {
     super(
       state,
-      parent,
+      dv.satelliteParentHub(parentHub),
       options?.tableName || "telemetry_metric_gauge",
       (table) => {
         return {
@@ -153,10 +170,11 @@ export class TelemetryMetricGaugeInstance extends dv.SatelliteTable {
   }
 }
 
-export class TelemetryMetricInfoInstance extends dv.SatelliteTable {
+export class TelemetryMetricInfoInstance
+  extends dv.SatelliteTable<TelemetryMetricHub> {
   constructor(
     readonly state: SQLa.DcpTemplateState,
-    readonly parent: TelemetryMetricHub,
+    readonly parentHub: TelemetryMetricHub,
     readonly options?: {
       readonly tableName?: SQLa.SqlTableName;
       readonly labelsDomain?: SQLa.PostgreSqlDomainSupplier<
@@ -166,7 +184,7 @@ export class TelemetryMetricInfoInstance extends dv.SatelliteTable {
   ) {
     super(
       state,
-      parent,
+      dv.satelliteParentHub(parentHub),
       options?.tableName || "telemetry_metric_info",
       (table) => {
         return {

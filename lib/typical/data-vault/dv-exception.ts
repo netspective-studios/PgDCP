@@ -8,23 +8,24 @@ export interface ExceptionVault {
   readonly httpClient: ExceptionHttpClient;
 }
 
-export class ExceptionHub extends dv.HubTable {
-  constructor(readonly state: SQLa.DcpTemplateState) {
-    super(state, "exception", [{
-      domain: dv.hubTextBusinessKeyDomain("exception_hub_key", "key"),
+export class ExceptionHub
+  extends dv.HubTable<dv.SingleKeyHubRecord<dv.HubTextBusinessKeyDomainValue>> {
+  constructor(readonly state: SQLa.DcpTemplateState, name = "exception") {
+    super(state, name, [{
+      domain: dv.hubTextBusinessKeyDomain(`${name}_hub_key`, "key"),
     }]);
   }
 }
 
-export class ExceptionDiagnostics extends dv.SatelliteTable {
+export class ExceptionDiagnostics extends dv.SatelliteTable<ExceptionHub> {
   constructor(
     readonly state: SQLa.DcpTemplateState,
-    readonly parent: ExceptionHub,
+    readonly parentHub: ExceptionHub,
   ) {
     super(
       state,
-      parent,
-      "exception_diagnostics",
+      dv.satelliteParentHub(parentHub),
+      `${parentHub.hubName}_diagnostics`,
       (table) => {
         return {
           all: [
@@ -59,22 +60,22 @@ export class ExceptionDiagnostics extends dv.SatelliteTable {
                sat.err_pg_exception_detail,
                sat.err_pg_exception_hint,
                sat.err_pg_exception_context
-         from ${satellite.parent.qName} hub, ${satellite.qName} sat
+         from ${satellite.parentHub.qName} hub, ${satellite.qName} sat
         where hub.hub_id = sat.hub_exception_id`; // don't include trailing semi-colon in SQL, since it's a "statement" not complete SQL
       };
     })(this.state, "exception_diagnostics");
   }
 }
 
-export class ExceptionHttpClient extends dv.SatelliteTable {
+export class ExceptionHttpClient extends dv.SatelliteTable<ExceptionHub> {
   constructor(
     readonly state: SQLa.DcpTemplateState,
-    readonly parent: ExceptionHub,
+    readonly parentHub: ExceptionHub,
   ) {
     super(
       state,
-      parent,
-      "exception_http_client",
+      dv.satelliteParentHub(parentHub),
+      `${parentHub.hubName}_http_client`,
       (table) => {
         return {
           all: ["http_req", "http_resp"].map((name) =>
@@ -100,7 +101,7 @@ export class ExceptionHttpClient extends dv.SatelliteTable {
         select hub.key, 
                sat.http_req,
                sat.http_resp
-         from ${satellite.parent.qName} hub, ${satellite.qName} sat
+         from ${satellite.parentHub.qName} hub, ${satellite.qName} sat
         where hub.hub_id = sat.hub_exception_id`; // don't include trailing semi-colon in SQL, since it's a "statement" not complete SQL
       };
     })(this.state, "exception_http_client");

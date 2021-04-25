@@ -192,16 +192,30 @@ export interface SqlTable extends QualifiedReferenceSupplier {
 
 export type SqlTableDelimitedTextColumnHeader = string;
 export type SqlTableDelimitedTextColumnContent = string;
+
 export type SqlTableDelimitedTextHeaderRow = {
   readonly header: SqlTableDelimitedTextColumnHeader;
   readonly column: SqlTableColumn<unknown>;
 }[];
-export interface SqlTableDelimitedTextContentRow {
+
+export interface SqlTableDelimitedTextContentRow<
+  TypedRecord extends Record<string, unknown>,
+> {
+  readonly record: TypedRecord;
   readonly rowIndex: number;
   readonly row: {
     readonly value: SqlTableDelimitedTextColumnContent;
     readonly column: SqlTableColumn<unknown>;
   }[];
+}
+
+export interface SqlTableDelimitedTextContentRows<
+  TypedRecord extends Record<string, unknown>,
+> {
+  readonly rows: SqlTableDelimitedTextContentRow<TypedRecord>[];
+  readonly insert: (
+    row: SqlTableDelimitedTextContentRow<TypedRecord>,
+  ) => [exists: boolean, row: SqlTableDelimitedTextContentRow<TypedRecord>];
 }
 
 export interface SqlTableColumnFilter<
@@ -211,12 +225,20 @@ export interface SqlTableColumnFilter<
   (column: C, table: T): boolean;
 }
 
+export type SqlTableColumnNameCamelCase = string;
+
 export interface SqlTableDelimitedTextColumnValueSupplier<
   // deno-lint-ignore no-explicit-any
   C extends SqlTableColumn<any>,
+  R extends Record<string, unknown>,
   T extends SqlTable,
 > {
-  (column: C, table: T): SqlTableDelimitedTextColumnContent;
+  (
+    fieldName: SqlTableColumnNameCamelCase,
+    column: C,
+    record: R,
+    table: T,
+  ): SqlTableDelimitedTextColumnContent;
 }
 
 export interface SqlTableDelimitedTextColumnValueDecorator<
@@ -227,7 +249,10 @@ export interface SqlTableDelimitedTextColumnValueDecorator<
   (value: unknown, column: C, table: T): SqlTableDelimitedTextColumnContent;
 }
 
-export interface SqlTableDelimitedTextColumnOptions<T extends SqlTable> {
+export interface SqlTableDelimitedTextColumnOptions<
+  R extends Record<string, unknown>,
+  T extends SqlTable,
+> {
   // deno-lint-ignore no-explicit-any
   keepColumn: SqlTableColumnFilter<SqlTableColumn<any>, T>;
   columnValue?: SqlTableDelimitedTextColumnValueDecorator<
@@ -238,33 +263,30 @@ export interface SqlTableDelimitedTextColumnOptions<T extends SqlTable> {
   defaultValue?: SqlTableDelimitedTextColumnValueSupplier<
     // deno-lint-ignore no-explicit-any
     SqlTableColumn<any>,
+    R,
     T
   >;
-}
-
-export interface SqlTableDelimitedTextColumnContentOptions<T extends SqlTable>
-  extends SqlTableDelimitedTextColumnOptions<T> {
-  onColumnNotFound?: SqlTableDelimitedTextColumnValueSupplier<
+  onColumnNotFoundInRecord?: SqlTableDelimitedTextColumnValueSupplier<
     // deno-lint-ignore no-explicit-any
     SqlTableColumn<any>,
+    R,
     T
   >;
-  primaryKeysPopulator: () => SqlTableDelimitedTextColumnContent[];
 }
 
 export interface SqlTableDelimitedTextSupplier<
+  R extends Record<string, unknown>,
   T extends SqlTable,
-  C extends Record<string, unknown>,
 > {
   readonly table: T;
   readonly header: (
-    options?: SqlTableDelimitedTextColumnOptions<T>,
+    options?: SqlTableDelimitedTextColumnOptions<R, T>,
   ) => SqlTableDelimitedTextHeaderRow;
   readonly content: (
-    row: C,
+    row: R,
     rowIndex: number,
-    options?: SqlTableDelimitedTextColumnContentOptions<T>,
-  ) => SqlTableDelimitedTextContentRow;
+    options?: Omit<SqlTableDelimitedTextColumnOptions<R, T>, "keepColumn">,
+  ) => SqlTableDelimitedTextContentRow<R>;
 }
 
 export interface SqlTableColumnReference<TypeScriptValue> {

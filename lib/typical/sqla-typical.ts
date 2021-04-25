@@ -259,42 +259,48 @@ export abstract class TypicalTable implements SQLa.SqlTable {
 }
 
 export function typicalDelimitedTextSupplier<
-  C extends Record<string, unknown>,
+  R extends Record<string, unknown>,
   T extends TypicalTable,
 >(
   table: T,
-  defaultOptions: SQLa.SqlTableDelimitedTextColumnOptions<T> = {
+  defaultOptions: SQLa.SqlTableDelimitedTextColumnOptions<R, T> = {
     keepColumn: () => {
       return true;
     },
   },
-): SQLa.SqlTableDelimitedTextSupplier<T, C> {
+): SQLa.SqlTableDelimitedTextSupplier<R, T> {
   const prepare = (
-    options: SQLa.SqlTableDelimitedTextColumnOptions<T> = defaultOptions,
+    record: R | undefined,
+    options?: Omit<SQLa.SqlTableDelimitedTextColumnOptions<R, T>, "keepColumn">,
   ): {
     column: SQLa.SqlTableColumn<unknown>;
     inflectableColName: inflect.InflectableValue;
+    colRecFieldName: SQLa.SqlTableColumnNameCamelCase;
     defaultValue: SQLa.SqlTableDelimitedTextColumnContent;
   }[] => {
-    const keep = options?.keepColumn
-      ? table.columns.all.filter((c) => options?.keepColumn(c, table))
-      : table.columns.all;
+    const keep = table.columns.all.filter((c) =>
+      defaultOptions.keepColumn(c, table)
+    );
     return keep.map((c) => {
+      const inflectableColName = inflect.snakeCaseValue(
+        typeof c.name === "string" ? c.name : c.name(),
+      );
+      const colRecFieldName = inflect.toCamelCase(inflectableColName);
       return {
+        record,
         column: c,
-        inflectableColName: inflect.snakeCaseValue(
-          typeof c.name === "string" ? c.name : c.name(),
-        ),
-        defaultValue: options?.defaultValue
-          ? options.defaultValue(c, table)
+        inflectableColName,
+        colRecFieldName,
+        defaultValue: (record && options?.defaultValue)
+          ? options.defaultValue(colRecFieldName, c, record, table)
           : (c.defaultDelimitedTextValue ? c.defaultDelimitedTextValue() : ``),
       };
     });
   };
-  const supplier: SQLa.SqlTableDelimitedTextSupplier<T, C> = {
+  const supplier: SQLa.SqlTableDelimitedTextSupplier<R, T> = {
     table,
     header: (options?) => {
-      const keep = prepare(options);
+      const keep = prepare(undefined, options);
       return keep.map((k) => {
         return {
           header: `"${k.inflectableColName.inflect()}"`,
@@ -303,8 +309,9 @@ export function typicalDelimitedTextSupplier<
       });
     },
     content: (row, rowIndex, options?) => {
-      const keep = prepare(options);
+      const keep = prepare(row, options);
       return {
+        record: row,
         rowIndex,
         row: keep.map((k) => {
           const ccName = inflect.toCamelCase(k.inflectableColName);
@@ -326,8 +333,13 @@ export function typicalDelimitedTextSupplier<
             };
           } else {
             return {
-              value: options?.onColumnNotFound
-                ? options.onColumnNotFound(k.column, table)
+              value: options?.onColumnNotFoundInRecord
+                ? options.onColumnNotFoundInRecord(
+                  k.colRecFieldName,
+                  k.column,
+                  row,
+                  table,
+                )
                 : k.defaultValue,
               column: k.column,
             };
@@ -339,19 +351,24 @@ export function typicalDelimitedTextSupplier<
   return supplier;
 }
 
-export interface SqlTableDelimitedTextWriterOptions {
+export interface SqlTableDelimitedTextWriterOptions<
+  C extends Record<string, unknown>,
+> {
   readonly columnDelim: string;
   readonly recordDelim: string;
   readonly destPath: string;
   readonly fileName: string;
   readonly emitHeader: boolean;
+  readonly values?: SQLa.SqlTableDelimitedTextContentRows<C>;
 }
 
-export function typicalSqlTableDelimitedTextWriterOptions(
+export function typicalSqlTableDelimitedTextWriterOptions<
+  C extends Record<string, unknown>,
+>(
   destPath: string,
   fileName: string,
-  inherit?: Partial<SqlTableDelimitedTextWriterOptions>,
-): SqlTableDelimitedTextWriterOptions {
+  inherit?: Partial<SqlTableDelimitedTextWriterOptions<C>>,
+): SqlTableDelimitedTextWriterOptions<C> {
   return {
     destPath,
     fileName,
@@ -360,30 +377,39 @@ export function typicalSqlTableDelimitedTextWriterOptions(
     emitHeader: typeof inherit?.emitHeader === "undefined"
       ? true
       : inherit.emitHeader,
+    values: inherit?.values,
   };
 }
 
 export class SqlTableDelimitedTextWriter<
-  C extends Record<string, unknown>,
-  T extends TypicalTable,
+  R extends Record<string, unknown>,
+  T extends SQLa.SqlTable,
 > {
   readonly stream: Deno.File;
+  readonly values?: SQLa.SqlTableDelimitedTextContentRows<R>;
   protected rowIndex = 0;
 
   constructor(
-    readonly supplier: SQLa.SqlTableDelimitedTextSupplier<T, C>,
-    readonly options: SqlTableDelimitedTextWriterOptions,
+    readonly table: T,
+    readonly supplier: SQLa.SqlTableDelimitedTextSupplier<R, T>,
+    readonly writerOptions: SqlTableDelimitedTextWriterOptions<R>,
   ) {
-    fs.ensureDirSync(options.destPath);
-    this.stream = Deno.openSync(path.join(options.destPath, options.fileName), {
-      create: true,
-      write: true,
-      append: false,
-    });
-    if (this.options.emitHeader) {
+    fs.ensureDirSync(writerOptions.destPath);
+    this.stream = Deno.openSync(
+      path.join(writerOptions.destPath, writerOptions.fileName),
+      {
+        create: true,
+        write: true,
+        append: false,
+      },
+    );
+    this.values = writerOptions.values;
+    if (this.writerOptions.emitHeader) {
       this.stream.writeSync(
         new TextEncoder().encode(
-          supplier.header().map((c) => c.header).join(this.options.columnDelim),
+          supplier.header().map((c) => c.header).join(
+            this.writerOptions.columnDelim,
+          ),
         ),
       );
     }
@@ -394,39 +420,42 @@ export class SqlTableDelimitedTextWriter<
   }
 
   write(
-    row: C,
-    options?: SQLa.SqlTableDelimitedTextColumnContentOptions<T>,
-  ): SQLa.SqlTableDelimitedTextContentRow {
+    row: R,
+    options?: Omit<SQLa.SqlTableDelimitedTextColumnOptions<R, T>, "keepColumn">,
+  ): [written: boolean, row: SQLa.SqlTableDelimitedTextContentRow<R>] {
     const content = this.supplier.content(row, this.rowIndex, options);
+    if (this.values) {
+      // if we care about unique records, we'll track the values in memory
+      const [exists, written] = this.values.insert(content);
+      if (exists) return [false, written];
+    }
     const te = new TextEncoder();
-    if ((this.rowIndex == 0 && this.options.emitHeader) || this.rowIndex > 0) {
-      this.stream.writeSync(te.encode(this.options.recordDelim));
+    if (
+      (this.rowIndex == 0 && this.writerOptions.emitHeader) || this.rowIndex > 0
+    ) {
+      this.stream.writeSync(te.encode(this.writerOptions.recordDelim));
     }
     this.stream.writeSync(te.encode(
-      content.row.map((c) => c.value).join(this.options.columnDelim),
+      content.row.map((c) => c.value).join(this.writerOptions.columnDelim),
     ));
     this.rowIndex++;
-    return content;
+    return [true, content];
   }
 
-  writeReturning<R extends Record<string, unknown>>(
-    row: C,
-    ...returning: (keyof R)[]
-  ): [R, SQLa.SqlTableDelimitedTextContentRow] {
-    const content = this.write(row);
+  writeReturning(
+    row: R,
+    options?: Omit<SQLa.SqlTableDelimitedTextColumnOptions<R, T>, "keepColumn">,
+  ): [R, SQLa.SqlTableDelimitedTextContentRow<R>, boolean] {
+    const content = this.write(row, options);
     const result: Record<string, unknown> = {};
-    for (const r of returning) {
-      content.row.forEach((c) => {
-        const inflectableColName = inflect.snakeCaseValue(
-          typeof c.column.name === "string" ? c.column.name : c.column.name(),
-        );
-        const camelCaseColName = inflect.toCamelCase(inflectableColName);
-        if (inflectableColName.inflect() == r || r == camelCaseColName) {
-          result[camelCaseColName] = c.value;
-        }
-      });
-    }
-    return [result as R, content];
+    content[1].row.forEach((c) => {
+      const inflectableColName = inflect.snakeCaseValue(
+        typeof c.column.name === "string" ? c.column.name : c.column.name(),
+      );
+      const camelCaseColName = inflect.toCamelCase(inflectableColName);
+      result[camelCaseColName] = c.value;
+    });
+    return [result as R, content[1], content[0]];
   }
 }
 
