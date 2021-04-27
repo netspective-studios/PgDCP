@@ -15,6 +15,7 @@ export function SQL(
   const [lQR] = state.observableQR(
     schemas.lib,
   );
+  // deno-fmt-ignore
   return SQLa.SQL(ctx, state)`
     -- PostgreSQL treats users and roles as synonyms. We treat roles as permissions
     -- policies and users as authenticatable entities. It's just nomenclature but
@@ -22,7 +23,7 @@ export function SQL(
 
     -- TODO: prefix all procedure names with affinity group
 
-    CREATE OR REPLACE PROCEDURE create_role_if_not_exists(role_name text) AS $$ 
+    CREATE OR REPLACE PROCEDURE create_role_if_not_exists(role_name TEXT) AS $$ 
     BEGIN
         EXECUTE FORMAT('CREATE ROLE %I WITH NOLOGIN', role_name);
     EXCEPTION 
@@ -114,26 +115,24 @@ export function SQL(
         CREATE SCHEMA IF NOT EXISTS assuranceTmp1;
         CREATE OR REPLACE VIEW assuranceTmp1.assuranceView AS SELECT '1' as result;
         --RETURN NEXT has_view('assuranceView');
-        CALL create_role_if_not_exists('assurance_role1');
-        CALL create_role_if_not_exists('assurance_role1');
+        CALL ${lQR("create_role_if_not_exists")}('assurance_role1');
+        CALL ${lQR("create_role_if_not_exists")}('assurance_role1');
         RETURN NEXT has_role('assurance_role1');
-        RETURN NEXT ok((create_database_user_with_role('assurance_user1', 'password', 'assurance_role1') = 1),
+        RETURN NEXT ok((${lQR("create_database_user_with_role")}('assurance_user1', 'password', 'assurance_role1') = 1),
                         'user assurance_user1 should be created with role assurance_role1');
         RETURN NEXT has_user('assurance_user1');
         --Check ALL Privileges--
-        CALL create_all_privileges_dcp_schema_role('assurancetmp1','assurance_role1');
+        CALL ${lQR("create_all_privileges_dcp_schema_role")}('assurancetmp1','assurance_role1');
         RETURN NEXT schema_privs_are(
         'assurancetmp1', 'assurance_user1', ARRAY['USAGE'],
         'assurance_user1 should be granted USAGE on schema "assurancetmp1"');
         --RETURN NEXT table_privs_are ( 'assurancetmp1','assuranceView', 'assurance_role1', ARRAY['SELECT','INSERT', 'UPDATE','DELETE'], 'assurance_role1 should be able to SELECT, INSERT, UPDATE and DELETE on table assuranceView' ); 
-        CALL ${
-    state.schema.qualifiedReference("revoke_all_privileges_dcp_schema_role")
-  } ('assurancetmp1','assurance_role1');
+        CALL ${state.schema.qualifiedReference("revoke_all_privileges_dcp_schema_role")}('assurancetmp1','assurance_role1');
         -- RETURN NEXT schema_privs_are(
         -- 'assurancetmp1', 'assurance_user1', ARRAY['USAGE'],
         -- 'assurance_user1 should be granted USAGE on schema "assurancetmp1"');
         -- RETURN NEXT table_privs_are ( 'assurancetmp1','assuranceView', 'assurance_role1', ARRAY['SELECT','INSERT', 'UPDATE','DELETE'], 'assurance_role1 should be able to SELECT, INSERT, UPDATE and DELETE on table assuranceView' ); 
-        CALL drop_role_and_user_if_exists('assurance_role1','assurance_user1');
+        CALL ${lQR("drop_role_and_user_if_exists")}('assurance_role1','assurance_user1');
         RETURN NEXT hasnt_role('assurance_role1');
         RETURN NEXT hasnt_user('assurance_user1');
         DROP SCHEMA assuranceTmp1 cascade;
