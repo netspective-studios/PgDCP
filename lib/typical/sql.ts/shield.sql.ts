@@ -64,7 +64,7 @@ export function SQL(
     BEGIN
       -- escape properly to prevent SQL injection
       IF NOT EXISTS ( SELECT FROM pg_roles WHERE  rolname = user_name) THEN
-        EXECUTE FORMAT('CREATE USER %I LOGIN PASSWORD ''%I''', user_name, user_passwd);
+        EXECUTE FORMAT('CREATE USER %I WITH LOGIN PASSWORD %L', user_name, user_passwd);
         EXECUTE FORMAT('GRANT %I TO %I', role_name, user_name);
       END IF;
       RETURN 1;
