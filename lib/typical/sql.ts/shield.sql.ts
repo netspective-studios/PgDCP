@@ -114,7 +114,7 @@ export function SQL(
       CALL ${lQR("create_role_if_not_exists")}('assurance_role1');
       RETURN NEXT has_role('assurance_role1');
       RETURN NEXT ok((${lQR("create_database_user_with_role")}('assurance_user1', 'password', 'assurance_role1') = 1),
-                      'user assurance_user1 should be created with role assurance_role1');
+      'user assurance_user1 should be created with role assurance_role1');
       RETURN NEXT has_user('assurance_user1');
       --Check ALL Privileges--
       CALL ${lQR("create_all_privileges_dcp_schema_role")}('assurancetmp1','assurance_role1');

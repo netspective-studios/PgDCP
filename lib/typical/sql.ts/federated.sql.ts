@@ -31,6 +31,7 @@ export function SQL(
         host text NOT NULL,
         port integer NOT NULL,
         dbname text NOT NULL,
+        remote_schema text NOT NULL,
         local_schema text NOT NULL,
         server_name text NOT NULL,
         fetch_size integer DEFAULT 50,
@@ -46,14 +47,14 @@ export function SQL(
 
     CREATE OR REPLACE PROCEDURE ${fn.destroyIdempotent(state).qName}() AS $$
     BEGIN
-        DROP FUNCTION IF EXISTS ${fn.unitTest(state).qName}();        
-        DROP TABLE IF EXISTS ${cQR("fdw_postgres_authn")};
+      DROP FUNCTION IF EXISTS ${fn.unitTest(state).qName}();        
+      DROP TABLE IF EXISTS ${cQR("fdw_postgres_authn")};
     END;
     $$ LANGUAGE PLPGSQL;
 
     CREATE OR REPLACE FUNCTION ${fn.unitTest(state).qName}() RETURNS SETOF TEXT AS $$
     BEGIN 
-        RETURN NEXT has_table('${schemas.confidential.name}', 'fdw_postgres_authn');
+      RETURN NEXT has_table('${schemas.confidential.name}', 'fdw_postgres_authn');
     END;
     $$ LANGUAGE plpgsql;`;
 }
