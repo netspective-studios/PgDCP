@@ -43,16 +43,20 @@ export function SQL(
     DECLARE
         account pg_catalog.pg_authid;
         username_password text;
+        user_role text;
     BEGIN
         select a.* into account
           from pg_catalog.pg_authid as a
          where a.rolname = username;
-       
+        user_role:= (select rolname from pg_user
+        join pg_auth_members on (pg_user.usesysid=pg_auth_members.member)
+        join pg_roles on (pg_roles.oid=pg_auth_members.roleid)
+        where pg_user.usename=username);   
         username_password := (select concat(password,username));
         
         IF account.rolname IS NOT NULL and account.rolpassword = concat('md5',md5(username_password)) THEN
         RETURN (
-          account.rolname,
+          user_role,
           extract(epoch from now() + interval '7 days'),
           account.oid,
           account.rolname

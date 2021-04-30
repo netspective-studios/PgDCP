@@ -268,6 +268,7 @@ export class ExtensionsSchema extends TypicalSchema {
   readonly pgTapExtn: SQLa.PostgreSqlExtension;
   readonly pgStatStatementsExtn: SQLa.PostgreSqlExtension;
   readonly pgCryptoExtn: SQLa.PostgreSqlExtension;
+  readonly pgJwtExtn: SQLa.PostgreSqlExtension;
   readonly unaccentExtn: SQLa.PostgreSqlExtension;
   readonly ltreeExtn: SQLa.PostgreSqlExtension;
   readonly semverExtn: SQLa.PostgreSqlExtension;
@@ -288,6 +289,7 @@ export class ExtensionsSchema extends TypicalSchema {
     this.crossTabExtn = this.extension("tablefunc");
     this.pgCronExtn = this.extension("pg_cron");
     this.pgCryptoExtn = this.extension("pgcrypto");
+    this.pgJwtExtn = this.extension("pgjwt");
     this.uuidExtn = this.extension('"uuid-ossp"');
     this.httpExtn = this.extension("http");
     this.postgresFDW = this.extension("postgres_fdw");
