@@ -9,11 +9,19 @@ export function SQL(
 ): SQLa.DcpInterpolationResult {
   const state = ctx.prepareState(
     ctx.prepareTsModuleExecution(import.meta.url),
-    options || { schema: schemas.lib, affinityGroup },
+    options || {
+      schema: schemas.lib,
+      affinityGroup,
+      extensions: [
+        schemas.extensions.pgCryptoExtn,
+        schemas.extensions.pgJwtExtn,
+      ],
+    },
   );
   const { lcFunctions: fn } = state.affinityGroup;
-  const [lQR] = state.observableQR(
+  const [lQR, exQR] = state.observableQR(
     schemas.lib,
+    schemas.extensions,
   );
 
   // deno-fmt-ignore
@@ -23,15 +31,14 @@ export function SQL(
     -- important for consistency.
 
     -- TODO: prefix all procedure names with affinity group
+    CREATE TYPE ${lQR("jwt_token_signed")} AS (token text);
 
     CREATE OR REPLACE PROCEDURE create_role_if_not_exists(role_name text) AS $$ 
     BEGIN
       EXECUTE FORMAT('CREATE ROLE %I WITH NOLOGIN', role_name);
     EXCEPTION 
-      WHEN DUPLICATE_OBJECT THEN
-          RAISE NOTICE 'role "%" already exists, skipping', role_name;
-    END;
-    $$ LANGUAGE plpgsql;
+      WHEN DUPLICATE_OBJECT THEN RAISE NOTICE 'role "%" already exists, skipping', role_name;
+    END;$$ LANGUAGE plpgsql;
     comment on procedure create_role_if_not_exists(role_name TEXT) IS 'Create the role_name (without login privileges) if it does not already exist';
 
     call ${lQR("create_role_if_not_exists")}('no_access_role');
@@ -96,6 +103,40 @@ export function SQL(
     END;$$ LANGUAGE plpgsql;
     comment on procedure drop_role_and_user_if_exists(role_name TEXT, user_name NAME) IS 'Drop the role_name/user_name if it exists after clearing dependencies';
 
+    CREATE OR REPLACE FUNCTION ${lQR("authenticate_api_pg_native")}(username text, password text) RETURNS TEXT LANGUAGE plpgsql STRICT SECURITY DEFINER AS $function$
+    DECLARE
+      jwt_token TEXT;
+      account pg_catalog.pg_authid;
+      username_password text;
+      user_role text;
+    BEGIN
+      select a.* into account from pg_catalog.pg_authid as a where a.rolname = username;
+      username_password := (select concat(password,username));
+      user_role:= (select rolname from pg_user
+        join pg_auth_members on (pg_user.usesysid=pg_auth_members.member)
+        join pg_roles on (pg_roles.oid=pg_auth_members.roleid)
+        where pg_user.usename=username);  
+      IF account.rolname IS NOT NULL and account.rolpassword = concat('md5',md5(username_password)) THEN
+        jwt_token:= ${exQR("sign")}(
+          row_to_json(r), '${Deno.env.get('API_JWT_SECRET')}'
+        ) AS token
+        FROM (SELECT 
+          user_role,
+          extract(epoch from now())::integer + 300 AS exp,
+          account.oid,
+          account.rolname
+        ) r;
+        return jwt_token;
+      ELSE
+        RETURN NULL;
+      END IF;
+    END;$function$;
+    COMMENT ON FUNCTION authenticate_api_pg_native("text","text") IS 'Authenticate a user and provide a Postgrest JWT payload';
+    
+    create function foo() returns text as $$
+      select current_setting('jwt.secret', true);
+    $$ language sql stable;
+    
     CREATE OR REPLACE FUNCTION ${fn.unitTest(state).qName}() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
     BEGIN 
       RETURN NEXT has_function('create_role_if_not_exists');
