@@ -41,7 +41,7 @@ export function SQL(
     END;$$ LANGUAGE plpgsql;
     comment on procedure create_role_if_not_exists(role_name TEXT) IS 'Create the role_name (without login privileges) if it does not already exist';
 
-    call ${lQR("create_role_if_not_exists")}('no_access_role');
+    -- call ${lQR("create_role_if_not_exists")}('no_access_role');
 
     CREATE OR REPLACE PROCEDURE create_all_privileges_dcp_schema_role(dcp_schema_name NAME, role_name text) AS $$ 
     BEGIN
@@ -121,10 +121,13 @@ export function SQL(
           row_to_json(r), '${Deno.env.get('API_JWT_SECRET')}'
         ) AS token
         FROM (SELECT 
-          user_role,
+          user_role as role,
           extract(epoch from now())::integer + 300 AS exp,
-          account.oid,
-          account.rolname
+          account.oid as user_id,
+          account.rolname as username,
+          extract(epoch from now())::integer AS iat,
+          'postgraphile' as aud,
+          'postgraphile' as iss 
         ) r;
         return jwt_token;
       ELSE
