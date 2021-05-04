@@ -80,7 +80,7 @@ export function SQL(
     
     CREATE OR REPLACE PROCEDURE ${lQR("set_curlopt_timeout")}() AS $$
     BEGIN
-      Perform (SELECT ${exQR("http_set_curlopt")}('CURLOPT_TIMEOUT_MS', '25000'));
+      Perform (SELECT ${exQR("http_set_curlopt")}('CURLOPT_TIMEOUT_MS', '60000'));
     END; $$ LANGUAGE PLPGSQL;
 
     CREATE OR REPLACE PROCEDURE ${fn.destroyIdempotent(state).qName}() AS $$
