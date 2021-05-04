@@ -63,9 +63,26 @@ export function SQL(
       EXECUTE FORMAT('GRANT SELECT ON ALL SEQUENCES IN SCHEMA %I TO %I', dcp_schema_name, role_name);
       -- Grants the same privileges as exists in the current schema for all future table or views that are created after calling this function.
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT SELECT ON TABLES TO %I', dcp_schema_name, role_name); 
-    END;
-    $$ LANGUAGE plpgsql;
+    END;$$ LANGUAGE plpgsql;
     comment on procedure create_read_only_privileges_dcp_schema_role(dcp_schema_name TEXT, role_name TEXT) IS 'Create the role_name and grant read only privileges to it in dcp_schema_name';
+    
+    CREATE OR REPLACE PROCEDURE create_read_only_privileges_dcp_schema_role(dcp_schema_name TEXT, role_name TEXT) AS $$ 
+    BEGIN
+      call ${lQR("create_role_if_not_exists")}(role_name);
+      EXECUTE FORMAT('GRANT USAGE ON SCHEMA %I TO %I', dcp_schema_name, role_name);
+      EXECUTE FORMAT('GRANT SELECT ON ALL TABLES IN SCHEMA %I TO %I', dcp_schema_name, role_name);
+      EXECUTE FORMAT('GRANT SELECT ON ALL SEQUENCES IN SCHEMA %I TO %I', dcp_schema_name, role_name);
+      -- Grants the same privileges as exists in the current schema for all future table or views that are created after calling this function.
+      EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT SELECT ON TABLES TO %I', dcp_schema_name, role_name); 
+    END;$$ LANGUAGE plpgsql;
+    comment on procedure create_read_only_privileges_dcp_schema_role(dcp_schema_name TEXT, role_name TEXT) IS 'Create the role_name and grant read only privileges to it in dcp_schema_name';
+
+    CREATE OR REPLACE PROCEDURE grant_execute_on_procedure(function_name TEXT, role_name TEXT) AS $$ 
+    BEGIN
+      CALL ${lQR("create_role_if_not_exists")}(role_name);
+      EXECUTE FORMAT('GRANT EXECUTE ON PROCEDURE %s TO %I', function_name, role_name);
+    END;$$ LANGUAGE plpgsql;
+    comment on procedure grant_execute_on_procedure(dcp_schema_name TEXT, role_name TEXT) IS 'Grant privileges to the function name';
 
     CREATE OR REPLACE FUNCTION create_database_user_with_role(user_name NAME, user_passwd TEXT, role_name text) RETURNS smallint AS $BODY$
     BEGIN
