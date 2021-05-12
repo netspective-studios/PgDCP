@@ -83,13 +83,6 @@ export function SQL(
       Perform (SELECT ${exQR("http_set_curlopt")}('CURLOPT_TIMEOUT_MS', '60000'));
     END; $$ LANGUAGE PLPGSQL;
 
-    CREATE OR REPLACE FUNCTION ${lQR("email_validation")}(emails TEXT[]) returns ${exQR("http_response")} AS $emailValidationFn$
-    DECLARE
-    BEGIN
-      return ${exQR("http_post")}('https://email.validation.infra.medigy.com', (json_build_object('to_emails',emails))::text, 'application/json')::${exQR("http_response")};
-    END;$emailValidationFn$ LANGUAGE PLPGSQL;
-    COMMENT ON FUNCTION ${lQR("email_validation")} (emails TEXT[]) IS 'Given a array of emails, check its valid or not';
-
     CREATE OR REPLACE PROCEDURE ${fn.destroyIdempotent(state).qName}() AS $$
     BEGIN
         DROP FUNCTION IF EXISTS ${fn.unitTest(state).qName}();
