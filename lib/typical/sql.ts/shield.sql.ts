@@ -153,10 +153,6 @@ export function SQL(
     END;$function$;
     COMMENT ON FUNCTION authenticate_api_pg_native("text","text") IS 'Authenticate a user and provide a Postgrest JWT payload';
     
-    create function foo() returns text as $$
-      select current_setting('jwt.secret', true);
-    $$ language sql stable;
-    
     CREATE OR REPLACE FUNCTION ${fn.unitTest(state).qName}() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
     BEGIN 
       RETURN NEXT has_function('create_role_if_not_exists');
