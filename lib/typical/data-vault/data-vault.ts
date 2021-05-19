@@ -131,7 +131,7 @@ export class DataVaultIdentity
         tableConstraintsSql: () =>
           `CONSTRAINT ${table.name}_pk UNIQUE(${column.name})`,
         tableIndexesSql: () =>
-          `CREATE INDEX ${table.name}_${column.name}_idx ON ${table.qName} (${column.name})`,
+          `CREATE INDEX IF NOT EXISTS ${table.name}_${column.name}_idx ON ${table.qName} (${column.name})`,
         isPrimaryKey: true,
       },
     );

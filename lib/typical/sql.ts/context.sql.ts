@@ -35,7 +35,7 @@ export function SQL(
       CREATE DOMAIN ${sQR("execution_host_identity")} as text;
 
       -- a single-row table which contains the global context (prod/test/devl/sandbox/etc.)
-      CREATE TABLE ${sQR("context")} (
+      CREATE TABLE IF NOT EXISTS ${sQR("context")} (
         singleton_id bool PRIMARY KEY DEFAULT TRUE,
         active ${sQR("execution_context")} NOT NULL,
         host ${sQR("execution_host_identity")} NOT NULL,

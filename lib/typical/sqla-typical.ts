@@ -230,7 +230,7 @@ export abstract class TypicalTable implements SQLa.SqlTable {
     };
 
     // deno-fmt-ignore
-    return `CREATE TABLE ${this.qName}(
+    return `CREATE TABLE IF NOT EXISTS ${this.qName}(
         ${columns.all.map(c => { return `${c.tableColumnDeclSql(state)}${sqlRemarks(c)}`}).join(",\n        ")}${components.constraints ? ',' : ''}
         ${components.constraints ? components.constraints.join(",\n        ") : '-- no column constraints'}
       );${components.appendix ? `\n      ${components.appendix.join(";\n      ")};` : ''}`;
