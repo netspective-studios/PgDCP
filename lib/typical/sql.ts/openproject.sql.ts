@@ -41,6 +41,7 @@ export function SQL(
         meta jsonb,
         created_at timestamptz NOT NULL default current_timestamp,
         created_by name NOT NULL default current_user,
+        CONSTRAINT openproject_provenance_pk UNIQUE(identity),
         CONSTRAINT openproject_provenance_unq_row UNIQUE(identity, context)
       );    
     END;
