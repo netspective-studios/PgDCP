@@ -12,6 +12,7 @@ export function SQL(
     options || { schema: schemas.lib, affinityGroup },
   );
   const { lcFunctions: lcf } = state.affinityGroup;
+  // deno-fmt-ignore
   return SQLa.SQL(ctx, state)`
     -- TODO: separate constructIdempotent into constructStorage/constructIdempotent
     -- TODO: separate destroyIdempotent into destroyStorage/destroyIdempotent
@@ -20,16 +21,14 @@ export function SQL(
   }_sql(schemaName text, tableName text) RETURNS text AS $$
     BEGIN
         return format($execBody$
-            CREATE TABLE %1$s.%2$s(
+            CREATE TABLE IF NOT EXISTS %1$s.%2$s(
                 mime_type TEXT,
                 file_extn TEXT,
                 label TEXT,
                 CONSTRAINT %2$s_unq_row UNIQUE(mime_type, file_extn, label)
             );
 
-            CREATE OR REPLACE PROCEDURE ${
-    lcf.populateSeedData(state).qName
-  }() AS $genBody$
+            CREATE OR REPLACE PROCEDURE ${lcf.populateSeedData(state).qName}() AS $genBody$
             BEGIN
                 -- used https://konbert.com/convert/csv/to/postgres for converting orignal CSV
                 INSERT INTO %1$s.%2$s VALUES
@@ -262,22 +261,19 @@ export function SQL(
                 ('video/x-sgi-movie','movie','Video SGI movie player'),
                 ('x-conference/x-cooltalk','ice','Conference Cooltalk'),
                 ('xuda/gen-cert','xuda','Xuda'),
-                ('x-world/x-vrml','vrml','VRML');
+                ('x-world/x-vrml','vrml','VRML') 
+                ON CONFLICT(mime_type, file_extn, label) DO NOTHING; 
             END;
             $genBody$ LANGUAGE plpgsql;
 
-            CREATE OR REPLACE PROCEDURE ${
-    lcf.destroyIdempotent(state).qName
-  }() AS $genBody$
+            CREATE OR REPLACE PROCEDURE ${lcf.destroyIdempotent(state).qName}() AS $genBody$
             BEGIN
                 DROP FUNCTION IF EXISTS ${lcf.unitTest(state, "%2$s").qName}();
                 DROP TABLE IF EXISTS %1$s.%2$s;
             END;
             $genBody$ LANGUAGE plpgsql;
 
-            CREATE OR REPLACE FUNCTION ${
-    lcf.unitTest(state, "%2$s").qName
-  }() RETURNS SETOF TEXT AS $genBody$
+            CREATE OR REPLACE FUNCTION ${lcf.unitTest(state, "%2$s").qName}() RETURNS SETOF TEXT AS $genBody$
             BEGIN
                 RETURN NEXT has_table('%1$s', '%2$s');
                 RETURN NEXT ok(((select count(*) from %1$s.%2$s) > 0), 'Should have content in %1$s.%2$s');
@@ -287,14 +283,12 @@ export function SQL(
     END;
     $$ LANGUAGE PLPGSQL;
     
-    CREATE OR REPLACE PROCEDURE ${
-    lcf.constructIdempotent(state).qName
-  }(schemaName text, tableName text) AS $$
+    CREATE OR REPLACE PROCEDURE ${lcf.constructIdempotent(state).qName}(schemaName text, tableName text) AS $$
     BEGIN
         -- TODO: register execution in DCP Lifecyle log table
         EXECUTE(${
     lcf.constructIdempotent(state).qName
-  }_sql(schemaName, tableName));
+    }_sql(schemaName, tableName));
     END;
     $$ LANGUAGE PLPGSQL;`;
 }

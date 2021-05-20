@@ -31,7 +31,15 @@ export function SQL(
     -- important for consistency.
 
     -- TODO: prefix all procedure names with affinity group
-    CREATE TYPE ${lQR("jwt_token_signed")} AS (token text);
+    DO $$
+    BEGIN
+      CREATE TYPE ${lQR("jwt_token_signed")} AS (token text);
+      comment on type jwt_token_signed IS 'User credentials Postgraphile will use to create JWT for API authentication';
+    EXCEPTION
+        WHEN DUPLICATE_OBJECT THEN
+            RAISE NOTICE 'type "jwt_token_signed" already exists, skipping';
+    END
+    $$;
 
     CREATE OR REPLACE PROCEDURE create_role_if_not_exists(role_name text) AS $$ 
     BEGIN

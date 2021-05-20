@@ -27,9 +27,15 @@ export function SQL(
     END;
     $$;
 
-
-    CREATE EVENT TRIGGER ddl_postgrest ON ddl_command_end
+    DO $$
+    BEGIN
+      CREATE EVENT TRIGGER ddl_postgrest ON ddl_command_end
         EXECUTE PROCEDURE notify_ddl_postgrest();
+        EXCEPTION
+        WHEN DUPLICATE_OBJECT THEN
+            RAISE NOTICE 'trigger "ddl_postgrest" already exists, skipping';
+    END
+    $$;
 
 
 `;

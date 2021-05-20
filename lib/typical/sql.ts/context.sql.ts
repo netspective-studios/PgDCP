@@ -28,11 +28,18 @@ export function SQL(
     --       it here
     -- TODO: Add CHECK constraint to make sure execution_context can only have
     --       valid values
-    CREATE DOMAIN ${sQR("execution_context")} as ${exQR("ltree")};
+    DO $$
+    BEGIN
+      CREATE DOMAIN ${sQR("execution_context")} as ${exQR("ltree")};
+    EXCEPTION
+        WHEN DUPLICATE_OBJECT THEN
+            RAISE NOTICE 'domain "execution_context" already exists, skipping';
+    END
+    $$;
 
     CREATE OR REPLACE PROCEDURE ${lcf.constructStorage(state).qName}() AS $$
     BEGIN
-      CREATE DOMAIN ${sQR("execution_host_identity")} as text;
+     BEGIN CREATE DOMAIN ${sQR("execution_host_identity")} as text;EXCEPTION WHEN duplicate_object THEN RAISE NOTICE 'domain "execution_host_identity" already exists, skipping'; END;
 
       -- a single-row table which contains the global context (prod/test/devl/sandbox/etc.)
       CREATE TABLE IF NOT EXISTS ${sQR("context")} (

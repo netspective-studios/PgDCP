@@ -28,7 +28,7 @@ export function SQL(
   return SQLa.SQL(ctx, state)`
     CREATE OR REPLACE PROCEDURE ${lcf.constructStorage(state).qName}() AS $$
     BEGIN
-      CREATE DOMAIN ${cQR("openproject_server_identity")} AS text;
+      BEGIN CREATE DOMAIN ${cQR("openproject_server_identity")} AS text;EXCEPTION WHEN duplicate_object THEN RAISE NOTICE 'domain "openproject_server_identity" already exists, skipping'; END;
 
       CREATE TABLE IF NOT EXISTS ${cQR("openproject_provenance")} (
         identity ${cQR("openproject_server_identity")} NOT NULL,
@@ -41,7 +41,6 @@ export function SQL(
         meta jsonb,
         created_at timestamptz NOT NULL default current_timestamp,
         created_by name NOT NULL default current_user,
-        CONSTRAINT openproject_provenance_pk UNIQUE(identity),
         CONSTRAINT openproject_provenance_unq_row UNIQUE(identity, context)
       );    
     END;

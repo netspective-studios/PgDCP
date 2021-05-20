@@ -83,9 +83,16 @@ export function SQL(
             end;
             $genBody$ language plpgsql;
             
+            DO $eventManagerInsertBody$
+            BEGIN
             create trigger event_manager_insert_%2$s_trigger
             instead of insert on %1$s.%2$s
             for each row execute function %1$s.event_manager_insert_%2$s();
+            EXCEPTION
+                WHEN duplicate_object THEN
+                    RAISE NOTICE 'Trigger already exists. Ignoring...';
+            END
+            $eventManagerInsertBody$;
 
             CREATE OR REPLACE PROCEDURE ${schemas.lifecycle.qualifiedReference("event_manager_%1$s_%2$s_destroy_all_objects")}() AS $genBody$
             BEGIN

@@ -87,14 +87,22 @@ export function SQL(
                     NEW.labels,
                     NEW.%3$s_elaboration,
                     NEW.meta_data
-                  returning id into %2$sId;
+                    on conflict on constraint asset_version_unq_row do nothing
+                  returning id into %2$sId ;
                 return NEW;
             end;
             $genBody$ language plpgsql;
             
-            create trigger version_upsert_%2$s_trigger
-            instead of insert on %1$s.%2$s
-            for each row execute function %1$s.version_upsert_%2$s();
+            DO $versionUpsertBody$
+            BEGIN
+              create trigger version_upsert_%2$s_trigger
+              instead of insert on %1$s.%2$s
+              for each row execute function %1$s.version_upsert_%2$s();
+            EXCEPTION
+                WHEN duplicate_object THEN
+                    RAISE NOTICE 'Trigger already exists. Ignoring...';
+            END
+            $versionUpsertBody$;
 
             CREATE OR REPLACE PROCEDURE ${
     schemas.lifecycle.qualifiedReference(
