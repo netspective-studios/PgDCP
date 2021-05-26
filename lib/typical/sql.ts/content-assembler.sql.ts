@@ -55,15 +55,15 @@ export function SQL(
     
     create or replace function ${lQR("prepare_file_name")}(basis TEXT, extn TEXT, max_length smallint = 100) returns TEXT as $$
     declare 
-        file_name TEXT;
+      file_name TEXT;
     begin
-        select concat(${lQR("slugify")}(basis), extn) into file_name;
-        return substring(
-            file_name
-            from 1 for max_length
-        );
+      select concat(${lQR("slugify")}(basis), extn) into file_name;
+      return substring(
+        file_name
+        from 1 for max_length
+      );
     end;
-    $$ LANGUAGE plpgsql STRICT IMMUTABLE ;
+    $$ LANGUAGE plpgsql STRICT IMMUTABLE SECURITY DEFINER;
     comment on function prepare_file_name(basis TEXT, extn TEXT, max_length smallint) IS 'Given a title or other basis, create a good filename for storing content';
     
     create or replace function url_brand(url TEXT) returns TEXT as $$
