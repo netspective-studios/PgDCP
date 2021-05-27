@@ -78,6 +78,27 @@ export function SQL(
     $$ LANGUAGE plpgsql STRICT IMMUTABLE ;
     comment on function url_brand(url TEXT) IS 'Given a URL, return the hostname only without "www." prefix';
     
+    CREATE OR REPLACE FUNCTION csv_to_table(file_path text, table_name text = 'temp', delim text = ',', no_delim text = chr(127)) RETURNS text as $csvToTable$
+    DECLARE
+      row_ct int;
+    BEGIN
+      -- create staging table for 1st row as  single text column 
+      CREATE TEMP TABLE tmp(cols text) ON COMMIT DROP;
+      EXECUTE format($$DROP table if exists %I cascade;$$, table_name);
+      -- fetch 1st row
+      EXECUTE format($$COPY tmp FROM PROGRAM 'head -n1 %I' WITH (DELIMITER %L)$$, file_path, no_delim);
+      -- create actual temp table with all columns text
+      EXECUTE (SELECT format('CREATE TABLE %I(', table_name)
+          || string_agg(quote_ident(col) || ' text', ',')
+          || ')'
+      FROM  (SELECT cols FROM tmp LIMIT 1) t, unnest(string_to_array(t.cols, delim)) col);
+      -- Import data
+      EXECUTE format($$COPY %I FROM %L WITH (FORMAT csv, HEADER, NULL '\\N', DELIMITER %L)$$, table_name, file_path, delim);
+      GET DIAGNOSTICS row_ct = ROW_COUNT;
+      RETURN format('Created table %I with %s rows.', table_name, row_ct);
+    END $csvToTable$  LANGUAGE plpgsql;
+    comment on function csv_to_table(file_path text, table_name text, delim text, no_delim text) IS 'Given CSV file, return a table with contents and dynamic number of columns';
+
     CREATE OR REPLACE PROCEDURE ${lQR("set_curlopt_timeout")}() AS $$
     BEGIN
       Perform (SELECT ${exQR("http_set_curlopt")}('CURLOPT_TIMEOUT_MS', '60000'));
