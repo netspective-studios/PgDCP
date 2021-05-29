@@ -78,28 +78,28 @@ export function SQL(
     $$ LANGUAGE plpgsql STRICT IMMUTABLE ;
     comment on function url_brand(url TEXT) IS 'Given a URL, return the hostname only without "www." prefix';
     
-    CREATE OR REPLACE FUNCTION csv_to_table(file_path text, table_name text = 'temp', schema_name text DEFAULT 'public'::text,delim text = ',', no_delim text = chr(127)) RETURNS text as $csvToTable$
+    CREATE OR REPLACE FUNCTION csv_to_table(file_path text, table_name text = 'temp', schema_name text DEFAULT 'public'::text,delim text = ',', encoder text DEFAULT 'UTF8'::text,no_delim text = chr(127)) RETURNS text as $csvToTable$
     DECLARE
       row_ct int;
     BEGIN
       CREATE TEMP TABLE tmp(cols text) ON COMMIT DROP;
       EXECUTE format($$DROP table if exists %I.%I cascade;$$, schema_name,table_name);
       -- fetch 1st row
-      EXECUTE format($$COPY tmp FROM PROGRAM 'head -n1 %I' WITH (DELIMITER %L,NULL '/N',ENCODING 'windows-1251')$$, file_path, no_delim);
+      EXECUTE format($$COPY tmp FROM PROGRAM 'head -n1 %I' WITH (DELIMITER %L,NULL '/N',ENCODING %L)$$, file_path, no_delim,encoder);
       -- create actual temp table with all columns text
       EXECUTE (SELECT format('CREATE TABLE %I.%I(', schema_name,table_name)
-          || string_agg(lower(regexp_replace(trim(col), '[^a-zA-Z0-9_]+', '_','g')) || ' text', ',')
+          || string_agg(lower(regexp_replace(TRIM(col), '[^a-zA-Z0-9_]+', '_','g')) || ' text', ',')
           || ')'
       FROM  (SELECT cols FROM tmp LIMIT 1) t, unnest(string_to_array(t.cols, delim)) col);
       -- Import data
-      EXECUTE format($$COPY %I.%I FROM %L WITH (FORMAT csv, HEADER, NULL '/N', DELIMITER %L,ENCODING 'windows-1251')$$, schema_name,table_name, file_path, delim);
+      EXECUTE format($$COPY %I.%I FROM %L WITH (FORMAT csv, HEADER, NULL '/N', DELIMITER %L,ENCODING %L)$$, schema_name,table_name, file_path, delim,encoder);
       GET DIAGNOSTICS row_ct = ROW_COUNT;
       DROP TABLE tmp;
       RETURN format('Created table %I with %s rows.', table_name, row_ct);
       EXCEPTION WHEN OTHERS THEN
-        RETURN format('Can not create table with the provided CSV file');
+        RETURN format('Got exception: %I',SQLERRM);
     END $csvToTable$  LANGUAGE plpgsql;
-    comment on function csv_to_table(file_path text, table_name text, schema_name text,delim text, no_delim text) IS 'Given CSV file, return a table with contents and dynamic number of columns';
+    comment on function csv_to_table(file_path text, table_name text, schema_name text,delim text, encoder text, no_delim text) IS 'Given CSV file, return a table with contents and dynamic number of columns';
 
     CREATE OR REPLACE PROCEDURE ${lQR("set_curlopt_timeout")}() AS $$
     BEGIN
