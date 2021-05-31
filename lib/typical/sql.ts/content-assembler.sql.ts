@@ -22,7 +22,17 @@ export function SQL(
   const { lcFunctions: fn } = state.affinityGroup;
 
   // deno-fmt-ignore
-  return SQLa.SQL(ctx, state)`    
+  return SQLa.SQL(ctx, state)` 
+    CREATE TYPE ${lQR("csv_to_table")} AS (
+      source TEXT,
+      table_name TEXT,
+      schema_name TEXT,
+      no_of_rows_created INTEGER,
+      encoder TEXT,
+      delimeter TEXT,
+      is_table_created BOOLEAN,
+      status_message TEXT
+    );
     CREATE OR REPLACE FUNCTION ${lQR("slugify")}("value" TEXT) RETURNS TEXT AS $$ 
         -- removes accents (diacritic signs) from a given string --
         WITH "unaccented" AS (
@@ -81,6 +91,7 @@ export function SQL(
     CREATE OR REPLACE FUNCTION csv_to_table(file_path text, table_name text = 'temp', schema_name text DEFAULT 'public'::text,delim text = ',', encoder text DEFAULT 'UTF8'::text,no_delim text = chr(127)) RETURNS text as $csvToTable$
     DECLARE
       row_ct int;
+      response ${lQR("csv_to_table")};
     BEGIN
       CREATE TEMP TABLE tmp(cols text) ON COMMIT DROP;
       EXECUTE format($$DROP table if exists %I.%I cascade;$$, schema_name,table_name);
@@ -95,9 +106,20 @@ export function SQL(
       EXECUTE format($$COPY %I.%I FROM %L WITH (FORMAT csv, HEADER, NULL '/N', DELIMITER %L,ENCODING %L)$$, schema_name,table_name, file_path, delim,encoder);
       GET DIAGNOSTICS row_ct = ROW_COUNT;
       DROP TABLE tmp;
-      RETURN format('Created table %I with %s rows.', table_name, row_ct);
+      SELECT file_path into response.source;
+      SELECT table_name into response.table_name;
+      SELECT schema_name into response.schema_name;
+      SELECT row_ct into response.no_of_rows_created;
+      SELECT delim into response.delimeter;
+      SELECT encoder into response.encoder;
+      SELECT True into response.is_table_created;
+      SELECT format('Created table %I with %s rows.', table_name, row_ct) into response.status_message;
+      RETURN response;
       EXCEPTION WHEN OTHERS THEN
-        RETURN format('Got exception: %I',SQLERRM);
+        SELECT 0 into response.no_of_rows_created;
+        SELECT False into response.is_table_created;
+        SELECT format('Got exception: %I',SQLERRM) into response.status_message;
+        RETURN response;
     END $csvToTable$  LANGUAGE plpgsql;
     comment on function csv_to_table(file_path text, table_name text, schema_name text,delim text, encoder text, no_delim text) IS 'Given CSV file, return a table with contents and dynamic number of columns';
 
