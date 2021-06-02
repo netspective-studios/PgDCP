@@ -91,6 +91,15 @@ export const ftsVectorsDomain: SQLa.PostgreSqlDomainSupplier<
   });
 };
 
+export type PgVectorsDomainValue = string;
+export const pgVectorsDomain: SQLa.PostgreSqlDomainSupplier<
+  PgVectorsDomainValue
+> = (state) => {
+  return state.schema.useDomain("pg_vector", (name, schema) => {
+    return new SQLaT.TypicalDomain(schema, name, "vector");
+  });
+};
+
 export type DataVaultIdentityValue = string;
 export class DataVaultIdentity
   extends SQLaT.TypicalDomain<DataVaultIdentityValue> {

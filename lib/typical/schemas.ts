@@ -278,6 +278,7 @@ export class ExtensionsSchema extends TypicalSchema {
   readonly httpExtn: SQLa.PostgreSqlExtension;
   readonly postgresFDW: SQLa.PostgreSqlExtension;
   readonly isjsonbValid: SQLa.PostgreSqlExtension;
+  readonly pgVectorExtn: SQLa.PostgreSqlExtension;
 
   constructor() {
     super("dcp_extensions");
@@ -294,6 +295,7 @@ export class ExtensionsSchema extends TypicalSchema {
     this.httpExtn = this.extension("http");
     this.postgresFDW = this.extension("postgres_fdw");
     this.isjsonbValid = this.extension("is_jsonb_valid");
+    this.pgVectorExtn = this.extension("vector");
   }
 }
 
