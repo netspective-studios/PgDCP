@@ -60,6 +60,15 @@ export const contentHashDomain: SQLa.PostgreSqlDomainSupplier<
   });
 };
 
+export type PgVectorsDomainValue = string;
+export const pgVectorsDomain: SQLa.PostgreSqlDomainSupplier<
+  PgVectorsDomainValue
+> = (state) => {
+  return state.schema.useDomain("pg_vector", (name, schema) => {
+    return new SQLaT.TypicalDomain(schema, name, "vector");
+  });
+};
+
 export type FtsVectorsSupplierDomainValue = string;
 export const ftsVectorsSupplierDomain: SQLa.PostgreSqlDomainSupplier<
   FtsVectorsSupplierDomainValue
@@ -87,18 +96,44 @@ export const ftsVectorsDomain: SQLa.PostgreSqlDomainSupplier<
   FtsVectorsDomainValue
 > = (state) => {
   return state.schema.useDomain("fts_vector", (name, schema) => {
-    return new SQLaT.TypicalDomain(schema, name, "tsvector");
+    return new FtsVectorDomain(schema, name, "field_tsvector");
   });
 };
 
-export type PgVectorsDomainValue = string;
-export const pgVectorsDomain: SQLa.PostgreSqlDomainSupplier<
-  PgVectorsDomainValue
-> = (state) => {
-  return state.schema.useDomain("pg_vector", (name, schema) => {
-    return new SQLaT.TypicalDomain(schema, name, "vector");
-  });
-};
+export class FtsVectorDomain
+  extends SQLaT.TypicalDomain<FtsVectorsDomainValue> {
+  constructor(
+    readonly schema: SQLa.PostgreSqlSchema,
+    readonly name: SQLa.PostgreSqlDomainName,
+    readonly defaultColumnName: SQLa.SqlTableColumnNameFlexible,
+  ) {
+    super(schema, name, "tsvector", {
+      defaultColumnName,
+      isNotNullable: true,
+    });
+  }
+
+  readonly tableColumn: SQLa.TypedSqlTableColumnSupplier<
+    FtsVectorsDomainValue
+  > = (
+    table,
+    options?,
+  ): SQLa.TypedSqlTableColumn<FtsVectorsDomainValue> => {
+    const column: SQLa.TypedSqlTableColumn<FtsVectorsDomainValue> = new SQLaT
+      .TypicalTypedTableColumnInstance(
+      this.schema,
+      table,
+      options?.columnName || this.defaultColumnName,
+      this,
+      {
+        ...options, // TODO: properly merge in the items below, not just override them
+        tableIndexesSql: () =>
+          `CREATE INDEX IF NOT EXISTS ${table.name}_${column.name}_idx ON ${table.qName} USING GIN (${column.name})`,
+      },
+    );
+    return column;
+  };
+}
 
 export type DataVaultIdentityValue = string;
 export class DataVaultIdentity
@@ -137,8 +172,6 @@ export class DataVaultIdentity
       this,
       {
         ...options, // TODO: properly merge in the items below, not just override them
-        tableConstraintsSql: () =>
-          `CONSTRAINT ${table.name}_pk UNIQUE(${column.name})`,
         tableIndexesSql: () =>
           `CREATE INDEX IF NOT EXISTS ${table.name}_${column.name}_idx ON ${table.qName} (${column.name})`,
         isPrimaryKey: true,
@@ -300,7 +333,7 @@ export interface SingleKeyHubRecord<T> extends HubRecord {
 
 /**
  * HubTable automates the creation of Data Vault 2.0 physical Hub tables.
- * 
+ *
  * Ref: https://www.sciencedirect.com/topics/computer-science/data-vault-model
  */
 export class HubTable<R extends HubRecord = HubRecord>
@@ -675,7 +708,7 @@ export interface SatelliteRecord {
 /**
  * SatelliteTable automates the creation of Data Vault 2.0 physical Satellite
  * tables that may elaborate or further describe an existing Hub or Link.
- * 
+ *
  * Ref: https://www.sciencedirect.com/topics/computer-science/data-vault-satellite
  */
 export class SatelliteTable<
