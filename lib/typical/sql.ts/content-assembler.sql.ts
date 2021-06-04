@@ -23,7 +23,9 @@ export function SQL(
 
   // deno-fmt-ignore
   return SQLa.SQL(ctx, state)` 
-    CREATE TYPE ${lQR("csv_to_table")} AS (
+    DO $csvToTableType$
+    BEGIN
+      CREATE TYPE ${lQR("csv_to_table")} AS (
       source TEXT,
       table_name TEXT,
       schema_name TEXT,
@@ -32,7 +34,11 @@ export function SQL(
       delimeter TEXT,
       is_table_created BOOLEAN,
       status_message TEXT
-    );
+      );
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+    END$csvToTableType$;
+    
     CREATE OR REPLACE FUNCTION ${lQR("slugify")}("value" TEXT) RETURNS TEXT AS $$ 
         -- removes accents (diacritic signs) from a given string --
         WITH "unaccented" AS (
