@@ -204,7 +204,7 @@ All code in PostgreSQL should be tested, or _assured_, with pgTAP code. All
 _Assurance Engineering Cases_ (AECs) should be written code-first, not
 human-first (what we call _Assurance as Code_).
 
-### Chaos in _in the Database_
+### Chaos _in the Database_
 
 Because our responses to bugs in the database which might lead to database
 crashes is only as good as the number of times we see such crashes, we should
@@ -289,6 +289,7 @@ libraries:
   [graphql-tools](https://www.graphql-tools.com/docs/generate-schema).
 - [uuid\-ossp](https://www.postgresql.org/docs/13/uuid-ossp.html) for UUIDs as
   primary keys
+- [Universally Unique Lexicographically Sortable Identifier \(ULID\)](https://github.com/iCyberon/pg_ulid)
 - [ltree](https://www.postgresql.org/docs/13/ltree.html) for representing labels
   of data stored in a hierarchical tree\-like structure
 - [pg_trgm](https://www.postgresql.org/docs/11/pgtrgm.html) module provides
