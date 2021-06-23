@@ -16,13 +16,14 @@ export function SQL(
         extensions: [schemas.extensions.ltreeExtn, schemas.extensions.httpExtn],
       },
   );
-  const [cQR, ctxQR, lQR] = state.observableQR(
+  const [sQR, cQR, exQR, ctxQR, lQR] = state.observableQR(
     state.schema,
     schemas.confidential,
     schemas.extensions,
     schemas.context,
     schemas.lib,
   );
+
   const { lcFunctions: lcf } = state.affinityGroup;
 
   // deno-fmt-ignore
@@ -33,7 +34,7 @@ export function SQL(
 
       CREATE TABLE IF NOT EXISTS ${cQR("keycloak_provenance")} (
         identity ${cQR("keycloak_server_identity")} NOT NULL,
-        context ${ctxQR("execution_context")} NOT NULL,
+        context ${ctxQR("context")} NOT NULL,
         api_base_url text NOT NULL,
         admin_username text NOT NULL,
         admin_password text NOT NULL,
@@ -49,7 +50,7 @@ export function SQL(
 
     CREATE OR REPLACE PROCEDURE ${lcf.constructIdempotent(state).qName}() AS $$
     BEGIN
-    CREATE OR REPLACE FUNCTION ${lQR("get_token")}(server_url text,client_id text,master_realm_name text,realm_name text , client_secret_key text, user text, password text, totp integer)
+    CREATE OR REPLACE FUNCTION ${lQR("get_token")}(server_url text,client_id text,master_realm_name text,realm_name text, client_secret_key text, username text, passwords text)
       RETURNS text
       AS $gettokenfn$
       from keycloak import KeycloakOpenID
@@ -58,17 +59,15 @@ export function SQL(
                           client_id=client_id,
                           realm_name=master_realm_name,
                           client_secret_key=client_secret_key)
-        if(totp != null)
-        token = keycloak_openid.token(user, password)
-        else
-        token = keycloak_openid.token(user, password, totp=totp)	
+        
+        token = keycloak_openid.token(username, passwords)        
         return token;                 
       except Exception as error:
         return repr(error)
       $gettokenfn$ LANGUAGE plpython3u
       ;
 
-      CREATE OR REPLACE FUNCTION ${lQR("userinfo")}(server_url text,client_id text,master_realm_name text,realm_name text , client_secret_key text, user text, password text)
+      CREATE OR REPLACE FUNCTION ${lQR("userinfo")}(server_url text,client_id text,master_realm_name text,realm_name text , client_secret_key text, username text, passwords text)
       RETURNS text
       AS $userinfofn$
       from keycloak import KeycloakOpenID
@@ -77,7 +76,7 @@ export function SQL(
                           client_id=client_id,
                           realm_name=master_realm_name,
                           client_secret_key=client_secret_key)
-        token = keycloak_openid.token(user, password)
+        token = keycloak_openid.token(username, passwords)
         userinfo = keycloak_openid.userinfo(token[token])	
         return userinfo;                 
       except Exception as error:
