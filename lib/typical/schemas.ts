@@ -321,6 +321,7 @@ export const context = new TypicalSchema(
 export const lib = new TypicalSchema("dcp_lib");
 export const confidential = new TypicalSchema("dcp_confidential");
 export const cron = new TypicalSchema("cron");
+export const keycloak = new TypicalSchema("dcp_keycloak");
 
 export const stateless = (name: string, enhancing?: boolean) => {
   return new TypicalSchema(`stateless${enhancing ? "_enhance" : ""}_${name}`);
