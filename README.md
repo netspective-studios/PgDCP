@@ -74,6 +74,8 @@ In case SQL or PL/pgSQL is not appropriate:
   expressed using
   [Postgraphile Schema Design](https://www.graphile.org/postgraphile/postgresql-schema-design/).
 
+[Cut Out the Middle Tier: Generating JSON Directly from Postgres](https://blog.crunchydata.com/blog/generating-json-directly-from-postgres) is a good HN discussion about the benefits and pitfalls of the PgDCP approach.
+
 ## Information Assurance and Security _in the Database_
 
 PgDCP requires _database-first_ security, which means PostgreSQL schemas, users,
