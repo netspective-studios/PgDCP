@@ -154,7 +154,7 @@ export function SQL(
         ) AS token
         FROM (SELECT 
           user_role as role,
-          extract(epoch from now())::integer + 300 AS exp,
+          extract(epoch from now())::integer + 1200 AS exp,
           account.oid as user_id,
           account.rolname as username,
           extract(epoch from now())::integer AS iat,
