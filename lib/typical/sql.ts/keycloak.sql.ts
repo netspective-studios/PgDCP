@@ -1,9 +1,7 @@
 import * as SQLa from "../../mod.ts";
 import { schemas } from "../mod.ts";
 
-export const affinityGroup = new schemas.TypicalAffinityGroup("dcp_keycloak");
-
-export function SQL(
+export function SQLShielded(
   ctx: SQLa.DcpInterpolationContext,
   options?: SQLa.InterpolationContextStateOptions,
 ): SQLa.DcpInterpolationResult {
@@ -12,7 +10,6 @@ export function SQL(
     options ||
       {
         schema: schemas.keycloak,
-        affinityGroup,
         extensions: [schemas.extensions.ltreeExtn, schemas.extensions.httpExtn],
       },
   );
@@ -24,7 +21,7 @@ export function SQL(
     schemas.keycloak,
   );
 
-  const { lcFunctions: lcf } = state.affinityGroup;
+  const { lcFunctions: lcf } = state.schema;
 
   // deno-fmt-ignore
   return SQLa.SQL(ctx, state)`
@@ -51,67 +48,134 @@ export function SQL(
 
     CREATE OR REPLACE PROCEDURE ${lcf.constructIdempotent(state).qName}() AS $$
     BEGIN
-    CREATE OR REPLACE FUNCTION ${lQR("get_token")}(client_id text,client_secret_key text, username text, passwords text)
-      RETURNS text
+    CREATE OR REPLACE FUNCTION ${lQR("get_token")}(client_name text, username text, passwords text)
+      RETURNS json
       AS $gettokenfn$
+      import json
       from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
       try: 
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_openid = KeycloakOpenID(server_url=str(keycloak_prov[0]["api_base_url"]),
-                          client_id=client_id,
-                          realm_name=str(keycloak_prov[0]["user_realm_name"]),
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                         username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                         password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                         realm_name='master',                                     
+                                         verify=True)    
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
+        client_id = keycloak_admin.get_client_id(client_name)
+        response =keycloak_admin.get_client_secrets(client_id)        
+	       client_secret_key = response['value']
+        keycloak_openid = KeycloakOpenID(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                          client_id=client_name,
+                          realm_name=str('${Deno.env.get('KEYCLOAK_REALM')}'),
                           client_secret_key=client_secret_key)        
         token = keycloak_openid.token(username, passwords)        
-        return token;                 
+        return json.dumps(token)                 
       except Exception as error:
-        return repr(error)
+        return json.dumps(repr(error))
       $gettokenfn$ LANGUAGE plpython3u
       ;
 
-      CREATE OR REPLACE FUNCTION ${lQR("userinfo")}(client_id text,client_secret_key text, access_token text)
-      RETURNS text
+    CREATE OR REPLACE FUNCTION ${lQR("get_client_secret")}(client_name text)
+    RETURNS json    
+   AS $getclientsecretfn$
+     import json
+     from keycloak import KeycloakOpenID
+     from keycloak import KeycloakAdmin
+     try: 
+       
+       keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                         username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                         password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                         realm_name='master',                                     
+                                         verify=True)    
+       keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
+       client_id = keycloak_admin.get_client_id(client_name)
+       response =keycloak_admin.get_client_secrets(client_id)    
+       return response['value'];                 
+     except Exception as error:
+        return json.dumps(repr(error))
+     $getclientsecretfn$ LANGUAGE plpython3u
+   ; 
+
+    
+
+      CREATE OR REPLACE FUNCTION ${lQR("user_info")}(client_name text, access_token text)
+      RETURNS json
       AS $userinfofn$
+      import json
       from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
       try: 
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_openid = KeycloakOpenID(server_url=str(keycloak_prov[0]["api_base_url"]),
-                          client_id=client_id,
-                          realm_name=str(keycloak_prov[0]["user_realm_name"]),
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                         username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                         password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                         realm_name='master',                                     
+                                         verify=True)    
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
+        client_id = keycloak_admin.get_client_id(client_name)
+        response =keycloak_admin.get_client_secrets(client_id)        
+	       client_secret_key = response['value']	
+        keycloak_openid = KeycloakOpenID(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                          client_id=client_name,
+                          realm_name=str('${Deno.env.get('KEYCLOAK_REALM')}'),
                           client_secret_key=client_secret_key)        
         userinfo = keycloak_openid.userinfo(access_token)	
-        return userinfo;                 
+        return json.dumps(userinfo);                 
       except Exception as error:
-        return repr(error)
+        return json.dumps(repr(error))
       $userinfofn$ LANGUAGE plpython3u
       ;
 
-      CREATE OR REPLACE FUNCTION ${lQR("refresh_token")}(client_id text, client_secret_key text, refresh_token varchar)
-      RETURNS text
+      CREATE OR REPLACE FUNCTION ${lQR("refresh_token")}(client_name text, refresh_token varchar)
+      RETURNS json
       AS $refreshtokenfn$
+      import json
       from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
       try: 
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_openid = KeycloakOpenID(server_url=str(keycloak_prov[0]["api_base_url"]),
-                          client_id=client_id,
-                          realm_name=str(keycloak_prov[0]["user_realm_name"]),
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                         username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                         password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                         realm_name='master',                                     
+                                         verify=True)    
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
+        client_id = keycloak_admin.get_client_id(client_name)
+        response =keycloak_admin.get_client_secrets(client_id)        
+	       client_secret_key = response['value']
+        keycloak_openid = KeycloakOpenID(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                          client_id=client_name,
+                          realm_name=str('${Deno.env.get('KEYCLOAK_REALM')}'),
                           client_secret_key=client_secret_key)
         token = keycloak_openid.refresh_token(refresh_token)	
-        return token;                 
+        return json.dumps(token);                 
       except Exception as error:
-        return repr(error)
+        return json.dumps(repr(error))
       $refreshtokenfn$ LANGUAGE plpython3u
       ;
 
 
-      CREATE OR REPLACE FUNCTION ${lQR("logout")}(client_id text, client_secret_key text, refresh_token varchar)
+      CREATE OR REPLACE FUNCTION ${lQR("logout")}(client_name text, refresh_token varchar)
       RETURNS text
       AS $logoutfn$
       from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
       try: 
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_openid = KeycloakOpenID(server_url=str(keycloak_prov[0]["api_base_url"]),
-                          client_id=client_id,
-                          realm_name=str(keycloak_prov[0]["user_realm_name"]),
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                         username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                         password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                         realm_name='master',                                     
+                                         verify=True)    
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
+        client_id = keycloak_admin.get_client_id(client_name)
+        response =keycloak_admin.get_client_secrets(client_id)        
+	       client_secret_key = response['value']	
+        keycloak_openid = KeycloakOpenID(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                          client_id=client_name,
+                          realm_name=str('${Deno.env.get('KEYCLOAK_REALM')}'),
                           client_secret_key=client_secret_key)
         keycloak_openid.logout(refresh_token)	
         return "logged out";                 
@@ -121,68 +185,71 @@ export function SQL(
       ;
       
       CREATE OR REPLACE FUNCTION ${lQR("create_user")}(email text, username text, value_password text, is_enabled boolean, firstname character varying, lastname character varying)
-      RETURNS text      
+      RETURNS json      
       AS $createuserFn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try: 
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"]                                 
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'                                 
         new_user = keycloak_admin.create_user({"email":email,
                               "username": username,
                               "enabled": True,
                               "firstName":firstname,
                               "lastName": lastname,
                               "credentials": [{"value": value_password,"type":  "password",}]})
-        return new_user;                 
+        return json.dumps(new_user);                 
       except Exception as error:
-        return repr(error)
+        return json.dumps(repr(error))
       $createuserFn$ LANGUAGE plpython3u     ;
 
 
       CREATE OR REPLACE FUNCTION ${lQR("create_client_role")}(client_name text, role_name text)
-      RETURNS text AS $createclientroleFn$
+      RETURNS json AS $createclientroleFn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try:
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"] 
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
         client_id = keycloak_admin.get_client_id(client_name)                                   
         keycloak_admin.create_client_role(client_id, {'name': role_name, 'clientRole': True})
         role = keycloak_admin.get_client_role(client_id=client_id, role_name=role_name)
-        return role; 
+        return json.dumps(role); 
       except Exception as error:
-        return repr(error)
+        return json.dumps(repr(error))
       $createclientroleFn$ LANGUAGE plpython3u;
 
       CREATE OR REPLACE FUNCTION ${lQR("get_client_role")}(client_name text, role_name text)
-      RETURNS text          
+      RETURNS json          
       AS $getclientrolefn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try:
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"]             
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'             
         client_id = keycloak_admin.get_client_id(client_name)                
         role_id = keycloak_admin.get_client_role(client_id=client_id, role_name=role_name)   
-        return role_id;  
+        return json.dumps(role_id);
       except Exception as error:
-        return repr(error)
+        return json.dumps(repr(error))
       $getclientrolefn$ LANGUAGE plpython3u;
 
       CREATE OR REPLACE FUNCTION ${lQR("create_group")}(group_name text)
@@ -191,13 +258,13 @@ export function SQL(
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try:
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"] 
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
         group = keycloak_admin.create_group({"name": group_name})
         return "group created"; 
       except Exception as error:
@@ -210,84 +277,89 @@ export function SQL(
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try:
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"] 
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
         client_id = keycloak_admin.get_client_id(client_name)    
         user_id_keycloak = keycloak_admin.get_user_id(username)
         role_id = keycloak_admin.get_client_role_id(client_id=client_id, role_name=role_name) 
         keycloak_admin.assign_client_role( user_id=user_id_keycloak, client_id=client_id,roles=[{"id":role_id ,"name": role_name}])  
-        return  "sucess";
+        return  "success";
       except Exception as error:
         return repr(error)
       $assignclientrolefn$ LANGUAGE plpython3u;
 
       CREATE OR REPLACE FUNCTION ${lQR("get_clients")}()
-      RETURNS text      
+      RETURNS json      
       AS $getclientsfn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
-      keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-      keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                        username=str(keycloak_prov[0]["admin_username"]),
-                                        password=str(keycloak_prov[0]["admin_password"]),
-                                        realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+      
+      keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                        username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                        password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                        realm_name='master',                                     
                                         verify=True)    
-      keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"] 
+      keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
       clients = keycloak_admin.get_clients()
-      return clients; 
+      return json.dumps(clients); 
       $getclientsfn$ LANGUAGE plpython3u;
       
       CREATE OR REPLACE FUNCTION ${lQR("get_client_id")}(client_name text)
-      RETURNS text      
+      RETURNS json      
       AS $getclientidfn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
-      keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-      keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                        username=str(keycloak_prov[0]["admin_username"]),
-                                        password=str(keycloak_prov[0]["admin_password"]),
-                                        realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+      
+      keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                        username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                        password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                        realm_name='master',                                     
                                         verify=True)    
-      keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"] 
+      keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
       client_id = keycloak_admin.get_client_id(client_name)
-      return client_id; 
+      return json.dumps(client_id); 
       $getclientidfn$ LANGUAGE plpython3u;
 
-      CREATE OR REPLACE FUNCTION ${lQR("get_roles")}()
-      RETURNS text      
+      CREATE OR REPLACE FUNCTION ${lQR("get_roles")}(client_name text)
+      RETURNS json      
       AS $getrolesfn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
-      keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-      keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                        username=str(keycloak_prov[0]["admin_username"]),
-                                        password=str(keycloak_prov[0]["admin_password"]),
-                                        realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+      
+      keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                        username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                        password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                        realm_name='master',                                     
                                         verify=True)    
-      keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"] 
-      realm_roles = keycloak_admin.get_roles()
-      return realm_roles;
+      keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
+      client_id = keycloak_admin.get_client_id(client_name)
+      realm_roles = keycloak_admin.get_client_roles(client_id=client_id)
+      return json.dumps(realm_roles);
       $getrolesfn$ LANGUAGE plpython3u;
 
       CREATE OR REPLACE FUNCTION ${lQR("get_user_id")}(username text)
-      RETURNS text
+      RETURNS json
       AS $getuseridfn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
-      keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-      keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                        username=str(keycloak_prov[0]["admin_username"]),
-                                        password=str(keycloak_prov[0]["admin_password"]),
-                                        realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+      
+      keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                        username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                        password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                        realm_name='master',                                     
                                         verify=True)    
-      keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"] 
+      keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
       user_id_keycloak = keycloak_admin.get_user_id(username)
-      return user_id_keycloak;
+      return json.dumps(user_id_keycloak);
       $getuseridfn$ LANGUAGE plpython3u;    
 
 
@@ -297,58 +369,60 @@ export function SQL(
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try:
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)
-        keycloak_admin.create_realm(payload={"realm": keycloak_prov[0]["user_realm_name"] }, skip_exists=False)  
-        return  "sucess";
+        keycloak_admin.create_realm(payload={"realm": '${Deno.env.get('KEYCLOAK_REALM')}' }, skip_exists=False)  
+        return  "success";
       except Exception as error:
         return repr(error)
       $createrealmfn$ LANGUAGE plpython3u;
       
 
       CREATE OR REPLACE FUNCTION ${lQR("get_groups")}()
-      RETURNS text
+      RETURNS json
       AS $getgroupsfn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try:
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"]
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
         groups = keycloak_admin.get_groups()
-        return groups; 
+        return json.dumps(groups); 
       except Exception as error:
-        return repr(error)
+        return json.dumps(repr(error))
       $getgroupsfn$ LANGUAGE plpython3u;
       
 
       CREATE OR REPLACE FUNCTION ${lQR("get_client_roles_of_user")}(client_name text, username text)
-      RETURNS text
+      RETURNS json
       AS $getclientrolesofuserfn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try:
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"]
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
         client_id = keycloak_admin.get_client_id(client_name)
         user_id_keycloak = keycloak_admin.get_user_id(username)
         roles_of_user = keycloak_admin.get_client_roles_of_user(user_id=user_id_keycloak, client_id=client_id)
-        return roles_of_user; 
+        return json.dumps(roles_of_user); 
       except Exception as error:
-        return repr(error) 
+        return json.dumps(repr(error)) 
       $getclientrolesofuserfn$ LANGUAGE plpython3u;   
       
       CREATE OR REPLACE FUNCTION ${lQR("create_client")}( client_name text)
@@ -357,14 +431,15 @@ export function SQL(
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try: 
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"]
-        new_client = keycloak_admin.create_client({"id" : client_name},skip_exists=False)
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
+        new_client = keycloak_admin.create_client({"id" : client_name,"directAccessGrantsEnabled" : True },skip_exists=False)
+        keycloak_admin.generate_client_secrets(client_name)
         return "client created";                 
       except Exception as error:
         return repr(error)
@@ -372,68 +447,71 @@ export function SQL(
       ;
 
       CREATE OR REPLACE FUNCTION ${lQR("create_user_with_password")}(email text ,username text, value_password text, is_enabled boolean,firstname varchar, lastname   varchar)
-      RETURNS text
+      RETURNS json
       AS $createuserwithpasswordfn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try: 
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"]
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
         new_user = keycloak_admin.create_user({"email":email,"username": username,"enabled": True,"firstName":firstname,"lastName": lastname, 
                       "credentials": [{"value": value_password,"type": "password",}]},
                         exist_ok=False)
-        return new_user;                 
+        return json.dumps(new_user);                 
       except Exception as error:
-        return repr(error)
+        return json.dumps(repr(error))
       $createuserwithpasswordfn$ LANGUAGE plpython3u
       ;
 
 
       CREATE OR REPLACE FUNCTION ${lQR("update_user")}(username text,firstname varchar )
-      RETURNS text
+      RETURNS json
       AS $updateuserfn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try: 
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"]
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
         user_id_keycloak = keycloak_admin.get_user_id(username)
         response = keycloak_admin.update_user(user_id=user_id_keycloak, 
                                             payload={"firstName": firstname})
-        return response;                 
+        return json.dumps(response);                 
       except Exception as error:
-        return repr(error)
+        return json.dumps(repr(error))
       $updateuserfn$ LANGUAGE plpython3u
       ;
 
       CREATE OR REPLACE FUNCTION ${lQR("update_user_password")}(username text,password varchar )
-      RETURNS text
+      RETURNS json
       AS $updateuserpasswordfn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try: 
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"]
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
         user_id_keycloak = keycloak_admin.get_user_id(username)
         response = keycloak_admin.set_user_password(user_id=user_id_keycloak, password=password, temporary=True)
-        return response;                 
+        return json.dumps(response);                 
       except Exception as error:
-        return repr(error)
+        return json.dumps(repr(error))
       $updateuserpasswordfn$ LANGUAGE plpython3u
       ;
 
@@ -445,13 +523,13 @@ export function SQL(
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try: 
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"]
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
         user_id_keycloak = keycloak_admin.get_user_id(username)
         response = keycloak_admin.send_verify_email(user_id=user_id_keycloak)
         return "Mail send";                 
@@ -462,88 +540,287 @@ export function SQL(
 
 
       CREATE OR REPLACE FUNCTION ${lQR("get_client_role")}(client_name text,role_name text)
-      RETURNS text
+      RETURNS json
       AS $getclientrolefn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try: 
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"]
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
         client_id = keycloak_admin.get_client_id(client_name)
         role = keycloak_admin.get_client_role(client_id=client_id, role_name=role_name)
-        return role;                 
+        return json.dumps(role);                 
       except Exception as error:
-        return repr(error)
+        return json.dumps(repr(error))
       $getclientrolefn$ LANGUAGE plpython3u
       ;
 
       CREATE OR REPLACE FUNCTION ${lQR("get_client_role_id")}(client_name text,role_name text)
-      RETURNS text
+      RETURNS json
       AS $getclientroleidfn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try: 
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"]
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
         client_id = keycloak_admin.get_client_id(client_name)
         role_id  = keycloak_admin.get_client_role_id(client_id=client_id, role_name=role_name)
-        return role_id ;                 
+        return json.dumps(role_id);                 
       except Exception as error:
-        return repr(error)
+        return json.dumps(repr(error))
       $getclientroleidfn$ LANGUAGE plpython3u
       ;
 
       
 
       CREATE OR REPLACE FUNCTION ${lQR("get_groups")}()
-      RETURNS text
+      RETURNS json
       AS $getgroupsfn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try: 
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
+        
+        keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                          realm_name='master',                                     
                                           verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"]
+        keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
         groups = keycloak_admin.get_groups()
-        return groups;                 
+        return json.dumps(groups);                 
       except Exception as error:
-        return repr(error)
+        return json.dumps(repr(error))
       $getgroupsfn$ LANGUAGE plpython3u
       ;
 
-      CREATE OR REPLACE FUNCTION ${lQR("create_subgroup")}(  parent_group_name text , group_name text)
-      RETURNS text
+      CREATE OR REPLACE FUNCTION ${lQR("create_subgroup")}(parent_group_name text, group_name text)
+      RETURNS json      
       AS $createsubgroupfn$
+      import json
       from keycloak import KeycloakOpenID
       from keycloak import KeycloakAdmin
       try: 
-        keycloak_prov = plpy.execute("select * from dcp_confidential.keycloak_provenance")
-        keycloak_admin = KeycloakAdmin(server_url=str(keycloak_prov[0]["api_base_url"]),
-                                          username=str(keycloak_prov[0]["admin_username"]),
-                                          password=str(keycloak_prov[0]["admin_password"]),
-                                          realm_name=str(keycloak_prov[0]["master_realm_name"]),                                     
-                                          verify=True)    
-        keycloak_admin.realm_name = keycloak_prov[0]["user_realm_name"]
-        group = keycloak_admin.create_group(parent = parent_group_name, name=group_name)
-        return group;                 
+          
+          keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                      username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                      password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                      realm_name='master',
+                      verify=True) 
+          keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
+          allgroups = keycloak_admin.get_groups()
+          for s in range(len(allgroups)):
+            if allgroups[s]["name"] == parent_group_name:
+              grp = allgroups[s]["id"]
+          group = keycloak_admin.create_group(parent=  grp, payload={"name": group_name}, skip_exists=False)
+          return json.dumps(group)
       except Exception as error:
-        return repr(error)
+          return repr(error)
       $createsubgroupfn$ LANGUAGE plpython3u
       ;
+
+      CREATE OR REPLACE FUNCTION ${lQR("group_user_add")}(parent_group_name text,user_name text) 
+      RETURNS text       
+      AS $groupuseraddfn$
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
+      try: 
+          
+          keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                      username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                      password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                      realm_name='master',
+                      verify=True) 
+          keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
+          allgroups = keycloak_admin.get_groups()
+          for s in range(len(allgroups)):
+            if allgroups[s]["name"] == parent_group_name:
+              groupid = allgroups[s]["id"]
+          user_id_keycloak = keycloak_admin.get_user_id(user_name)
+          keycloak_admin.group_user_add(user_id=user_id_keycloak, group_id=groupid)
+          return 'user added to group'
+      except Exception as error:
+        return repr(error)
+      $groupuseraddfn$ LANGUAGE plpython3u 
+      ;
+
+      CREATE OR REPLACE FUNCTION ${lQR("group_user_remove")}(parent_group_name text,userid text) 
+      RETURNS text       
+      AS $groupuserremovefn$
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin      
+      try: 
+          
+          keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                      username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                      password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                      realm_name='master',
+                      verify=True) 
+          keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
+          allgroups = keycloak_admin.get_groups()
+          for s in range(len(allgroups)):
+            if allgroups[s]["name"] == parent_group_name:
+              groupid = allgroups[s]["id"]
+          user_id_keycloak = keycloak_admin.get_user_id(userid)
+          keycloak_admin.group_user_remove(user_id=user_id_keycloak, group_id=groupid)
+          return 'user removed from group'
+      except Exception as error:
+          return repr(error)
+      $groupuserremovefn$ LANGUAGE plpython3u 
+      ;
+
+      CREATE OR REPLACE FUNCTION ${lQR("delete_group")}(parent_group_name text) 
+      RETURNS text       
+      AS $deletegroupfn$
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin      
+      try: 
+          
+          keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                      username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                      password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                      realm_name='master',
+                      verify=True) 
+          keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
+          allgroups = keycloak_admin.get_groups()
+          for s in range(len(allgroups)):
+            if allgroups[s]["name"] == parent_group_name:
+              groupid = allgroups[s]["id"]
+          keycloak_admin.delete_group(group_id=groupid)
+          return grp
+      except Exception as error:
+          return repr(error)
+      $deletegroupfn$ LANGUAGE plpython3u 
+      ;
+
+      CREATE OR REPLACE FUNCTION ${lQR("subgroup_user_add")}(group_name text,subgroup_name text, user_name text)
+      RETURNS json
+      LANGUAGE plpython3u
+      AS $subgroupuseraddfn$
+        import json
+        from keycloak import KeycloakOpenID
+        from keycloak import KeycloakAdmin
+        try: 
+            
+            keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                        username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                        password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                        realm_name='master',
+                        verify=True) 
+            keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
+            allgroups = keycloak_admin.get_groups()
+            for s in range(len(allgroups)):
+              if allgroups[s]["name"] == group_name:
+                for t in range(len(allgroups[s]["subGroups"])):
+                  if allgroups[s]["subGroups"][t]["name"] == subgroup_name:
+                    subgroupid = allgroups[s]["subGroups"][t]["id"]
+            user_id_keycloak = keycloak_admin.get_user_id(user_name)
+            keycloak_admin.group_user_add(user_id=user_id_keycloak, group_id=subgroupid)
+            return json.dumps("sucess") 
+        except Exception as error:
+            return json.dumps(repr(error))
+        $subgroupuseraddfn$
+      ;
+
+      CREATE OR REPLACE FUNCTION ${lQR("subgroup_user_remove")}(group_name text,subgroup_name text, user_name text)
+      RETURNS json
+      LANGUAGE plpython3u
+     AS $subgroupuserremovefun$
+        import json
+        from keycloak import KeycloakOpenID
+        from keycloak import KeycloakAdmin
+        try: 
+            
+            keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                        username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                        password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                        realm_name='master',
+                        verify=True) 
+            keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
+            allgroups = keycloak_admin.get_groups()
+            for s in range(len(allgroups)):
+              if allgroups[s]["name"] == group_name:
+                for t in range(len(allgroups[s]["subGroups"])):
+                  if allgroups[s]["subGroups"][t]["name"] == subgroup_name:
+                    subgroupid = allgroups[s]["subGroups"][t]["id"]
+            user_id_keycloak = keycloak_admin.get_user_id(user_name)
+            keycloak_admin.group_user_remove(user_id=user_id_keycloak, group_id=subgroupid)
+            return json.dumps("sucess") 
+        except Exception as error:
+            return json.dumps(repr(error))
+        $subgroupuserremovefun$
+     ;
+
+      CREATE OR REPLACE FUNCTION  ${lQR("introspect")}(client_name text, access_token text)
+      RETURNS json
+      LANGUAGE plpython3u
+      AS $introspectfn$
+        import json
+        from keycloak import KeycloakOpenID
+        from keycloak import KeycloakAdmin
+        try: 
+          
+          keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                          username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                          password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                          realm_name='master',
+                          verify=True)    
+          keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
+          client_id = keycloak_admin.get_client_id(client_name)
+          response =keycloak_admin.get_client_secrets(client_id)        
+          client_secret_key = response['value']
+          keycloak_openid = KeycloakOpenID(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                          client_id=client_name,
+                          realm_name=str('${Deno.env.get('KEYCLOAK_REALM')}'),
+                          client_secret_key=client_secret_key) 
+          token_info = keycloak_openid.introspect(access_token)
+          return json.dumps(token_info)                 
+        except Exception as error:
+          return json.dumps(repr(error))
+        $introspectfn$
+      ;
+      CREATE OR REPLACE FUNCTION ${lQR("get_users")}()
+      RETURNS json
+      LANGUAGE plpython3u
+      AS $getusersfn$
+         import json
+         from keycloak import KeycloakOpenID
+         from keycloak import KeycloakAdmin
+         try:           
+           keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+              username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+              password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+              realm_name='master',
+              verify=True)    
+           keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
+           users = keycloak_admin.get_users({})
+           return json.dumps(users)                 
+         except Exception as error:
+           return json.dumps(repr(error))
+         $getusersfn$
+     ;
+     
+     CREATE OR REPLACE VIEW ${lQR("get_userslist")}
+      AS SELECT * FROM ${lQR("get_users")}();
+
+      CREATE OR REPLACE VIEW ${lQR("get_clientslist")}
+      AS SELECT * FROM ${lQR("get_clients")}();
+      
+     
+     CREATE OR REPLACE VIEW ${lQR("get_groupslist")}
+      AS SELECT * FROM ${lQR("get_groups")}();
 
 
     END;
@@ -577,6 +854,319 @@ export function SQL(
         DROP FUNCTION IF EXISTS ${lQR("create_group")};        
 		    DROP FUNCTION IF EXISTS ${lQR("create_subgroup")};
         DROP FUNCTION IF EXISTS ${lQR("get_client_roles_of_user")};
+        DROP TABLE IF EXISTS ${cQR("keycloak_provenance")} CASCADE;
+    END;
+    $$ LANGUAGE PLPGSQL;
+
+    CREATE OR REPLACE FUNCTION ${lcf.unitTest(state).qName}() RETURNS SETOF TEXT AS $$
+    BEGIN 
+        RETURN NEXT has_table('${schemas.confidential.name}', 'keycloak_provenance');
+    END;
+    $$ LANGUAGE plpgsql;`;
+}
+export function SQLAnonymous(
+  ctx: SQLa.DcpInterpolationContext,
+  options?: SQLa.InterpolationContextStateOptions,
+): SQLa.DcpInterpolationResult {
+  const state = ctx.prepareState(
+    ctx.prepareTsModuleExecution(import.meta.url),
+    options ||
+      {
+        schema: schemas.keycloakAnonymous,
+        extensions: [schemas.extensions.ltreeExtn, schemas.extensions.httpExtn],
+      },
+  );
+  const [sQR, cQR, exQR, ctxQR, kaQR] = state.observableQR(
+    state.schema,
+    schemas.confidential,
+    schemas.extensions,
+    schemas.context,
+    schemas.keycloakAnonymous,
+  );
+
+  const { lcFunctions: lcf } = state.schema;
+
+  // deno-fmt-ignore
+  return SQLa.SQL(ctx, state)`
+    CREATE OR REPLACE PROCEDURE ${lcf.constructIdempotent(state).qName}() AS $$
+    BEGIN
+    
+     CREATE OR REPLACE FUNCTION ${kaQR("get_token")}(client_name text, username text, passwords text)
+     RETURNS json
+     AS $gettokenfn$
+     import json
+     from keycloak import KeycloakOpenID
+     from keycloak import KeycloakAdmin
+     try: 
+       
+       keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                        username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                        password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                        realm_name='master',                                     
+                                        verify=True)    
+       keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
+       client_id = keycloak_admin.get_client_id(client_name)
+       response =keycloak_admin.get_client_secrets(client_id)        
+       client_secret_key = response['value']
+       keycloak_openid = KeycloakOpenID(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                         client_id=client_name,
+                         realm_name=str('${Deno.env.get('KEYCLOAK_REALM')}'),
+                         client_secret_key=client_secret_key)        
+       token = keycloak_openid.token(username, passwords)        
+       return json.dumps(token)                 
+     except Exception as error:
+       return json.dumps(repr(error))
+     $gettokenfn$ LANGUAGE plpython3u
+     ;
+
+     CREATE OR REPLACE FUNCTION ${kaQR("refresh_token")}(client_name text, refresh_token varchar)
+     RETURNS json
+     AS $refreshtokenfn$
+     import json
+     from keycloak import KeycloakOpenID
+     from keycloak import KeycloakAdmin
+     try: 
+       
+       keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                        username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                        password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                        realm_name='master',                                     
+                                        verify=True)    
+       keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
+       client_id = keycloak_admin.get_client_id(client_name)
+       response =keycloak_admin.get_client_secrets(client_id)        
+       client_secret_key = response['value']
+       keycloak_openid = KeycloakOpenID(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                         client_id=client_name,
+                         realm_name=str('${Deno.env.get('KEYCLOAK_REALM')}'),
+                         client_secret_key=client_secret_key)
+       token = keycloak_openid.refresh_token(refresh_token)	
+       return json.dumps(token);                 
+     except Exception as error:
+       return json.dumps(repr(error))
+     $refreshtokenfn$ LANGUAGE plpython3u
+     ;
+
+     CREATE OR REPLACE FUNCTION ${kaQR("introspect")}(client_name text, access_token text)
+     RETURNS json
+     LANGUAGE plpython3u
+     AS $function$
+       import json
+       from keycloak import KeycloakOpenID
+       from keycloak import KeycloakAdmin
+       try: 
+         
+         keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                         username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                         password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                         realm_name='master',
+                         verify=True)    
+         keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
+         client_id = keycloak_admin.get_client_id(client_name)
+         response =keycloak_admin.get_client_secrets(client_id)        
+         client_secret_key = response['value']
+         keycloak_openid = KeycloakOpenID(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                         client_id=client_name,
+                         realm_name=str('${Deno.env.get('KEYCLOAK_REALM')}'),
+                         client_secret_key=client_secret_key) 
+         token_info = keycloak_openid.introspect(access_token)
+         return json.dumps(token_info)                 
+       except Exception as error:
+         return json.dumps(repr(error))
+       $function$
+     ;
+
+     CREATE OR REPLACE FUNCTION ${kaQR("send_verify_email")}(username text)
+     RETURNS json
+     AS $sendverifyemailfn$
+     import json
+     from keycloak import KeycloakOpenID
+     from keycloak import KeycloakAdmin
+     try: 
+       
+       keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                         username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                         password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                         realm_name='master',                                     
+                                         verify=True)    
+       keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
+       user_id_keycloak = keycloak_admin.get_user_id(username)
+       response = keycloak_admin.send_verify_email(user_id=user_id_keycloak)
+       return json.dumps(response);                 
+     except Exception as error:
+       return json.dumps(repr(error))
+     $sendverifyemailfn$ LANGUAGE plpython3u
+     ;
+
+   CREATE OR REPLACE FUNCTION ${kaQR("get_tokenotp")}(client_name text, username text, passwords text,totp_code text)
+   RETURNS json
+   AS $gettokenfn$
+   import json
+   from keycloak import KeycloakOpenID
+   from keycloak import KeycloakAdmin
+   try:       
+     keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                      username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                      password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                      realm_name='master',                                     
+                                      verify=True)    
+     keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
+     client_id = keycloak_admin.get_client_id(client_name)
+     response =keycloak_admin.get_client_secrets(client_id)        
+     client_secret_key = response['value']
+     keycloak_openid = KeycloakOpenID(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                       client_id=client_name,
+                       realm_name=str('${Deno.env.get('KEYCLOAK_REALM')}'),
+                       client_secret_key=client_secret_key)        
+     token = keycloak_openid.token(username, passwords, totp=totp_code)        
+     return json.dumps(token)                 
+   except Exception as error:
+     return json.dumps(repr(error))
+   $gettokenfn$ LANGUAGE plpython3u
+   ;
+
+   
+     CREATE OR REPLACE FUNCTION ${kaQR("forgot_password")}(username text)
+     RETURNS json      
+     AS $forgotpasswordfn$
+       import json
+       from keycloak import KeycloakOpenID
+       from keycloak import KeycloakAdmin
+       try:           
+         keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                 username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                 password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                 realm_name='master',                                     
+                 verify=True)    
+         keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
+         user_id_keycloak = keycloak_admin.get_user_id(username)
+         response = keycloak_admin.send_update_account(user_id=user_id_keycloak,payload=["UPDATE_PASSWORD"])
+         return json.dumps(response)                 
+       except Exception as error:
+         return json.dumps(repr(error))
+       $forgotpasswordfn$ LANGUAGE plpython3u ;
+
+     
+     
+     CREATE OR REPLACE FUNCTION ${kaQR("create_user")}(email text, username text, value_password text, is_enabled boolean, firstname character varying, lastname character varying)
+     RETURNS json      
+     AS $createuserFn$
+     import json
+     from keycloak import KeycloakOpenID
+     from keycloak import KeycloakAdmin
+     try: 
+       
+       keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                         username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                         password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                         realm_name='master',                                     
+                                         verify=True)    
+       keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'                                 
+       new_user = keycloak_admin.create_user({"email":email,
+                             "username": username,
+                             "enabled": True,
+                             "firstName":firstname,
+                             "lastName": lastname,
+                             "credentials": [{"value": value_password,"type":  "password",}]})
+       return json.dumps(new_user);                 
+     except Exception as error:
+       return json.dumps(repr(error))
+     $createuserFn$ LANGUAGE plpython3u     ;
+
+
+     CREATE OR REPLACE FUNCTION ${kaQR("create_client_role")}(client_name text, role_name text)
+     RETURNS json 
+     AS $createclientroleFn$
+     import json
+     from keycloak import KeycloakOpenID
+     from keycloak import KeycloakAdmin
+     try:
+       
+       keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                         username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                         password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                         realm_name='master',                                     
+                                         verify=True)    
+       keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
+       client_id = keycloak_admin.get_client_id(client_name)                                   
+       keycloak_admin.create_client_role(client_id, {'name': role_name, 'clientRole': True})
+       role = keycloak_admin.get_client_role(client_id=client_id, role_name=role_name)
+       return json.dumps(role); 
+     except Exception as error:
+       return json.dumps(repr(error))
+     $createclientroleFn$ LANGUAGE plpython3u;
+
+     CREATE OR REPLACE FUNCTION ${kaQR("assign_client_role")}(username text , client_name text, role_name text)
+     RETURNS text
+     AS $assignclientrolefn$
+     from keycloak import KeycloakOpenID
+     from keycloak import KeycloakAdmin
+     try:
+       
+       keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                         username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                         password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                         realm_name='master',
+                                         verify=True)    
+       keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}' 
+       client_id = keycloak_admin.get_client_id(client_name)    
+       user_id_keycloak = keycloak_admin.get_user_id(username)
+       role_id = keycloak_admin.get_client_role_id(client_id=client_id, role_name=role_name) 
+       keycloak_admin.assign_client_role( user_id=user_id_keycloak, client_id=client_id,roles=[{"id":role_id ,"name": role_name}])  
+       return  "success";
+     except Exception as error:
+       return json.dumps(repr(error))
+     $assignclientrolefn$ LANGUAGE plpython3u;
+
+     CREATE OR REPLACE FUNCTION ${kaQR("create_realm")}(realm_name text)
+     RETURNS text
+     AS $createrealmfn$
+     from keycloak import KeycloakOpenID
+     from keycloak import KeycloakAdmin
+     try:
+       
+       keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                         username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                         password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                         realm_name='master',                                     
+                                         verify=True)
+       keycloak_admin.create_realm(payload={"realm": realm_name,"enabled": True  }, skip_exists=False)  
+       return  "success";
+     except Exception as error:
+       return json.dumps(repr(error))
+     $createrealmfn$ LANGUAGE plpython3u;
+
+     CREATE OR REPLACE FUNCTION ${kaQR("create_client")}( client_name text)
+     RETURNS text
+     AS $createclientfn$
+     from keycloak import KeycloakOpenID
+     from keycloak import KeycloakAdmin
+     try: 
+       
+       keycloak_admin = KeycloakAdmin(server_url='${Deno.env.get('KEYCLOAK_API_URL')}',
+                                         username='${Deno.env.get('KEYCLOAK_ADMIN_USER')}',
+                                         password='${Deno.env.get('KEYCLOAK_ADMIN_PASSWORD')}',
+                                         realm_name='master',                                     
+                                         verify=True)    
+       keycloak_admin.realm_name = '${Deno.env.get('KEYCLOAK_REALM')}'
+       new_client = keycloak_admin.create_client({"id" : client_name,"directAccessGrantsEnabled" : True },skip_exists=False)
+       keycloak_admin.generate_client_secrets(client_name)
+       return "client created";                 
+     except Exception as error:
+       return json.dumps(repr(error))
+     $createclientfn$ LANGUAGE plpython3u
+     ;
+
+
+
+
+    END;
+    $$ LANGUAGE PLPGSQL;
+
+    CREATE OR REPLACE PROCEDURE ${lcf.destroyIdempotent(state).qName}() AS $$
+    BEGIN
+        DROP FUNCTION IF EXISTS ${lcf.unitTest(state).qName}();        
+        
         DROP TABLE IF EXISTS ${cQR("keycloak_provenance")} CASCADE;
     END;
     $$ LANGUAGE PLPGSQL;
