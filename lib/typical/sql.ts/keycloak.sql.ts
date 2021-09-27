@@ -65,7 +65,7 @@ export function SQLShielded(
         response =keycloak_admin.get_client_secrets(client_id)        
 	       client_secret_key = response['value']
         keycloak_openid = KeycloakOpenID(server_url=api_base_url,
-                          client_id=client_name,
+                          client_id=client_id,
                           realm_name=user_realm_name,
                           client_secret_key=client_secret_key)        
         token = keycloak_openid.token(username, passwords)        
@@ -115,7 +115,7 @@ export function SQLShielded(
         response =keycloak_admin.get_client_secrets(client_id)        
 	       client_secret_key = response['value']	
         keycloak_openid = KeycloakOpenID(server_url=api_base_url,
-                          client_id=client_name,
+                          client_id=client_id,
                           realm_name=user_realm_name,
                           client_secret_key=client_secret_key)        
         userinfo = keycloak_openid.userinfo(access_token)	
@@ -142,7 +142,7 @@ export function SQLShielded(
         response =keycloak_admin.get_client_secrets(client_id)        
 	       client_secret_key = response['value']
         keycloak_openid = KeycloakOpenID(server_url=api_base_url,
-                          client_id=client_name,
+                          client_id=client_id,
                           realm_name=user_realm_name,
                           client_secret_key=client_secret_key)
         token = keycloak_openid.refresh_token(refresh_token)	
@@ -169,7 +169,7 @@ export function SQLShielded(
         response =keycloak_admin.get_client_secrets(client_id)        
 	       client_secret_key = response['value']	
         keycloak_openid = KeycloakOpenID(server_url=api_base_url,
-                          client_id=client_name,
+                          client_id=client_id,
                           realm_name=user_realm_name,
                           client_secret_key=client_secret_key)
         keycloak_openid.logout(refresh_token)	
@@ -755,7 +755,7 @@ export function SQLShielded(
           response =keycloak_admin.get_client_secrets(client_id)        
           client_secret_key = response['value']
           keycloak_openid = KeycloakOpenID(server_url=api_base_url,
-                          client_id=client_name,
+                          client_id=client_id,
                           realm_name=user_realm_name,
                           client_secret_key=client_secret_key) 
           token_info = keycloak_openid.introspect(access_token)
@@ -942,7 +942,7 @@ export function SQLAnonymous(
        response =keycloak_admin.get_client_secrets(client_id)        
        client_secret_key = response['value']
        keycloak_openid = KeycloakOpenID(server_url=api_base_url,
-                         client_id=client_name,
+                         client_id=client_id,
                          realm_name=user_realm_name,
                          client_secret_key=client_secret_key)        
        token = keycloak_openid.token(username, passwords)        
@@ -970,7 +970,7 @@ export function SQLAnonymous(
        response =keycloak_admin.get_client_secrets(client_id)        
        client_secret_key = response['value']
        keycloak_openid = KeycloakOpenID(server_url=api_base_url,
-                         client_id=client_name,
+                         client_id=client_id,
                          realm_name=user_realm_name,
                          client_secret_key=client_secret_key)
        token = keycloak_openid.refresh_token(refresh_token)	
@@ -1021,7 +1021,7 @@ export function SQLAnonymous(
      response =keycloak_admin.get_client_secrets(client_id)        
      client_secret_key = response['value']
      keycloak_openid = KeycloakOpenID(server_url=api_base_url,
-                       client_id=client_name,
+                       client_id=client_id,
                        realm_name=user_realm_name,
                        client_secret_key=client_secret_key)        
      token = keycloak_openid.token(username, passwords, totp=totp_code)        
