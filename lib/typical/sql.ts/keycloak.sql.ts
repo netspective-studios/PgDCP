@@ -13,10 +13,8 @@ export function SQLShielded(
         extensions: [schemas.extensions.ltreeExtn, schemas.extensions.httpExtn],
       },
   );
-  const [sQR, cQR, exQR, ctxQR, lQR] = state.observableQR(
-    state.schema,
+  const [cQR, ctxQR, lQR] = state.observableQR(
     schemas.confidential,
-    schemas.extensions,
     schemas.context,
     schemas.keycloak,
   );
