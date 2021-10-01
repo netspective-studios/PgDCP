@@ -43,36 +43,11 @@ export function SQLShielded(
       );    
     END;
     $$ LANGUAGE PLPGSQL;
-
+    DROP FUNCTION IF EXISTS ${lQR("create_user")} CASCADE;
     CREATE OR REPLACE PROCEDURE ${lcf.constructIdempotent(state).qName}() AS $$
     BEGIN
-    CREATE OR REPLACE FUNCTION ${lQR("get_token")}(username text, passwords text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text  )
-      RETURNS json
-      AS $gettokenfn$
-      import json
-      from keycloak import KeycloakOpenID
-      from keycloak import KeycloakAdmin
-      try: 
-        keycloak_admin = KeycloakAdmin(server_url=api_base_url,
-                                         username=admin_username,
-                                         password=admin_password,
-                                         realm_name=master_realm,                                     
-                                         verify=True)    
-        keycloak_admin.realm_name = user_realm_name
-        client_id = keycloak_admin.get_client_id(client_name)
-        response =keycloak_admin.get_client_secrets(client_id)        
-	       client_secret_key = response['value']
-        keycloak_openid = KeycloakOpenID(server_url=api_base_url,
-                          client_id=client_id,
-                          realm_name=user_realm_name,
-                          client_secret_key=client_secret_key)        
-        token = keycloak_openid.token(username, passwords)        
-        return json.dumps(token)                 
-      except Exception as error:
-        return json.dumps(repr(error))
-      $gettokenfn$ LANGUAGE plpython3u
-      ;
-
+    
+    DROP FUNCTION IF EXISTS ${lQR("get_client_secret")} CASCADE;
     CREATE OR REPLACE FUNCTION ${lQR("get_client_secret")}(api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text  )
     RETURNS json    
    AS $getclientsecretfn$
@@ -94,8 +69,8 @@ export function SQLShielded(
      $getclientsecretfn$ LANGUAGE plpython3u
    ; 
 
-    
-
+  
+   DROP FUNCTION IF EXISTS ${lQR("user_info")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("user_info")}(access_token text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text  )
       RETURNS json
       AS $userinfofn$
@@ -110,8 +85,8 @@ export function SQLShielded(
                                          verify=True)    
         keycloak_admin.realm_name = user_realm_name
         client_id = keycloak_admin.get_client_id(client_name)
-        response =keycloak_admin.get_client_secrets(client_id)        
-	       client_secret_key = response['value']	
+        response =keycloak_admin.get_client_secrets(client_id)
+        client_secret_key = response['value']	
         keycloak_openid = KeycloakOpenID(server_url=api_base_url,
                           client_id=client_id,
                           realm_name=user_realm_name,
@@ -122,7 +97,7 @@ export function SQLShielded(
         return json.dumps(repr(error))
       $userinfofn$ LANGUAGE plpython3u
       ;
-
+      DROP FUNCTION IF EXISTS ${lQR("refresh_token")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("refresh_token")}(refresh_token varchar,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text  )
       RETURNS json
       AS $refreshtokenfn$
@@ -137,8 +112,8 @@ export function SQLShielded(
                                          verify=True)    
         keycloak_admin.realm_name = user_realm_name
         client_id = keycloak_admin.get_client_id(client_name)
-        response =keycloak_admin.get_client_secrets(client_id)        
-	       client_secret_key = response['value']
+        response =keycloak_admin.get_client_secrets(client_id)
+        client_secret_key = response['value']
         keycloak_openid = KeycloakOpenID(server_url=api_base_url,
                           client_id=client_id,
                           realm_name=user_realm_name,
@@ -150,7 +125,7 @@ export function SQLShielded(
       $refreshtokenfn$ LANGUAGE plpython3u
       ;
 
-
+      DROP FUNCTION IF EXISTS ${lQR("logout")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("logout")}(refresh_token varchar,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text  )
       RETURNS text
       AS $logoutfn$
@@ -164,8 +139,8 @@ export function SQLShielded(
                                          verify=True)    
         keycloak_admin.realm_name = user_realm_name
         client_id = keycloak_admin.get_client_id(client_name)
-        response =keycloak_admin.get_client_secrets(client_id)        
-	       client_secret_key = response['value']	
+        response =keycloak_admin.get_client_secrets(client_id)
+        client_secret_key = response['value']	
         keycloak_openid = KeycloakOpenID(server_url=api_base_url,
                           client_id=client_id,
                           realm_name=user_realm_name,
@@ -176,9 +151,9 @@ export function SQLShielded(
         return repr(error)
       $logoutfn$ LANGUAGE plpython3u
       ;
-      
+      DROP FUNCTION IF EXISTS ${lQR("create_user")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("create_user")}(email text, username text, value_password text,  firstname character varying, lastname character varying,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text  )
-      RETURNS json      
+      RETURNS text      
       AS $createuserFn$
       import json
       from keycloak import KeycloakOpenID
@@ -196,12 +171,12 @@ export function SQLShielded(
                               "firstName":firstname,
                               "lastName": lastname,
                               "credentials": [{"value": value_password,"type":  "password",}]})
-        return json.dumps(new_user);                 
+        return new_user;                 
       except Exception as error:
-        return json.dumps(repr(error))
+        return repr(error)
       $createuserFn$ LANGUAGE plpython3u     ;
 
-
+      DROP FUNCTION IF EXISTS ${lQR("create_client_role")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("create_client_role")}(role_name text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text  )
       RETURNS json AS $createclientroleFn$
       import json
@@ -222,6 +197,7 @@ export function SQLShielded(
         return json.dumps(repr(error))
       $createclientroleFn$ LANGUAGE plpython3u;
 
+      DROP FUNCTION IF EXISTS ${lQR("get_client_role")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("get_client_role")}(role_name text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text  )
       RETURNS json          
       AS $getclientrolefn$
@@ -242,6 +218,7 @@ export function SQLShielded(
         return json.dumps(repr(error))
       $getclientrolefn$ LANGUAGE plpython3u;
 
+      DROP FUNCTION IF EXISTS ${lQR("create_group")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("create_group")}(group_name text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text  )
       RETURNS text      
       AS $creategroupfn$
@@ -255,11 +232,39 @@ export function SQLShielded(
                                           verify=True)    
         keycloak_admin.realm_name = user_realm_name
         group = keycloak_admin.create_group({"name": group_name})
-        return "group created"; 
+        allgroups = keycloak_admin.get_groups()
+        for s in range(len(allgroups)):
+            if allgroups[s]["name"] == group_name:
+              groupid = allgroups[s]["id"]
+        return groupid; 
       except Exception as error:
         return repr(error)
       $creategroupfn$ LANGUAGE plpython3u;
 
+      DROP FUNCTION IF EXISTS ${lQR("create_group_service")} CASCADE;
+      CREATE OR REPLACE FUNCTION ${lQR("create_group_service")}(group_name text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text  )
+      RETURNS text      
+      AS $creategroupfn$
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
+      try:        
+        keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                          username=admin_username,
+                                          password=admin_password,
+                                          realm_name=master_realm,                                     
+                                          verify=True)    
+        keycloak_admin.realm_name = user_realm_name
+        group = keycloak_admin.create_group({"name": group_name,"attributes":{"Service":["True"]}})
+        allgroups = keycloak_admin.get_groups()
+        for s in range(len(allgroups)):
+            if allgroups[s]["name"] == group_name:
+              groupid = allgroups[s]["id"]
+        return groupid; 
+      except Exception as error:
+        return repr(error)
+      $creategroupfn$ LANGUAGE plpython3u;
+
+      DROP FUNCTION IF EXISTS ${lQR("assign_client_role")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("assign_client_role")}(username text ,  role_name text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text  )
       RETURNS text
       AS $assignclientrolefn$
@@ -281,6 +286,7 @@ export function SQLShielded(
         return repr(error)
       $assignclientrolefn$ LANGUAGE plpython3u;
 
+      DROP FUNCTION IF EXISTS ${lQR("get_clients")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("get_clients")}(api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
       RETURNS json      
       AS $getclientsfn$
@@ -297,6 +303,7 @@ export function SQLShielded(
       return json.dumps(clients); 
       $getclientsfn$ LANGUAGE plpython3u;
       
+      DROP FUNCTION IF EXISTS ${lQR("get_client_id")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("get_client_id")}(api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text )
       RETURNS json      
       AS $getclientidfn$
@@ -313,6 +320,7 @@ export function SQLShielded(
       return json.dumps(client_id); 
       $getclientidfn$ LANGUAGE plpython3u;
 
+      DROP FUNCTION IF EXISTS ${lQR("get_roles")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("get_roles")}(api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text ,client_name text)
       RETURNS json      
       AS $getrolesfn$
@@ -330,8 +338,9 @@ export function SQLShielded(
       return json.dumps(realm_roles);
       $getrolesfn$ LANGUAGE plpython3u;
 
+      DROP FUNCTION IF EXISTS ${lQR("get_user_id")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("get_user_id")}(username text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
-      RETURNS json
+      RETURNS text
       AS $getuseridfn$
       import json
       from keycloak import KeycloakOpenID
@@ -343,10 +352,10 @@ export function SQLShielded(
                                         verify=True)    
       keycloak_admin.realm_name = user_realm_name
       user_id_keycloak = keycloak_admin.get_user_id(username)
-      return json.dumps(user_id_keycloak);
+      return user_id_keycloak;
       $getuseridfn$ LANGUAGE plpython3u;    
 
-
+      DROP FUNCTION IF EXISTS ${lQR("create_realm")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("create_realm")}(realm_name text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text  )
       RETURNS text
       AS $createrealmfn$
@@ -364,7 +373,7 @@ export function SQLShielded(
         return repr(error)
       $createrealmfn$ LANGUAGE plpython3u;
       
-
+      DROP FUNCTION IF EXISTS ${lQR("get_groups")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("get_groups")}(api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
       RETURNS json
       AS $getgroupsfn$
@@ -384,7 +393,7 @@ export function SQLShielded(
         return json.dumps(repr(error))
       $getgroupsfn$ LANGUAGE plpython3u;
       
-
+      DROP FUNCTION IF EXISTS ${lQR("get_client_roles_of_user")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("get_client_roles_of_user")}( username text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text )
       RETURNS json
       AS $getclientrolesofuserfn$
@@ -406,6 +415,7 @@ export function SQLShielded(
         return json.dumps(repr(error)) 
       $getclientrolesofuserfn$ LANGUAGE plpython3u;   
       
+      DROP FUNCTION IF EXISTS ${lQR("create_client")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("create_client")}( api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text )
       RETURNS text
       AS $createclientfn$
@@ -425,7 +435,7 @@ export function SQLShielded(
         return repr(error)
       $createclientfn$ LANGUAGE plpython3u
       ;
-
+      DROP FUNCTION IF EXISTS ${lQR("create_user_with_password")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("create_user_with_password")}(email text ,username text, value_password text, is_enabled boolean,firstname varchar, lastname   varchar,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
       RETURNS json
       AS $createuserwithpasswordfn$
@@ -448,7 +458,7 @@ export function SQLShielded(
       $createuserwithpasswordfn$ LANGUAGE plpython3u
       ;
 
-
+      DROP FUNCTION IF EXISTS ${lQR("update_user")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("update_user")}(username text,firstname varchar ,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
       RETURNS json
       AS $updateuserfn$
@@ -470,7 +480,7 @@ export function SQLShielded(
         return json.dumps(repr(error))
       $updateuserfn$ LANGUAGE plpython3u
       ;
-
+      DROP FUNCTION IF EXISTS ${lQR("update_user_password")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("update_user_password")}(username text,password varchar,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text  )
       RETURNS json
       AS $updateuserpasswordfn$
@@ -493,7 +503,7 @@ export function SQLShielded(
       ;
 
 
-
+      DROP FUNCTION IF EXISTS ${lQR("send_verify_email")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("send_verify_email")}(username text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
       RETURNS text
       AS $sendverifyemailfn$
@@ -514,7 +524,7 @@ export function SQLShielded(
       $sendverifyemailfn$ LANGUAGE plpython3u
       ;
 
-
+      DROP FUNCTION IF EXISTS ${lQR("get_client_role")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("get_client_role")}(role_name text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text ,client_name text)
       RETURNS json
       AS $getclientrolefn$
@@ -535,7 +545,7 @@ export function SQLShielded(
         return json.dumps(repr(error))
       $getclientrolefn$ LANGUAGE plpython3u
       ;
-
+      DROP FUNCTION IF EXISTS ${lQR("get_client_role_id")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("get_client_role_id")}(role_name text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text )
       RETURNS json
       AS $getclientroleidfn$
@@ -558,7 +568,7 @@ export function SQLShielded(
       ;
 
       
-
+      DROP FUNCTION IF EXISTS ${lQR("get_groups")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("get_groups")}(api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
       RETURNS json
       AS $getgroupsfn$
@@ -579,8 +589,9 @@ export function SQLShielded(
       $getgroupsfn$ LANGUAGE plpython3u
       ;
 
+      DROP FUNCTION IF EXISTS ${lQR("create_subgroup")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("create_subgroup")}(parent_group_name text, group_name text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
-      RETURNS json      
+      RETURNS text      
       AS $createsubgroupfn$
       import json
       from keycloak import KeycloakOpenID
@@ -597,12 +608,12 @@ export function SQLShielded(
           if allgroups[s]["name"] == parent_group_name:
             grp = allgroups[s]["id"]
         group = keycloak_admin.create_group(parent=  grp, payload={"name": group_name}, skip_exists=False)
-        return json.dumps(group)
+        return group['id']
       except Exception as error:
         return repr(error)
       $createsubgroupfn$ LANGUAGE plpython3u
       ;
-
+      DROP FUNCTION IF EXISTS ${lQR("group_user_add")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("group_user_add")}(parent_group_name text,user_name text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text ) 
       RETURNS text       
       AS $groupuseraddfn$
@@ -626,7 +637,7 @@ export function SQLShielded(
         return repr(error)
       $groupuseraddfn$ LANGUAGE plpython3u 
       ;
-
+      DROP FUNCTION IF EXISTS ${lQR("group_user_remove")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("group_user_remove")}(parent_group_name text,userid text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text ) 
       RETURNS text       
       AS $groupuserremovefn$
@@ -651,7 +662,7 @@ export function SQLShielded(
           return repr(error)
       $groupuserremovefn$ LANGUAGE plpython3u 
       ;
-
+      DROP FUNCTION IF EXISTS ${lQR("delete_group")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("delete_group")}(parent_group_name text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text ) 
       RETURNS text       
       AS $deletegroupfn$
@@ -675,7 +686,7 @@ export function SQLShielded(
           return repr(error)
       $deletegroupfn$ LANGUAGE plpython3u 
       ;
-
+      DROP FUNCTION IF EXISTS ${lQR("subgroup_user_add")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("subgroup_user_add")}(group_name text,subgroup_name text, user_name text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
       RETURNS json
       LANGUAGE plpython3u
@@ -704,7 +715,7 @@ export function SQLShielded(
             return json.dumps(repr(error))
         $subgroupuseraddfn$
       ;
-
+      DROP FUNCTION IF EXISTS ${lQR("subgroup_user_remove")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("subgroup_user_remove")}(group_name text,subgroup_name text, user_name text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
       RETURNS json
       LANGUAGE plpython3u
@@ -733,7 +744,7 @@ export function SQLShielded(
             return json.dumps(repr(error))
         $subgroupuserremovefun$
      ;
-
+     DROP FUNCTION IF EXISTS ${lQR("introspect")} CASCADE;
       CREATE OR REPLACE FUNCTION  ${lQR("introspect")}(access_token text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text ,client_name text)
       RETURNS json
       LANGUAGE plpython3u
@@ -750,7 +761,7 @@ export function SQLShielded(
                           verify=True)    
           keycloak_admin.realm_name = user_realm_name
           client_id = keycloak_admin.get_client_id(client_name)
-          response =keycloak_admin.get_client_secrets(client_id)        
+          response =keycloak_admin.get_client_secrets(client_id)
           client_secret_key = response['value']
           keycloak_openid = KeycloakOpenID(server_url=api_base_url,
                           client_id=client_id,
@@ -762,6 +773,7 @@ export function SQLShielded(
           return json.dumps(repr(error))
         $introspectfn$
       ;
+      DROP FUNCTION IF EXISTS ${lQR("get_users")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("get_users")}(api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
       RETURNS json
       LANGUAGE plpython3u
@@ -783,6 +795,8 @@ export function SQLShielded(
            return json.dumps(repr(error))
          $getusersfn$
      ;
+
+     DROP FUNCTION IF EXISTS ${lQR("update_user_git_token")} CASCADE;
      CREATE OR REPLACE FUNCTION ${lQR("update_user_git_token")}(username text, git_token text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
      RETURNS json
      AS $usergittokenfn$
@@ -806,7 +820,7 @@ export function SQLShielded(
          return json.dumps(repr(error))
        $usergittokenfn$ LANGUAGE plpython3u
      ;
-
+     DROP FUNCTION IF EXISTS ${lQR("user_details")} CASCADE;
      CREATE OR REPLACE FUNCTION ${lQR("user_details")}(username text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
      RETURNS json
     AS $function$
@@ -830,6 +844,7 @@ export function SQLShielded(
        LANGUAGE plpython3u
     ;
 
+    DROP FUNCTION IF EXISTS ${lQR("user_gittoken")} CASCADE;
     CREATE OR REPLACE FUNCTION ${lQR("user_gittoken")} (username text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
     RETURNS json
     AS $usergittokenfn$
@@ -852,7 +867,52 @@ export function SQLShielded(
       return json.dumps(repr(error))
     $usergittokenfn$  LANGUAGE plpython3u;  
 
-
+    DROP FUNCTION IF EXISTS ${lQR("get_groupid")} CASCADE;
+    CREATE OR REPLACE FUNCTION ${lQR("get_groupid")}(group_name text, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text)
+    RETURNS text
+   AS $getgroupidFn$
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
+      try:        
+        keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                          username=admin_username,
+                                          password=admin_password,
+                                          realm_name=master_realm,                                     
+                                          verify=True)    
+        keycloak_admin.realm_name = user_realm_name
+        allgroups = keycloak_admin.get_groups()
+        for s in range(len(allgroups)):
+            if allgroups[s]["name"] == group_name:
+              groupid = allgroups[s]["id"]
+        return groupid; 
+      except Exception as error:
+        return repr(error)
+      $getgroupidFn$ LANGUAGE plpython3u
+   ;
+   DROP FUNCTION IF EXISTS ${lQR("get_subgroupid")} CASCADE;
+   CREATE OR REPLACE FUNCTION ${lQR("get_subgroupid")}(group_name text,subgroup_name text, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text)
+ RETURNS text 
+AS $getsubgroupidFn$
+   from keycloak import KeycloakOpenID
+   from keycloak import KeycloakAdmin
+   try:        
+     keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                       username=admin_username,
+                                       password=admin_password,
+                                       realm_name=master_realm,                                     
+                                       verify=True)    
+     keycloak_admin.realm_name = user_realm_name
+     allgroups = keycloak_admin.get_groups()
+     for s in range(len(allgroups)):
+           if allgroups[s]["name"] == group_name:
+             for t in range(len(allgroups[s]["subGroups"])):
+               if allgroups[s]["subGroups"][t]["name"] == subgroup_name:
+                 subgroupid = allgroups[s]["subGroups"][t]["id"]
+     return subgroupid; 
+   except Exception as error:
+     return repr(error)
+   $getsubgroupidFn$ LANGUAGE plpython3u
+;
 
     END;
     $$ LANGUAGE PLPGSQL;
@@ -937,7 +997,7 @@ export function SQLAnonymous(
                                         verify=True)    
        keycloak_admin.realm_name = user_realm_name
        client_id = keycloak_admin.get_client_id(client_name)
-       response =keycloak_admin.get_client_secrets(client_id)        
+       response =keycloak_admin.get_client_secrets(client_id)
        client_secret_key = response['value']
        keycloak_openid = KeycloakOpenID(server_url=api_base_url,
                          client_id=client_id,
@@ -965,7 +1025,7 @@ export function SQLAnonymous(
                                         verify=True)    
        keycloak_admin.realm_name = user_realm_name
        client_id = keycloak_admin.get_client_id(client_name)
-       response =keycloak_admin.get_client_secrets(client_id)        
+       response =keycloak_admin.get_client_secrets(client_id)
        client_secret_key = response['value']
        keycloak_openid = KeycloakOpenID(server_url=api_base_url,
                          client_id=client_id,
@@ -1016,7 +1076,7 @@ export function SQLAnonymous(
                                       verify=True)    
      keycloak_admin.realm_name = user_realm_name
      client_id = keycloak_admin.get_client_id(client_name)
-     response =keycloak_admin.get_client_secrets(client_id)        
+     response =keycloak_admin.get_client_secrets(client_id)
      client_secret_key = response['value']
      keycloak_openid = KeycloakOpenID(server_url=api_base_url,
                        client_id=client_id,
