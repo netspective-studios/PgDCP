@@ -613,6 +613,29 @@ export function SQLShielded(
         return repr(error)
       $createsubgroupfn$ LANGUAGE plpython3u
       ;
+      DROP FUNCTION IF EXISTS ${lQR("create_invite_user")} CASCADE;
+      CREATE OR REPLACE FUNCTION ${lQR("create_invite_user")}  (email text, username text,  firstname character varying, lastname character varying, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text)
+      RETURNS text AS $createinviteuserFn$
+      import json
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
+      try:         
+        keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                          username=admin_username,
+                                          password=admin_password,
+                                          realm_name=master_realm,                                     
+                                          verify=True)    
+        keycloak_admin.realm_name = user_realm_name                                
+        new_user = keycloak_admin.create_user({"email":email,
+                              "username": username,
+                              "enabled": True,
+                              "firstName":firstname,
+                              "lastName": lastname})
+        return new_user;                 
+      except Exception as error:
+        return repr(error)
+      $createinviteuserFn$ LANGUAGE plpython3u ;
+
       DROP FUNCTION IF EXISTS ${lQR("group_user_add")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("group_user_add")}(parent_group_name text,user_name text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text ) 
       RETURNS text       
@@ -913,6 +936,39 @@ AS $getsubgroupidFn$
      return repr(error)
    $getsubgroupidFn$ LANGUAGE plpython3u
 ;
+
+DROP FUNCTION IF EXISTS ${lQR("servicegroups")} CASCADE;
+CREATE OR REPLACE FUNCTION ${lQR("servicegroups")} (api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text)
+ returns json
+AS $servicegroupsFn$
+   import json
+   from keycloak import KeycloakOpenID
+   from keycloak import KeycloakAdmin
+   try:        
+     keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                    username=admin_username,
+                                    password=admin_password,
+                                    realm_name=master_realm,                                     
+                                    verify=True)    
+     keycloak_admin.realm_name = user_realm_name
+     allgroups = keycloak_admin.get_groups()
+     res=[]
+     all_count = 0
+     res_count = 0
+     for s in range(len(allgroups)):
+       subgroupid = allgroups[s]["id"]
+       al = keycloak_admin.get_group(group_id= subgroupid) 
+       all_count = all_count + 1
+       if  len(al['attributes']) != 0 and len(al['attributes']['Service']) > 0  and al['attributes']['Service'][0]=='True':
+       	rs_js = {"id":subgroupid,"name":allgroups[s]["name"]}
+       	res.append(rs_js)
+       	res_count = res_count+1
+     return json.dumps(res);
+   except Exception as error:
+     return repr(error)
+   $servicegroupsFn$   LANGUAGE plpython3u;
+
+
 
     END;
     $$ LANGUAGE PLPGSQL;
