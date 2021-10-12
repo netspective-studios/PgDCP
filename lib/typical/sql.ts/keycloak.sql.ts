@@ -94,7 +94,7 @@ export function SQLShielded(
         userinfo = keycloak_openid.userinfo(access_token)	
         return json.dumps(userinfo);                 
       except Exception as error:
-        return json.dumps(repr(error))
+        return json.dumps(json.loads(error.args[0]))
       $userinfofn$ LANGUAGE plpython3u
       ;
       DROP FUNCTION IF EXISTS ${lQR("refresh_token")} CASCADE;
@@ -121,7 +121,7 @@ export function SQLShielded(
         token = keycloak_openid.refresh_token(refresh_token)	
         return json.dumps(token);                 
       except Exception as error:
-        return json.dumps(repr(error))
+        return json.dumps(json.loads(error.args[0]))
       $refreshtokenfn$ LANGUAGE plpython3u
       ;
 
@@ -603,6 +603,10 @@ export function SQLShielded(
                       realm_name=master_realm,
                       verify=True) 
         keycloak_admin.realm_name = user_realm_name
+        try:
+         add_group = keycloak_admin.create_group({"name": parent_group_name})
+        except Exception as errors:
+          err = repr(errors)
         allgroups = keycloak_admin.get_groups()
         for s in range(len(allgroups)):
           if allgroups[s]["name"] == parent_group_name:
@@ -968,6 +972,71 @@ AS $servicegroupsFn$
      return repr(error)
    $servicegroupsFn$   LANGUAGE plpython3u;
 
+   DROP FUNCTION IF EXISTS ${lQR("get_group_institutions")} CASCADE;
+CREATE OR REPLACE FUNCTION ${lQR("get_group_institutions")} (api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text)
+ returns json
+AS $getgroupinstitutionsFn$
+   import json
+   from keycloak import KeycloakOpenID
+   from keycloak import KeycloakAdmin
+   try:        
+     keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                        username=admin_username,
+                        password=admin_password,
+                        realm_name=master_realm,                                     
+                        verify=True)    
+     keycloak_admin.realm_name = user_realm_name
+     allgroups = keycloak_admin.get_groups()
+     res=[]
+     for s in range(len(allgroups)):
+       subgroupid = allgroups[s]["id"]
+       al = keycloak_admin.get_group(group_id= subgroupid) 
+       if  len(al['subGroups']) > 0:
+       	res.append(al)
+     return json.dumps(res);
+   except Exception as error:
+     return repr(error)   
+   $getgroupinstitutionsFn$  LANGUAGE plpython3u
+;
+
+DROP FUNCTION IF EXISTS ${lQR("get_userslist")} CASCADE;
+CREATE OR REPLACE FUNCTION ${lQR("get_userslist")}(api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text, client_name text)
+ RETURNS json
+AS $getuserslistFn$
+import json
+from keycloak import KeycloakOpenID
+from keycloak import KeycloakAdmin
+try:   
+  keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+     username=admin_username,
+     password=admin_password,
+     realm_name=master_realm,
+     verify=True)
+  keycloak_admin.realm_name = user_realm_name
+  users = keycloak_admin.get_users()
+  client_id = keycloak_admin.get_client_id(client_name)
+  res=[]
+  result_set=[]
+  for u in range(len(users)):
+  	user_id = users[u]["id"]
+  	user_name = users[u]["username"]
+  	rs_js = {"id":user_id,"username":user_name}
+  	res.append(rs_js)
+  	for r in range(len(res)):
+  	 uname = res[r]["username"]
+  	 user_id_keycloak = keycloak_admin.get_user_id(uname)
+  	 roles_of_user = keycloak_admin.get_client_roles_of_user(user_id=user_id_keycloak, client_id=client_id) 	      
+  	 res_1 = (roles_of_user)
+  	 for i in range(len(res_1)):
+  	  role_id = {"id":user_id,"username":user_name,"firstname":users[u]["firstName"],"lastname":users[u]["lastName"],"enabled":users[u]["enabled"],"role":res_1[i]["name"]}
+  	result_set.append(role_id)
+  return json.dumps(result_set);
+except Exception as error:
+  return json.dumps(repr(error))
+$getuserslistFn$ 
+LANGUAGE plpython3u
+;
+
 
 
     END;
@@ -975,7 +1044,7 @@ AS $servicegroupsFn$
 
     CREATE OR REPLACE PROCEDURE ${lcf.destroyIdempotent(state).qName}() AS $$
     BEGIN
-        DROP FUNCTION IF EXISTS ${lcf.unitTest(state).qName}();        
+        DROP FUNCTION IF EXISTS ${lcf.unitTest(state).qName}();    
         DROP FUNCTION IF EXISTS ${lQR("create_user")};
         DROP FUNCTION IF EXISTS ${lQR("fetch_client_id")};
         DROP FUNCTION IF EXISTS ${lQR("create_client_role")};
@@ -1000,7 +1069,7 @@ AS $servicegroupsFn$
         DROP FUNCTION IF EXISTS ${lQR("get_client_role_id")};
         DROP FUNCTION IF EXISTS ${lQR("create_group")};        
 		    DROP FUNCTION IF EXISTS ${lQR("create_subgroup")};
-        DROP FUNCTION IF EXISTS ${lQR("get_client_roles_of_user")};
+        DROP FUNCTION IF EXISTS ${lQR("get_client_roles_of_user")};            
         DROP TABLE IF EXISTS ${cQR("keycloak_provenance")} CASCADE;
     END;
     $$ LANGUAGE PLPGSQL;
@@ -1062,7 +1131,7 @@ export function SQLAnonymous(
        token = keycloak_openid.token(username, passwords)        
        return json.dumps(token)                 
      except Exception as error:
-       return json.dumps(repr(error))
+       return json.dumps(json.loads(error.args[0]))
      $gettokenfn$ LANGUAGE plpython3u
      ;
 
@@ -1090,7 +1159,7 @@ export function SQLAnonymous(
        token = keycloak_openid.refresh_token(refresh_token)	
        return json.dumps(token);                 
      except Exception as error:
-       return json.dumps(repr(error))
+       return json.dumps(json.loads(error.args[0]))
      $refreshtokenfn$ LANGUAGE plpython3u
      ;
 
@@ -1141,7 +1210,7 @@ export function SQLAnonymous(
      token = keycloak_openid.token(username, passwords, totp=totp_code)        
      return json.dumps(token)                 
    except Exception as error:
-     return json.dumps(repr(error))
+     return json.dumps(json.loads(error.args[0]))
    $gettokenfn$ LANGUAGE plpython3u
    ;
 
