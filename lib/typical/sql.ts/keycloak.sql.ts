@@ -1037,7 +1037,22 @@ $getuserslistFn$
 LANGUAGE plpython3u
 ;
 
-
+CREATE OR REPLACE FUNCTION ${lQR("get_realms")} (api_base_url text, admin_username text, admin_password text,  master_realm text)
+ RETURNS json
+ LANGUAGE plpython3u
+AS $function$
+      import json
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin      
+      keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                        username=admin_username,
+                                        password=admin_password,
+                                        realm_name=master_realm,
+                                        verify=True)
+      realms = keycloak_admin.get_realms()
+      return json.dumps(realms);
+      $function$
+;
 
     END;
     $$ LANGUAGE PLPGSQL;
@@ -1261,6 +1276,34 @@ export function SQLAnonymous(
      except Exception as error:
        return json.dumps(repr(error))
      $createuserFn$ LANGUAGE plpython3u     ;
+
+
+     CREATE OR REPLACE FUNCTION ${kaQR("get_token_realm")}(username text, passwords text, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text, client_name text, clientid text)
+     RETURNS json
+     LANGUAGE plpython3u
+    AS $function$
+      import json
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
+      try:         
+        keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                         username=admin_username,
+                                         password=admin_password,
+                                         realm_name=master_realm,                                     
+                                         verify=True)    
+        keycloak_admin.realm_name = user_realm_name
+        response = keycloak_admin.get_client_secrets(clientid)
+        client_secret_key = response['value']
+        keycloak_openid = KeycloakOpenID(server_url=api_base_url,
+                          client_id=client_name,
+                          realm_name=user_realm_name,
+                          client_secret_key=client_secret_key)        
+        token = keycloak_openid.token(username, passwords)       
+        return json.dumps(token)                 
+      except Exception as error:
+        return json.dumps(json.loads(error.args[0]))
+      $function$
+    ;
 
 
     END;
