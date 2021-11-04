@@ -941,8 +941,8 @@ AS $getsubgroupidFn$
    $getsubgroupidFn$ LANGUAGE plpython3u
 ;
 
-DROP FUNCTION IF EXISTS ${lQR("servicegroups")} CASCADE;
-CREATE OR REPLACE FUNCTION ${lQR("servicegroups")} (api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text)
+DROP FUNCTION IF EXISTS ${lQR("service_groups")} CASCADE;
+CREATE OR REPLACE FUNCTION ${lQR("service_groups")} (api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text)
  returns json
 AS $servicegroupsFn$
    import json
@@ -999,8 +999,8 @@ AS $getgroupinstitutionsFn$
    $getgroupinstitutionsFn$  LANGUAGE plpython3u
 ;
 
-DROP FUNCTION IF EXISTS ${lQR("get_userslist")} CASCADE;
-CREATE OR REPLACE FUNCTION ${lQR("get_userslist")}(api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text, client_name text)
+DROP FUNCTION IF EXISTS ${lQR("get_users_list")} CASCADE;
+CREATE OR REPLACE FUNCTION ${lQR("get_users_list")}(api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text, client_name text)
  RETURNS json
 AS $getuserslistFn$
 import json
@@ -1039,7 +1039,6 @@ LANGUAGE plpython3u
 
 CREATE OR REPLACE FUNCTION ${lQR("get_realms")} (api_base_url text, admin_username text, admin_password text,  master_realm text)
  RETURNS json
- LANGUAGE plpython3u
 AS $function$
       import json
       from keycloak import KeycloakOpenID
@@ -1051,8 +1050,81 @@ AS $function$
                                         verify=True)
       realms = keycloak_admin.get_realms()
       return json.dumps(realms);
-      $function$
+      $function$ 
+ LANGUAGE plpython3u
 ;
+
+      CREATE OR REPLACE FUNCTION ${lQR("user_realm_role_info")} (user_name text,realm text,api_base_url text, admin_username text, admin_password text,  master_realm text)
+      RETURNS json
+      AS $function$
+      import json
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
+      try:
+        keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                              username=admin_username,
+                                              password=admin_password,
+                                              realm_name=master_realm,                                     
+                                              verify=True)
+        keycloak_admin.realm_name = realm
+        userid = keycloak_admin.get_user_id(user_name)
+        response =keycloak_admin.get_realm_roles_of_user(userid)  	
+        return json.dumps(response);    
+      except Exception as error:
+        return json.dumps(json.loads(error.args[0]))
+      $function$ 
+      LANGUAGE plpython3u
+      ;
+
+      CREATE OR REPLACE FUNCTION ${lQR("get_user")} (user_name text,realm text,api_base_url text, admin_username text, admin_password text,  master_realm text)
+      RETURNS json
+      AS $function$
+      import json
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
+      try:
+        keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                              username=admin_username,
+                                              password=admin_password,
+                                              realm_name=master_realm,                                     
+                                              verify=True)
+        keycloak_admin.realm_name = realm
+        userid = keycloak_admin.get_user_id(user_name)
+        response =keycloak_admin.get_user(userid)  	
+        return json.dumps(response);    
+      except Exception as error:
+        return json.dumps(json.loads(error.args[0]))
+      $function$ 
+      LANGUAGE plpython3u
+      ;
+ 
+
+CREATE OR REPLACE FUNCTION ${lQR("update_user_git_user_id")} (username text, git_user_id text, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text)
+ RETURNS json
+AS $function$
+       import json
+       from keycloak import KeycloakOpenID
+       from keycloak import KeycloakAdmin
+       try: 
+             
+         keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+           username=admin_username,
+           password=admin_password,
+           realm_name=master_realm,                                     
+           verify=True)    
+         keycloak_admin.realm_name = user_realm_name
+         user_id_keycloak = keycloak_admin.get_user_id(username)
+         response = keycloak_admin.update_user(user_id=user_id_keycloak,payload={ "attributes": {
+                           "git_user_id": git_user_id
+                         }})
+         return json.dumps(response);                 
+       except Exception as error:
+         return json.dumps(repr(error))
+       $function$ 
+ LANGUAGE plpython3u
+;
+
+
 
     END;
     $$ LANGUAGE PLPGSQL;
@@ -1136,13 +1208,8 @@ export function SQLAnonymous(
                                         realm_name=master_realm,                                     
                                         verify=True)    
        keycloak_admin.realm_name = user_realm_name
-       client_id = keycloak_admin.get_client_id(client_name)
-       response =keycloak_admin.get_client_secrets(client_id)
-       client_secret_key = response['value']
-       keycloak_openid = KeycloakOpenID(server_url=api_base_url,
-                         client_id=client_id,
-                         realm_name=user_realm_name,
-                         client_secret_key=client_secret_key)        
+       response = keycloak_admin.get_client_secrets(client_id)
+       client_secret_key = response['value']               
        token = keycloak_openid.token(username, passwords)        
        return json.dumps(token)                 
      except Exception as error:
@@ -1202,7 +1269,7 @@ export function SQLAnonymous(
      $sendverifyemailfn$ LANGUAGE plpython3u
      ;
 
-   CREATE OR REPLACE FUNCTION ${kaQR("get_tokenotp")}(username text, passwords text,totp_code text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text)
+   CREATE OR REPLACE FUNCTION ${kaQR("get_token_otp")}(username text, passwords text,totp_code text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text)
    RETURNS json
    AS $gettokenfn$
    import json
