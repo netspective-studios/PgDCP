@@ -1208,8 +1208,13 @@ export function SQLAnonymous(
                                         realm_name=master_realm,                                     
                                         verify=True)    
        keycloak_admin.realm_name = user_realm_name
-       response = keycloak_admin.get_client_secrets(client_id)
-       client_secret_key = response['value']               
+       client_id = keycloak_admin.get_client_id(client_name)
+       response =keycloak_admin.get_client_secrets(client_id)
+       client_secret_key = response['value']
+       keycloak_openid = KeycloakOpenID(server_url=api_base_url,
+                         client_id=client_id,
+                         realm_name=user_realm_name,
+                         client_secret_key=client_secret_key)                      
        token = keycloak_openid.token(username, passwords)        
        return json.dumps(token)                 
      except Exception as error:
