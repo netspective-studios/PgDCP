@@ -406,6 +406,7 @@ Content engineers who need datasets:
 
 Precision Knowledge:
 
+- [Lesser Known PostgreSQL Features](https://hakibenita.com/postgresql-unknown-features)
 - [Evolutionary Database Design](https://martinfowler.com/articles/evodb.html)
 - [Intuit’s Data Mesh Strategy](https://medium.com/intuit-engineering/intuits-data-mesh-strategy-778e3edaa017)
 - [Web development platform built entirely in
