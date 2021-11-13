@@ -267,6 +267,7 @@ Platform and site reliability engineers should review:
 - [An unassuming proposal for PLSQL Continuous Integration using revision
   control, Jenkins and Maven\.](https://github.com/pauldzy/Tentative_PLpgSQL_CI)
 - [Securing Your PostgreSQL Database](https://goteleport.com/blog/securing-postgres-postgresql/)
+- [Advanced multi\-threaded PostgreSQL connection pooler and request router](https://github.com/yandex/odyssey)
 
 Engineers writing stored routines (functions, SPs) should review:
 
