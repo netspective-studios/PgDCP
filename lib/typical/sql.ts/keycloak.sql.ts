@@ -1124,6 +1124,30 @@ AS $function$
  LANGUAGE plpython3u
 ;
 
+DROP FUNCTION IF EXISTS ${lQR("get_user_groups")}() CASCADE; 	  
+CREATE OR REPLACE FUNCTION ${lQR("get_user_groups")}(user_id uuid, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text)
+ RETURNS text
+ LANGUAGE plpython3u
+AS $function$
+      import json
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
+      try:         
+        keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                          username=admin_username,
+                                          password=admin_password,
+                                          realm_name=master_realm,                                     
+                                          verify=True)    
+        keycloak_admin.realm_name = user_realm_name
+        user_groups = keycloak_admin.get_user_groups(user_id)
+        if len(user_groups) > 0:
+         response = user_groups[0]["id"];
+         return user_groups[0]["id"]
+      except Exception as error:
+        return json.dumps(repr(error))
+      $function$
+;
+
 
 
     END;
