@@ -1401,6 +1401,31 @@ export function SQLAnonymous(
       $function$
     ;
 
+    CREATE OR REPLACE FUNCTION ${kaQR("refresh_token_realm")}(refresh_token character varying, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text, client_name text, clientid text)
+      RETURNS json
+      AS $refreshtokenrealm$
+        import json
+        from keycloak import KeycloakOpenID
+        from keycloak import KeycloakAdmin
+        try: 
+          
+          keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                          username=admin_username,
+                                          password=admin_password,
+                                          realm_name=master_realm,                                     
+                                          verify=True)    
+          keycloak_admin.realm_name = user_realm_name
+          response =keycloak_admin.get_client_secrets(clientid)
+          client_secret_key = response['value']
+          keycloak_openid = KeycloakOpenID(server_url=api_base_url,
+                            client_id=client_name,
+                            realm_name=user_realm_name,
+                            client_secret_key=client_secret_key)
+          token = keycloak_openid.refresh_token(refresh_token)	
+          return json.dumps(token);                 
+        except Exception as error:
+          return json.dumps(json.loads(error.args[0]))
+        $refreshtokenrealm$ LANGUAGE plpython3u;
 
     END;
     $$ LANGUAGE PLPGSQL;
