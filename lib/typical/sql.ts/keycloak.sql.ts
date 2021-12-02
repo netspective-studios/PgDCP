@@ -126,7 +126,7 @@ export function SQLShielded(
       ;
 
       DROP FUNCTION IF EXISTS ${lQR("logout")} CASCADE;
-      CREATE OR REPLACE FUNCTION ${lQR("logout")}(refresh_token varchar,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text  )
+      CREATE OR REPLACE FUNCTION ${lQR("logout")}(refresh_token varchar,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text )
       RETURNS text
       AS $logoutfn$
       from keycloak import KeycloakOpenID
@@ -138,11 +138,11 @@ export function SQLShielded(
                                          realm_name=master_realm,                                     
                                          verify=True)    
         keycloak_admin.realm_name = user_realm_name
-        client_id = keycloak_admin.get_client_id(client_name)
+        client_id = keycloak_admin.get_client_id(client_name)        
         response =keycloak_admin.get_client_secrets(client_id)
         client_secret_key = response['value']	
         keycloak_openid = KeycloakOpenID(server_url=api_base_url,
-                          client_id=client_id,
+                          client_id=client_name,
                           realm_name=user_realm_name,
                           client_secret_key=client_secret_key)
         keycloak_openid.logout(refresh_token)	
@@ -1143,6 +1143,31 @@ AS $function$
         if len(user_groups) > 0:
          response = user_groups[0]["id"];
          return user_groups[0]["id"]
+      except Exception as error:
+        return json.dumps(repr(error))
+      $function$
+;
+
+DROP FUNCTION IF EXISTS ${lQR("get_user_group_details")}() CASCADE; 	  
+CREATE OR REPLACE FUNCTION ${lQR("get_user_group_details")}(user_id uuid, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text)
+ RETURNS text
+ LANGUAGE plpython3u
+AS $function$
+      import json
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
+      try:         
+        keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                          username=admin_username,
+                                          password=admin_password,
+                                          realm_name=master_realm,                                     
+                                          verify=True)    
+        keycloak_admin.realm_name = user_realm_name
+        user_groups = keycloak_admin.get_user_groups(user_id)
+        if len(user_groups) > 0:
+         for i in range(len(user_groups)):
+          user_group = {"id":user_groups[i]["id"],"name":user_groups[i]["name"]}
+          return json.dumps(user_group)
       except Exception as error:
         return json.dumps(repr(error))
       $function$
