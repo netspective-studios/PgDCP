@@ -91,6 +91,17 @@ and stored functions as if they were the API endpoints.
 [OWASP API Security Project](https://owasp.org/www-project-api-security/)
 provides some great advice.
 
+### Zero Trust SQL (ztSQL) for Zero Trust Data Access (ZTDA)
+
+Zero Trust is a generally accepted cybersecurity approach that eliminates implicit
+trust in favor of continuously validating each stage of digital interactions. PgDCP
+encourages the same “never trust, always verify,” with _Zero Trust SQL_ (`ztSQL`). 
+`ztSQL` is designed to protect database environments and enable faster development
+by allowing anyone to run any SQL but leveages row-level security, attribute-based-
+access-control, role-based access control, and data segmentation within the
+database. Granular, “least access” policies should be implemented within the 
+database so that _Zero Trust Data Access_ (`ZTDA`) is possible.
+
 ### Securing Access _to the Database_
 
 If all access management is _in the database_, then securing access _to the
