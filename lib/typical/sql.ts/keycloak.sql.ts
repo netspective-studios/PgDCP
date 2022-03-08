@@ -1036,7 +1036,7 @@ except Exception as error:
 $getuserslistFn$ 
 LANGUAGE plpython3u
 ;
-
+DROP FUNCTION IF EXISTS ${lQR("get_realms")} CASCADE;
 CREATE OR REPLACE FUNCTION ${lQR("get_realms")} (api_base_url text, admin_username text, admin_password text,  master_realm text)
  RETURNS json
 AS $function$
@@ -1053,7 +1053,7 @@ AS $function$
       $function$ 
  LANGUAGE plpython3u
 ;
-
+DROP FUNCTION IF EXISTS ${lQR("user_realm_role_info")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("user_realm_role_info")} (user_name text,realm text,api_base_url text, admin_username text, admin_password text,  master_realm text)
       RETURNS json
       AS $function$
@@ -1075,7 +1075,7 @@ AS $function$
       $function$ 
       LANGUAGE plpython3u
       ;
-
+      DROP FUNCTION IF EXISTS ${lQR("get_user")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("get_user")} (user_name text,realm text,api_base_url text, admin_username text, admin_password text,  master_realm text)
       RETURNS json
       AS $function$
@@ -1097,8 +1097,29 @@ AS $function$
       $function$ 
       LANGUAGE plpython3u
       ;
+      DROP FUNCTION IF EXISTS ${lQR("get_user_from_userid")} CASCADE;
+      CREATE OR REPLACE FUNCTION ${lQR("get_user_from_userid")} (userid text,realm text,api_base_url text, admin_username text, admin_password text,  master_realm text)
+      RETURNS json
+      AS $function$
+      import json
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
+      try:
+        keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                              username=admin_username,
+                                              password=admin_password,
+                                              realm_name=master_realm,                                     
+                                              verify=True)
+        keycloak_admin.realm_name = realm
+        response =keycloak_admin.get_user(userid)  	
+        return json.dumps(response["email"]);    
+      except Exception as error:
+        return json.dumps(json.loads(error.args[0]))
+      $function$ 
+      LANGUAGE plpython3u
+      ;
  
-
+      DROP FUNCTION IF EXISTS ${lQR("update_user_git_user_id")} CASCADE;
 CREATE OR REPLACE FUNCTION ${lQR("update_user_git_user_id")} (username text, git_user_id text, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text)
  RETURNS json
 AS $function$
@@ -1173,6 +1194,27 @@ AS $function$
       $function$
 ;
 
+      DROP FUNCTION IF EXISTS ${lQR("assign_realm_roles")} CASCADE;
+      CREATE OR REPLACE FUNCTION ${lQR("assign_realm_roles")}(username text, role_name text, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text, client_name text)
+      RETURNS text
+      AS $assignrealmroles$
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
+      try:        
+        keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                          username=admin_username,
+                                          password=admin_password,
+                                          realm_name=master_realm,
+                                          verify=True)    
+        keycloak_admin.realm_name = user_realm_name
+        client_id = keycloak_admin.get_client_id(client_name)    
+        user_id_keycloak = keycloak_admin.get_user_id(username)
+        role_id = keycloak_admin.get_realm_role(role_name=role_name)
+        keycloak_admin.assign_realm_roles( user_id=user_id_keycloak, client_id=client_id, roles=[{"id":role_id["id"] ,"name": role_id["name"]}])
+        return  'success';
+      except Exception as error:
+        return repr(error)
+      $assignrealmroles$ LANGUAGE plpython3u;
 
 
     END;
@@ -1243,6 +1285,7 @@ export function SQLAnonymous(
     CREATE OR REPLACE PROCEDURE ${lcf.constructIdempotent(state).qName}() AS $$
     BEGIN
     
+    DROP FUNCTION IF EXISTS ${kaQR("get_token")} CASCADE;
      CREATE OR REPLACE FUNCTION ${kaQR("get_token")}(username text, passwords text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text )
      RETURNS json
      AS $gettokenfn$
@@ -1270,7 +1313,7 @@ export function SQLAnonymous(
        return json.dumps(json.loads(error.args[0]))
      $gettokenfn$ LANGUAGE plpython3u
      ;
-
+     DROP FUNCTION IF EXISTS ${kaQR("refresh_token")} CASCADE;
      CREATE OR REPLACE FUNCTION ${kaQR("refresh_token")}(refresh_token varchar,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text)
      RETURNS json
      AS $refreshtokenfn$
@@ -1300,7 +1343,7 @@ export function SQLAnonymous(
      ;
 
      
-
+     DROP FUNCTION IF EXISTS ${kaQR("send_verify_email")} CASCADE;
      CREATE OR REPLACE FUNCTION ${kaQR("send_verify_email")}(username text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text)
      RETURNS json
      AS $sendverifyemailfn$
@@ -1322,7 +1365,7 @@ export function SQLAnonymous(
        return json.dumps(repr(error))
      $sendverifyemailfn$ LANGUAGE plpython3u
      ;
-
+     DROP FUNCTION IF EXISTS ${kaQR("get_token_otp")} CASCADE;
    CREATE OR REPLACE FUNCTION ${kaQR("get_token_otp")}(username text, passwords text,totp_code text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text)
    RETURNS json
    AS $gettokenfn$
@@ -1350,7 +1393,7 @@ export function SQLAnonymous(
    $gettokenfn$ LANGUAGE plpython3u
    ;
 
-   
+   DROP FUNCTION IF EXISTS ${kaQR("forgot_password")} CASCADE;
      CREATE OR REPLACE FUNCTION ${kaQR("forgot_password")}(username text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text)
      RETURNS text      
      AS $forgotpasswordfn$
@@ -1371,8 +1414,29 @@ export function SQLAnonymous(
          return repr(error)
        $forgotpasswordfn$ LANGUAGE plpython3u ;
 
+     DROP FUNCTION IF EXISTS ${kaQR("forgot_password_with_redirect_uri")} CASCADE;
+     CREATE OR REPLACE FUNCTION ${kaQR("forgot_password_with_redirect_uri")}(username text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text ,life_span int,redirect_url text)
+     RETURNS text      
+     AS $forgotpasswordwithredirecturifn$
+       import json
+       from keycloak import KeycloakOpenID
+       from keycloak import KeycloakAdmin
+       try:           
+         keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                 username=admin_username,
+                 password=admin_password,
+                 realm_name=master_realm,                                     
+                 verify=True)    
+         keycloak_admin.realm_name = user_realm_name
+         user_id_keycloak = keycloak_admin.get_user_id(username)
+         response = keycloak_admin.send_update_account(user_id=user_id_keycloak,payload=["UPDATE_PASSWORD"], client_id ='security-admin-console',lifespan = life_span, redirect_uri = redirect_url)
+         return 'Email Sent'               
+       except Exception as error:
+         return repr(error)
+       $forgotpasswordwithredirecturifn$ LANGUAGE plpython3u ;       
+
      
-     
+       DROP FUNCTION IF EXISTS ${kaQR("create_user")} CASCADE;
      CREATE OR REPLACE FUNCTION ${kaQR("create_user")}(email text, username text, value_password text,  firstname character varying, lastname character varying,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text)
      RETURNS json      
      AS $createuserFn$
@@ -1398,7 +1462,7 @@ export function SQLAnonymous(
        return json.dumps(repr(error))
      $createuserFn$ LANGUAGE plpython3u     ;
 
-
+     DROP FUNCTION IF EXISTS ${kaQR("get_token_realm")} CASCADE;
      CREATE OR REPLACE FUNCTION ${kaQR("get_token_realm")}(username text, passwords text, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text, client_name text, clientid text)
      RETURNS json
      LANGUAGE plpython3u
@@ -1425,7 +1489,7 @@ export function SQLAnonymous(
         return json.dumps(json.loads(error.args[0]))
       $function$
     ;
-
+    DROP FUNCTION IF EXISTS ${kaQR("refresh_token_realm")} CASCADE;
     CREATE OR REPLACE FUNCTION ${kaQR("refresh_token_realm")}(refresh_token character varying, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text, client_name text, clientid text)
       RETURNS json
       AS $refreshtokenrealm$
