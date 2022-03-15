@@ -127,6 +127,7 @@ First review Martin Fowler's
 [Evolutionary Database Design](https://martinfowler.com/articles/evodb.html)
 article and then see tools like:
 
+- [Zero\-downtime schema migrations in Postgres using views](https://fabianlindfors.se/blog/schema-migrations-in-postgres/)
 - [postgresql\-dbpatch](https://github.com/linz/postgresql-dbpatch), which
   support conducting database changes and deploying them in a robust and
   automated way through the database instead of external tools
