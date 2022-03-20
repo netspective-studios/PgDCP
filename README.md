@@ -216,7 +216,11 @@ Part of the DLE is "Joe", which should be used by engineering and QA teams:
 
 All code in PostgreSQL should be tested, or _assured_, with pgTAP code. All
 _Assurance Engineering Cases_ (AECs) should be written code-first, not
-human-first (what we call _Assurance as Code_).
+human-first (what we call _Assurance as Code_). If Assurance is done within the
+database then tools like [PostgreSQL Anonymizer](https://gitlab.com/dalibo/postgresql_anonymizer)
+should be used to help build test-first databases from production data when appropriate
+(see [this PDF](https://dalibo.gitlab.io/postgresql_anonymizer/how-to.handout.pdf) for
+further elaboration).
 
 ### Chaos _in the Database_
 
