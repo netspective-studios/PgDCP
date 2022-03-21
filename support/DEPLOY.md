@@ -10,7 +10,7 @@ This playbook will help you to deploy PgDCP (PostgreSQL Data Computing Platform)
 `
 Settings -> About
 `
-## To check PgDCP is already installed
+## To check PgDCP is already installed, goto Terminal
 ```
 psql --version
 ```
@@ -26,7 +26,11 @@ Command 'psql' not found, but can be installed with:
 sudo apt install postgresql-client-common
 `
 
-For installing PgDCP follow the below steps.
+OR
+`psql--version: command not found`
+
+
+**For installing PgDCP follow the below steps**
 
 # One-time Setup
 ## Install Ansible on VM
@@ -45,11 +49,8 @@ sudo apt install git
 ```
 ## Clone the git Repository 
 ```
-
 git clone https://github.com/netspective-studios/PgDCP.git
-
 cd PgDCP
-
 ```
 **NOTE:** Sometimes you may face a Certificate issue. In this case you need to export the certificate using the following command
 ```
@@ -59,13 +60,14 @@ export GIT_SSL_NO_VERIFY=1
 Use `Main` branch for deployment.
 ```
 git checkout main
-
 cd support
-
 ```
 
-After cloning and checkout, set the variables **Host_IP, Postgres_Config_Path, DB_Name_to_Enable_PG_CRON, DB_User, DB_Name, DB_Password** in  `main.yml` with your system/application details.
-
+## Set variables
+```
+vim.tiny main.yml
+```
+After cloning and checkout, set the variables **Host_IP, Postgres_Config_Path, DB_Name_to_Enable_PG_CRON, DB_User, DB_Name, DB_Password, Promscale_ReadOnly_Password** in  `main.yml` with your system/application details.
 
 ## Execute the below command for PgDCP installation
 ```bash 
