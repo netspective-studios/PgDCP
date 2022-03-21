@@ -46,7 +46,7 @@ sudo apt install git
 ## Clone the git Repository 
 ```
 
-git clone https://github.com/netspective/PgDCP.git
+git clone https://github.com/netspective-studios/PgDCP.git
 
 cd PgDCP
 
@@ -59,6 +59,9 @@ export GIT_SSL_NO_VERIFY=1
 Use `Main` branch for deployment.
 ```
 git checkout main
+
+cd support
+
 ```
 
 After cloning and checkout, set the variables **Host_IP, Postgres_Config_Path, DB_Name_to_Enable_PG_CRON, DB_User, DB_Name, DB_Password** in  `main.yml` with your system/application details.
