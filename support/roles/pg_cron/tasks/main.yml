@@ -1,0 +1,7 @@
+---
+
+- name: Install pg_cron 
+  shell: "apt install -y postgresql-{{ postgres_version }}-cron "
+
+- name: Add database name to use pg_cron  in posgresql.conf
+  shell: echo "cron.database_name = '{{ DB_Name_to_Enable_PG_CRON }}'" >> {{ Postgres_Config_Path }}/postgresql.conf

@@ -1,0 +1,4 @@
+key_size: 2048
+key_type: RSA
+Host_Domain: prime.dcp.infra.medigy.com
+Host_Mail: no-reply@mail.medigy.com

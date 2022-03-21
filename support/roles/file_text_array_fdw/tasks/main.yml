@@ -1,0 +1,13 @@
+--- 
+- name: Clone file_text_array_fdw from GitHub
+  git:
+    repo: https://github.com/adunstan/file_text_array_fdw.git
+    dest: /tmp/file_text_array_fdw
+    version: "{{ GitHubRepoBranch }}"
+
+- name: Install file_text_array_fdw(Make USE_PGXS=1 install)
+  make:
+    chdir: /tmp/file_text_array_fdw
+    target: install
+    params:
+      USE_PGXS: 1

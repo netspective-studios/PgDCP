@@ -1,0 +1,18 @@
+---
+- name: Install pgsparql dependency modules
+  apt:
+    pkg: [ 'libwww-perl' , 'libjson-perl' , 'libdatetime-perl' ]
+
+- name: Clone pgsparql from GitHub
+  git:
+    repo: https://github.com/lacanoid/pgsparql.git
+    dest: /tmp/pgsparql
+
+- name: pgsparql Make  
+  make:
+    chdir: /tmp/pgsparql
+  
+- name: Install pgsparql(Make install)
+  make:
+    chdir: /tmp/pgsparql
+    target: install

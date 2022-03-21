@@ -1,0 +1,3 @@
+---
+- name: Install PL/PERL
+  apt: pkg=postgresql-plperl-{{ postgres_version }} state=present update_cache=true

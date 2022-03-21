@@ -1,0 +1,11 @@
+--- 
+- name: Install pgxnclient
+  apt: pkg=pgxnclient state=present update_cache=true
+
+- name: Install safeupdate extension modules
+  shell: pgxn install safeupdate
+
+- name: Enable safeupdate for specific database only
+  shell: |
+     psql -U postgres -c "ALTER DATABASE {{ DB_Name }} SET session_preload_libraries = 'safeupdate';"
+  become_user: postgres

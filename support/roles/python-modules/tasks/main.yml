@@ -1,0 +1,81 @@
+---
+- name: Install python3-pip
+  apt: pkg=python3-pip state=present
+
+#- name: Install python-pip
+#  apt: pkg=python-pip state=present
+
+- name: Upgrade pip command
+  command: pip install --upgrade pip
+
+- name: Upgrade pip3 command
+  command: pip3 install --upgrade pip
+
+- name: Install GitPython
+  command: pip3 install GitPython
+  
+- name: Install pillow
+  command: pip3 install pillow
+
+- name: Install tensorflow
+  command: pip3 install tensorflow pandas matplotlib seaborn 
+
+- name: Install cython3
+  command: pip3 install --upgrade cython 
+
+- name: Install ludwig
+  command: pip3 install ludwig
+
+- name: Install PyYAML
+  command: pip install --ignore-installed PyYAML
+  
+- name: Install transformers
+  command: pip install transformers
+  
+- name: Install imagehash
+  command: pip3 install imagehash
+
+- name: Install python-gitlab
+  shell: pip install python-gitlab && pip3 install python-gitlab
+
+- name: Install python-magic
+  command: pip3 install python-magic
+
+- name: Install tldextract
+  command: pip3 install tldextract
+
+- name: Install PyYAML
+  command: pip3 install PyYAML
+
+- name: Install timeago
+  command: pip3 install timeago
+
+- name: Install bleach
+  command: pip3 install bleach
+
+- name: Install python-keycloak
+  command: pip3 install python-keycloak
+
+- name: Install requests minimum version 2.26.0
+  command: pip3 install 'requests>=2.26.0'
+
+- name: Install urllib3 minimum version 1.26.6
+  command: pip3 install 'urllib3>=1.26.6'
+
+- name: Install PyGithub
+  command: pip3 install PyGithub
+
+- name: Install json2xml
+  command: pip3 install json2xml
+
+- name: Install dicttoxml
+  command: pip3 install dicttoxml
+
+- name: Install ctypesgen
+  command: pip3 install ctypesgen
+
+- name: Install opentelemetry modules
+  command: pip3 install opentelemetry-api opentelemetry-sdk opentelemetry-launcher opentelemetry-exporter-otlp
+
+- name: Install uptrace
+  command: pip3 install uptrace

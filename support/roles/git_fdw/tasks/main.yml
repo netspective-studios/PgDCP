@@ -1,0 +1,12 @@
+- name: Install git_fdw dependency modules
+  apt: pkg=libgit2-dev state=present update_cache=true
+
+- name: Clone git_fdw from GitHub
+  git:
+    repo: https://github.com/franckverrot/git_fdw.git
+    dest: /tmp/git_fdw
+  
+- name: Install git_fdw(Make install)
+  make:
+    chdir: /tmp/git_fdw
+    target: install

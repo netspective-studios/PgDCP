@@ -1,0 +1,14 @@
+--- 
+- name: Clone pgvector from GitHub
+  git:
+    repo: https://github.com/ankane/pgvector.git
+    dest: /tmp/pgvector 
+
+- name: pgvector Make
+  make:
+    chdir: /tmp/pgvector
+  
+- name: Install pgvector(Make install)
+  make:
+    chdir: /tmp/pgvector
+    target: install

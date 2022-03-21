@@ -1,0 +1,20 @@
+- name: Install is_jsonb_valid dependency modules
+  apt:
+    pkg: [ 'git' , 'build-essential'  ] 
+
+- name: Create is_jsonb_valid directory
+  shell: "rm -rf /tmp/is_jsonb_valid || mkdir -p /tmp/is_jsonb_valid"
+
+- name: Clone is_jsonb_valid from GitHub
+  shell: "cd /tmp &&git clone https://github.com/furstenheim/is_jsonb_valid.git"
+
+#- name: Clone is_jsonb_valid from GitHub
+#  git:
+#    repo: https://github.com/furstenheim/is_jsonb_valid.git
+#    dest: /tmp/is_jsonb_valid
+#    recursive: yes
+  
+- name: Install is_jsonb_valid(Make install)
+  make:
+    chdir: /tmp/is_jsonb_valid
+    target: install

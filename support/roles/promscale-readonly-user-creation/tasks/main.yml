@@ -1,0 +1,32 @@
+---
+- name: Create readOnly User
+  shell: |
+     psql -U postgres -d {{ Promscale_Database }} -c "CREATE USER {{ Promscale_ReadOnly_User }} WITH LOGIN PASSWORD '{{ Promscale_ReadOnly_Password }}';
+                                                      GRANT CONNECT ON DATABASE {{ Promscale_Database }} TO {{ Promscale_ReadOnly_User }};"
+  become_user: postgres
+
+- name: Create access to readOnly User
+  shell: |
+     psql -U postgres -d {{ Promscale_Database }} -c "GRANT USAGE ON SCHEMA {{ item }} TO {{ Promscale_ReadOnly_User }};
+                                                      GRANT SELECT ON ALL TABLES IN SCHEMA {{ item }} TO {{ Promscale_ReadOnly_User }};
+                                                      GRANT SELECT ON ALL SEQUENCES IN SCHEMA {{ item }} TO {{ Promscale_ReadOnly_User }};
+                                                      GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA {{ item }} TO {{ Promscale_ReadOnly_User }};
+                                                      ALTER DEFAULT PRIVILEGES IN SCHEMA {{ item }} GRANT SELECT ON TABLES TO {{ Promscale_ReadOnly_User }};
+                                                      ALTER DEFAULT PRIVILEGES IN SCHEMA {{ item }} GRANT SELECT ON SEQUENCES TO {{ Promscale_ReadOnly_User }};
+                                                      ALTER DEFAULT PRIVILEGES IN SCHEMA {{ item }} GRANT EXECUTE ON FUNCTIONS TO {{ Promscale_ReadOnly_User }};"
+  become_user: postgres
+  with_items:
+      - _prom_catalog
+      - _prom_ext
+      - _timescaledb_cache
+      - _timescaledb_catalog
+      - _timescaledb_config
+      - _timescaledb_internal
+      - prom_series
+      - prom_api
+      - prom_data
+      - prom_data_series
+      - prom_info
+      - prom_metric
+      - public
+      - timescaledb_information

@@ -1,0 +1,39 @@
+---
+- name: Install rust
+  shell: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
+
+- name: Clone promscale from GitHub
+  git:
+    repo: https://github.com/timescale/promscale_extension.git
+    dest: /tmp/promscale_extension
+
+- name: Source rust cargo
+  shell: source ~/.cargo/env
+  args:
+       executable: "{{ SHELL }}"
+
+- name: cargo install cargo-pgx
+  shell: |
+    echo cargo install --git https://github.com/JLockerman/pgx.git --branch timescale cargo-pgx
+  args:
+        chdir: /tmp/promscale_extension  
+    
+- name: cargo pgx init
+  shell: |
+    echo  cargo pgx init --pg13=/usr/lib/postgresql/13/bin/pg_config
+  args:  
+        chdir: /tmp/promscale_extension
+    
+- name: Install promscale dependencies package
+  apt:
+    pkg: [ 'llvm-dev', 'libclang-dev', 'clang']
+               
+
+- name: Install promscale (Make)
+  make:
+    chdir: /tmp/promscale_extension
+
+- name: Install promscale (Make install)
+  make:
+    chdir: /tmp/promscale_extension
+    target: install

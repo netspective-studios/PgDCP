@@ -1,0 +1,22 @@
+--- 
+- name: Clone SupaScript from GitHub
+  git:
+    repo: https://github.com/burggraf/SupaScript.git
+    dest: /tmp/SupaScript
+- name: Execute Make install
+  make:
+    chdir: /tmp/SupaScript
+    target: install
+
+- name: Copy EASY-INSTALL-V1.4.sql into /tmp
+  template:
+          src: ../templates/EASY-INSTALL-V1.4.sql
+          dest: /tmp/EASY-INSTALL-V1.4.sql
+          mode: 0644
+
+- name: Restore EASY-INSTALL-V1.4.SQL
+  become_user: postgres
+  become: yes
+  postgresql_db: name={{ DB_Name }}
+             state=restore
+             target='/tmp/EASY-INSTALL-V1.4.sql'

@@ -1,0 +1,19 @@
+---
+
+- name: Install pg-semver dependency modules
+  apt:
+    pkg: [ 'software-properties-common' , 'git' , 'build-essential' ]
+
+- name: Clone pg-semver from GitHub
+  git:
+    repo: https://github.com/theory/pg-semver.git
+    dest: /tmp/pg-semver
+
+- name: pg-semver Make  
+  make:
+    chdir: /tmp/pg-semver
+  
+- name: Install pg-semver(Make install)
+  make:
+    chdir: /tmp/pg-semver
+    target: install

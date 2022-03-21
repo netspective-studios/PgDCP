@@ -1,0 +1,21 @@
+---
+- name: Install pljava dependency modules
+  shell: "apt install -y postgresql-server-dev-{{ postgres_version }}"
+  
+- name: Install pljava buildDependencies modules
+  apt:
+    pkg: [ 'build-essential' , 'default-jdk' , 'maven' , 'libecpg-dev', 'libkrb5-dev' , 'git' , 'libssl-dev' , 'openjdk-11-jre' ]
+
+- name: Clone pljava from GitHub
+  git:
+    repo: https://github.com/tada/pljava.git
+    dest: /tmp/pljava
+
+- name: Execute mvn clean install
+  shell: "cd /tmp/pljava && mvn clean install"
+
+- name: Start pljava
+  shell: "java -jar /tmp/pljava/pljava-packaging/target/pljava-pg13.jar"
+
+- name: Export LIBJVM_PATH path
+  shell: "export LIBJVM_PATH=/usr/lib/jvm/java-11-openjdk-amd64/lib/server/libjvm.so"

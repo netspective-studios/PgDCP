@@ -1,0 +1,68 @@
+---
+- name: Install openssl package
+  apt: name=openssl update_cache=true state=latest
+
+- name: Install pyopenssl
+  command: pip install pyopenssl
+
+- name: Create ssl directory
+  become_user: postgres
+  become: yes
+  file: path={{ Postgres_Config_Path }}/ssl-certs state=directory mode=0775
+
+- name: Generate Private key
+  become_user: postgres
+  become: yes
+  openssl_privatekey:
+    path: "{{ Postgres_Config_Path }}/ssl-certs/server.key"
+    size: "{{ key_size }}"
+    type: "{{ key_type }}"
+    backup: yes
+
+- name: Create Server certificate
+  become_user: postgres
+  become: yes
+  shell: "openssl req -new -key {{ Postgres_Config_Path }}/ssl-certs/server.key -days 3650 -out {{ Postgres_Config_Path }}/ssl-certs/server.crt -x509 -subj '/C=US/ST=MaryLand/L=Landover/O=Medigy/CN={{ Host_Domain }}/emailAddress={{ Host_Mail }}'"
+
+- name: Create root.crt
+  copy:
+    src: '{{ Postgres_Config_Path }}/ssl-certs/server.crt'
+    dest: '{{ Postgres_Config_Path }}/ssl-certs/root.crt'
+    owner: postgres
+    group: postgres
+    mode: '0644'
+
+- name: Enable ssl
+  lineinfile:
+    path: '{{ Postgres_Config_Path }}/postgresql.conf'
+    regexp: "ssl ="
+    line: "ssl = on"
+
+- name: Add ssl_key_file path to postgresql.conf
+  lineinfile:
+    path: '{{ Postgres_Config_Path }}/postgresql.conf'
+    regexp: "ssl_key_file ="
+    line: "ssl_key_file = '{{ Postgres_Config_Path }}/ssl-certs/server.key'"
+
+- name: Add SSL CA File path to postgresql.conf
+  lineinfile:
+    path: '{{ Postgres_Config_Path }}/postgresql.conf'
+    regexp: "ssl_ca_file ="
+    line: "ssl_ca_file =  '{{ Postgres_Config_Path }}/ssl-certs/root.crt'"
+
+- name: Add SSL Certificate File path to postgresql.conf
+  lineinfile:
+    path: '{{ Postgres_Config_Path }}/postgresql.conf'
+    regexp: "ssl_cert_file ="
+    line: "ssl_cert_file =  '{{ Postgres_Config_Path }}/ssl-certs/server.crt'"
+
+- name: Checking whether enabled certification based authentication
+  shell: cat {{ Postgres_Config_Path }}/pg_hba.conf | grep "hostssl        all        all          0.0.0.0/0             md5 clientcert=1" | wc -l
+  register: test_grep
+
+- debug: msg="{{test_grep.stdout}}"
+
+- name: adding line to allow certification based authentication
+  lineinfile: dest={{ Postgres_Config_Path }}/pg_hba.conf line="hostssl        all        all          0.0.0.0/0             md5 clientcert=verify-full"
+  when: test_grep.stdout == "0"
+  notify: restart postgresql

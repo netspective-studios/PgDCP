@@ -1,0 +1,3 @@
+---
+- name: Install PL/SH
+  apt: pkg=postgresql-{{ postgres_version }}-plsh state=present update_cache=true

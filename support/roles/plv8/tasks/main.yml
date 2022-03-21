@@ -1,0 +1,27 @@
+---
+- name: Install plv8 dependency module
+  shell: "apt install -y postgresql-server-dev-{{ postgres_version }}"
+
+- name: Install plv8 buildDependencies modules
+  apt:
+    pkg: [ 'ca-certificates' , 'curl' , 'git-core', 'gpp', 'cpp', 'pkg-config', 'apt-transport-https' , 'cmake' , 'libc++-dev' , 'libc++abi-dev' ]
+
+- name: Install plv8 runtimeDependencies modules
+  apt:
+    pkg: [ 'libc++1' , 'libtinfo5' , 'libc++abi1' ]
+
+- name: Clone plv8 from GitHub
+  git:
+    repo: https://github.com/plv8/plv8.git
+    dest: /tmp/plv8
+    version: "{{ PLV8_VERSION }}"
+
+- name: plv8 Make  static
+  make:
+    chdir: /tmp/plv8
+    target: static
+
+- name: Install plv8(Make install)
+  make:
+    chdir: /tmp/plv8
+    target: install

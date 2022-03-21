@@ -1,0 +1,13 @@
+---
+- name: Install html2image
+  command: pip3 install --upgrade html2image
+
+- name: Download and unarchive chrome driver
+  unarchive:
+    src: https://chromedriver.storage.googleapis.com/{{ GOOGLE_CHROME_VERSION }}/chromedriver_linux64.zip
+    dest: /usr/bin
+    remote_src: yes
+
+- name: Install chrome browser .deb package
+  apt:
+    deb: http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_{{ GOOGLE_CHROME_VERSION }}-1_amd64.deb

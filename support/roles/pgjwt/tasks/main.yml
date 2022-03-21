@@ -1,0 +1,10 @@
+---
+- name: Clone pgjwt from GitHub
+  git:
+    repo: https://github.com/michelp/pgjwt.git
+    dest: /tmp/pgjwt
+
+- name: Install pgjwt(Make install)
+  make:
+    chdir: /tmp/pgjwt
+    target: install

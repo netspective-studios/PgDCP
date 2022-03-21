@@ -1,0 +1,11 @@
+---
+- name: Clone pgtap from GitHub
+  git:
+    repo: https://github.com/theory/pgtap.git
+    dest: /tmp/pgtap
+    version: "{{ PGTAP_VERSION }}"
+
+- name: Install pgtap
+  make:
+    chdir: /tmp/pgtap
+    target: install

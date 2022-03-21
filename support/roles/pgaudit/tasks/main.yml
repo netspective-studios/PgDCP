@@ -1,0 +1,23 @@
+---
+
+- name: Install pgaudit dependency modules
+  shell: "apt install -y postgresql-server-dev-{{ postgres_version }} gcc make libicu-dev "
+  
+- name: Install pgaudit buildDependencies modules
+  apt:
+    pkg: [ 'libssl-dev' , 'libkrb5-dev' , 'git-core', 'wget' , 'build-essential' ]
+
+
+
+- name: Unarchive pgaudit from GitHub URL
+  unarchive:
+    src: https://github.com/pgaudit/pgaudit/archive/{{ PGAUDIT_VERSION }}.tar.gz
+    dest: /tmp
+    remote_src: yes
+
+- name: Install pgaudit(Make install)
+  make:
+    chdir: /tmp/pgaudit-{{ PGAUDIT_VERSION }}
+    target: install
+    params:
+      USE_PGXS: 1

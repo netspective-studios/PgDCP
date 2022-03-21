@@ -1,0 +1,77 @@
+---
+- name: import the postgres-13 apt key from the keyserver
+  apt_key:
+    url: "https://www.postgresql.org/media/keys/ACCC4CF8.asc"
+    state: present
+  become: true
+
+- name: Register distribution *short* code name
+  shell: lsb_release -cs
+  register: lsb_release
+
+- name: Add specified repository into sources list using specified filename
+  apt_repository:
+    repo: deb http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release | lower }}-pgdg main
+    state: present
+    filename: pgdg
+
+- name: Ensure bash, OpenSSl, and libssl are the latest versions
+  apt:
+    name: ['bash', 'openssl', 'cmake', 'libssl-dev', 'libssl-doc']
+    update_cache: true
+    state: latest
+  tags: packages
+
+- name: Install PostgreSQL
+  apt:
+    name: ['postgresql-{{ postgres_version }}', 'postgresql-client-{{ postgres_version }}', 'libpq-dev', 'python3-psycopg2', 'python3-psutil']
+    update_cache: true
+    state: present
+  tags: packages
+
+- name: Ensure the PostgreSQL service is running
+  service: name=postgresql state=started enabled=yes
+
+- name: Ensure database {{ DB_Name }} is created
+  become_user: postgres
+  become: yes
+  postgresql_db: name={{ DB_Name }}
+             encoding='UTF-8'
+             lc_collate='en_US.UTF-8'
+             lc_ctype='en_US.UTF-8'
+             template='template0'
+             state=present
+
+- name: Ensure database {{ DB_Name_to_Enable_PG_CRON }} is created
+  become_user: postgres
+  become: yes
+  postgresql_db: name={{ DB_Name_to_Enable_PG_CRON }}
+             encoding='UTF-8'
+             lc_collate='en_US.UTF-8'
+             lc_ctype='en_US.UTF-8'
+             template='template0'
+             state=present
+
+- name: Ensure user has access to the database
+  become_user: postgres
+  become: yes
+  postgresql_user: db={{ DB_Name }}
+               name={{ DB_User }}
+               password={{ DB_Password }}
+               encrypted=yes
+               priv=ALL
+               state=present
+
+- name: Ansible create file .pgpass with content.
+  copy:
+    content: "localhost:5432:{{ DB_Name }}:postgres:{{ DB_Password }}"
+    dest: "/var/lib/postgresql/.pgpass"
+    owner: postgres
+    group: postgres
+    mode: 0600
+    
+- name: Add {{ Host_IP }} as listen_addresses in  posgresql.conf
+  shell: echo "listen_addresses = 'localhost, {{ Host_IP }}'" >> {{ Postgres_Config_Path }}/postgresql.conf
+
+- name: Enable postgresql access in pg_hba.conf 
+  shell: echo "host    all             all             0.0.0.0/0            md5" >> {{ Postgres_Config_Path }}/pg_hba.conf

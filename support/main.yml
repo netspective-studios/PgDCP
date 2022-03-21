@@ -1,0 +1,55 @@
+---
+- name: Install Postgresql Extensions
+  hosts: localhost
+  become: true
+  become_method: sudo
+
+  vars:
+    Host_IP: <local-ip-bind-address>
+    postgres_version: 13
+    Postgres_Config_Path: /etc/postgresql/13/main
+    ansible_python_interpreter: /usr/bin/python3
+    DB_Name_to_Enable_PG_CRON: pgdcp_lib
+    Promscale_Database: pgdcp_promscale
+    Promscale_ReadOnly_User: promscale_read_only_user
+    Promscale_ReadOnly_Password: xxxxxxxx
+    Calendso_Database:  pgdcp_calendso
+    DB_User: postgres
+    DB_Name: pgdcp_prime
+    DB_Password: <pgdcp-db-password>
+    SHELL: /bin/bash
+
+  roles:
+    - createdb
+    - calendso_db
+    - postgresql-conf-update
+    - python-modules
+    - deno
+    - sqlite
+    - pgloader
+    - just
+    - datamash
+    - plpython
+    - plsh
+    - plperl
+    - pljava
+    - postgis
+    - pgtap
+    - plpgsql_check
+    - pgsql-http
+    - pgsparql
+    - pgaudit
+    - pg_cron
+    - pg-semver
+    - is_jsonb_valid
+    - file_text_array_fdw
+    - safeupdate
+    - pgvector
+    - timescaledb
+    - git_fdw
+    - pgjwt
+    - sqlite_fdw
+    - supascript
+    - sslcert-authentication
+    - chrome
+    - clickhouse_fdw

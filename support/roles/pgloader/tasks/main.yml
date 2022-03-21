@@ -1,0 +1,2 @@
+- name: Install pgloader
+  apt: pkg=pgloader state=present update_cache=true

@@ -1,0 +1,6 @@
+- name: Install deno install dependencies.
+  apt:
+    pkg: [ 'curl' , 'unzip' ]
+
+- name: Run install.sh script.
+  shell: curl -fsSL https://deno.land/x/install/install.sh | sudo DENO_INSTALL=/usr/local sh

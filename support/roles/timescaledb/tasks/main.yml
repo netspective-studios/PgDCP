@@ -1,0 +1,60 @@
+---
+- name: Install timescaledb dependency modules
+  shell: "apt install -y postgresql-server-dev-{{ postgres_version }} libssl-dev libkrb5-dev"
+
+- name: Unarchive cmake from gihub URL
+  unarchive:
+    src: https://github.com/Kitware/CMake/releases/download/v3.20.2/cmake-3.20.2.tar.gz
+    dest: /tmp
+    remote_src: yes
+
+- name: Prepare cmake build
+  shell: "apt remove cmake -y; cd /tmp/cmake-3.20.2; ./bootstrap"
+
+- name: Install cmake (Make)
+  make:
+    chdir: /tmp/cmake-3.20.2
+
+- name: Install cmake (Make install)
+  make:
+    chdir: /tmp/cmake-3.20.2
+    target: install
+
+- name: Clone timescaledb from GitHub
+  git:
+    repo: https://github.com/timescale/timescaledb.git
+    dest: /tmp/timescaledb
+
+- name: Prepare timescaledb build
+  shell: "cd /tmp/timescaledb; ./bootstrap -DREGRESS_CHECKS=OFF"
+
+- name: Install timescaledb (Make)
+  make:
+    chdir: /tmp/timescaledb/build
+
+- name: Install timescaledb (Make install)
+  make:
+    chdir: /tmp/timescaledb/build
+    target: install
+
+- name: Add timescaledb as shared_preload_libraries parameter in posgresql.conf
+  shell: echo "shared_preload_libraries = 'timescaledb'" >> {{ Postgres_Config_Path }}/postgresql.conf
+
+- name: Restart service postgresql
+  service:
+    name: postgresql
+    state: restarted
+
+- name: Ensure database {{ Promscale_Database }} is created
+  become_user: postgres
+  become: yes
+  postgresql_db: name={{ Promscale_Database }}
+             encoding='UTF-8'
+             lc_collate='en_US.UTF-8'
+             lc_ctype='en_US.UTF-8'
+             template='template0'
+             state=present
+
+- name: Enable timescaledb extension
+  shell: "psql -U postgres -d {{ Promscale_Database }} -c 'CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;'"
+  become_user: postgres

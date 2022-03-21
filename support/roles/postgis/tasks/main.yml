@@ -1,0 +1,13 @@
+---
+- name: Install build-essential
+  apt: 
+    name: [ 'software-properties-common' , 'git' , 'build-essential' ] 
+    state: present 
+    update_cache: yes
+
+- name: Install and update
+  shell: "apt-get update"
+
+- name: Install PostGIS
+  shell: "apt install -y postgresql-{{ postgres_version }}-postgis-{{ POSTGIS_MAJOR }}  postgresql-{{ postgres_version }}-postgis-{{ POSTGIS_MAJOR }}-scripts --fix-missing"
+

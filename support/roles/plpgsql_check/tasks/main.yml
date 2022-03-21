@@ -1,0 +1,18 @@
+---
+- name: Install plpgsql_check dependency modules
+  shell: "apt install -y postgresql-server-dev-{{ postgres_version }} gcc make libicu-dev "
+
+- name: Clone plpgsql_check from GitHub
+  git:
+    repo: https://github.com/okbob/plpgsql_check.git
+    dest: /tmp/plpgsql_check
+
+- name: plpgsql_check Make clean 
+  make:
+    chdir: /tmp/plpgsql_check
+    target: clean
+  
+- name: Install plpgsql_check (Make install)
+  make:
+    chdir: /tmp/plpgsql_check
+    target: install

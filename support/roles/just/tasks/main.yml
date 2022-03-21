@@ -1,0 +1,9 @@
+- name: Delete Just binary file if it already exists
+  file:
+    path: /usr/local/bin/just
+    state: absent
+
+- name: Install Just command
+  shell: curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | sudo bash -s -- --to /usr/local/bin
+  args:
+    warn: false

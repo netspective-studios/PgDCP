@@ -1,0 +1,26 @@
+---
+- name: Install dependencies
+  apt:
+    pkg: [ 'uuid-dev', 'pkg-config' ]
+
+- name: Clone clickhouse_fdw from GitHub
+  git:
+    repo: https://github.com/adjust/clickhouse_fdw.git
+    dest: /tmp/clickhouse_fdw
+
+- name: Cmake clickhouse_fdw
+  shell: "cd /tmp/clickhouse_fdw; mkdir build; cd build; cmake .."
+
+- name: Install clickhouse_fdw (Make)
+  make:
+    chdir: /tmp/clickhouse_fdw/build
+
+- name: Install clickhouse_fdw (Make install)
+  make:
+    chdir: /tmp/clickhouse_fdw/build
+    target: install
+
+- name: Create extension
+  shell: |
+     psql -U postgres -d {{ DB_Name }} -c "CREATE EXTENSION clickhouse_fdw;"
+  become_user: postgres

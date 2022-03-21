@@ -1,0 +1,21 @@
+---
+- name: Install sqlite_fdw dependencies
+  apt: pkg=libsqlite3-dev state=present update_cache=true
+
+- name: Clone sqlite_fdw from GitHub
+  git:
+    repo: https://github.com/pgspider/sqlite_fdw.git
+    dest: /tmp/sqlite_fdw
+
+- name: Run Make command(Make USE_PGXS=1)
+  make:
+    chdir: /tmp/sqlite_fdw
+    params:
+      USE_PGXS: 1
+
+- name: Install sqlite_fdw(Make USE_PGXS=1 install)
+  make:
+    chdir: /tmp/sqlite_fdw
+    target: install
+    params:
+      USE_PGXS: 1
