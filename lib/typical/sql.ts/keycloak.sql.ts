@@ -772,28 +772,26 @@ export function SQLShielded(
         $subgroupuserremovefun$
      ;
      DROP FUNCTION IF EXISTS ${lQR("introspect")} CASCADE;
-      CREATE OR REPLACE FUNCTION  ${lQR("introspect")}(access_token text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text ,client_name text)
+      CREATE OR REPLACE FUNCTION  ${lQR("introspect")}(access_token text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text ,client_name text, clientid text)
       RETURNS json
       LANGUAGE plpython3u
       AS $introspectfn$
         import json
         from keycloak import KeycloakOpenID
         from keycloak import KeycloakAdmin
-        try: 
-          
+        try:           
           keycloak_admin = KeycloakAdmin(server_url=api_base_url,
                           username=admin_username,
                           password=admin_password,
                           realm_name=master_realm,
                           verify=True)    
           keycloak_admin.realm_name = user_realm_name
-          client_id = keycloak_admin.get_client_id(client_name)
-          response =keycloak_admin.get_client_secrets(client_id)
+          response =keycloak_admin.get_client_secrets(clientid)
           client_secret_key = response['value']
           keycloak_openid = KeycloakOpenID(server_url=api_base_url,
-                          client_id=client_id,
-                          realm_name=user_realm_name,
-                          client_secret_key=client_secret_key) 
+                         client_id=client_name,
+                         realm_name=user_realm_name,
+                         client_secret_key=client_secret_key) 
           token_info = keycloak_openid.introspect(access_token)
           return json.dumps(token_info)                 
         except Exception as error:
@@ -1313,6 +1311,33 @@ export function SQLAnonymous(
        return json.dumps(json.loads(error.args[0]))
      $gettokenfn$ LANGUAGE plpython3u
      ;
+     DROP FUNCTION IF EXISTS ${kaQR("get_token_realm_access")} CASCADE;
+     CREATE OR REPLACE FUNCTION ${kaQR("get_token_realm_access")}(access_code text, redirecturl text, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text, client_name text, clientid text)
+ RETURNS json
+AS $get_token_realm_access$
+   import json
+   from keycloak import KeycloakOpenID
+   from keycloak import KeycloakAdmin
+   try:         
+     keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                      username=admin_username,
+                                      password=admin_password,
+                                      realm_name=master_realm,                                     
+                                      verify=True)    
+     keycloak_admin.realm_name = user_realm_name
+     response = keycloak_admin.get_client_secrets(clientid)
+     client_secret_key = response['value']
+     keycloak_openid = KeycloakOpenID(server_url=api_base_url,
+                       client_id=client_name,
+                       realm_name=user_realm_name,
+                       client_secret_key=client_secret_key)        
+     token = keycloak_openid.token(code=access_code, grant_type=["authorization_code"],redirect_uri=redirecturl)       
+     return json.dumps(token)                 
+   except Exception as error:
+     return json.dumps(json.loads(error.args[0]))
+   $get_token_realm_access$  LANGUAGE plpython3u
+;
+
      DROP FUNCTION IF EXISTS ${kaQR("refresh_token")} CASCADE;
      CREATE OR REPLACE FUNCTION ${kaQR("refresh_token")}(refresh_token varchar,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text)
      RETURNS json
