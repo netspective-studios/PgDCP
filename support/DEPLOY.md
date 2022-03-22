@@ -39,7 +39,7 @@ Execute the following commands in your Ubuntu terminal.
 sudo apt update
 sudo apt install python2.7 
 sudo update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1
-sudo apt install python-pip
+sudo apt install python-pip    # This package only required for Ubuntu 18.04
 sudo apt install ansible -y
 ```
 ## Move to the HOME folder and Install git
