@@ -1,84 +1,58 @@
-# Ansible Playbooks for Installing PostgreSQL 13 and it's required extensions in VM
+# Welcome to the Ansible Playbook for Installing PgDCP
 
-This playbook will help you to deploy PgDCP (PostgreSQL Data Computing Platform) in Ubuntu 18.04/20.04 servers.
+## Server software requirements
+Ubuntu 18.04/20.04 or similar Linux distribution on a cloud instance such as AWS EC2 is required. If you are an expert in working on other cloud instances, you can execute similar steps there.
 
-## Server Requirements
-- Single core Processor (Minimum)
-- 4GB RAM
-- 40GB SSD
-## To check the server details, goto Settings
-`
-Settings -> About
-`
-## To check PgDCP is already installed, goto Terminal
-```
-psql --version
-```
-
- If PgDCP is installed output will be like 
+The following is the minimum requirements required for the EC2 instance
+ - RAM: minimum 4096 megabytes, preferably 8192 megabytes
+ - vCPU: minimum 2
+ - Storage: minimum 32 gigabytes, preferably 256 gigabytes
+ - Network: Accessible outbound to the Internet (both IPv4 and IPv6), inbound access not required
+ - Firewall: Use a security group with appropriate inbound rules
  
- `psql (PostgreSQL) 13.6 (Ubuntu 13.6-1.pgdg20.04+1)`
+NOTE: Since we are handling PHI data in this instance, it should be deployed only in a private subnet. This will mean that public IP is not directly attached to this instance. We should use any NAT gateway to access internet in this instance.
  
- If PgDCP is not installed output will be like
-
-`
-Command 'psql' not found, but can be installed with:
-sudo apt install postgresql-client-common
-`
-
-OR
-`psql--version: command not found`
-
-
-**For installing PgDCP follow the below steps**
+ ### After completing the EC2 initialization, we get the following defaults
+ - Private IP address of this instance
+ - Instance User Name: ubuntu
+ - [AWS System Manager Agent (SSM)](https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent.html) is preinstalled
+ 
+## Connect to this Linux instance using Session Manager
+To connect using Session Manager, follow the instructions [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/session-manager.html).
 
 # One-time Setup
-## Install Ansible on VM
-Execute the following commands in your Ubuntu terminal.
+## Install Ansible on this instance
+Execute the following commands from the Session Manager terminal.
 ```
 sudo apt update
-sudo apt install python2.7 
+sudo apt install python2.7 ansible git -y 
 sudo update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1
-sudo apt install python-pip    # This package only required for Ubuntu 18.04
-sudo apt install ansible -y
-```
-## Move to the HOME folder and Install git
-
-```
-cd $HOME
-sudo apt install git
+sudo apt install python-pip    // This package only required for Ubuntu 18.04 
 ```
 ## Clone the git Repository 
 ```
 git clone https://github.com/netspective-studios/PgDCP.git
-cd PgDCP
-```
-**NOTE:** Sometimes you may face a Certificate issue. In this case you need to export the certificate using the following command
-```
-export GIT_SSL_NO_VERIFY=1
-```
-## Git checkout
-Use `Main` branch for deployment.
-```
-git checkout main
-cd support
+cd PgDCP/support
 ```
 
 ## Set variables
 ```
 vim.tiny main.yml
 ```
-After cloning and checkout, set the variables **Host_IP, Postgres_Config_Path, DB_Name_to_Enable_PG_CRON, DB_User, DB_Name, DB_Password, Promscale_ReadOnly_Password** in  `main.yml` with your system/application details.
-
+After cloning and checkout, set only the following variables in `main.yml` with your system/application details.
+```
+Host_IP : <Private IPv4 address of instance>
+DB_Name : <Database name>
+DB_User : <Database username>
+DB_Password : <Database password>
+Promscale_ReadOnly_Password : <Promscale password>
+```
 ## Execute the below command for PgDCP installation
 ```bash 
 sudo ansible-playbook main.yml
 ```
-# Install system utilities
+# The following PostgreSQL extensions will be installed along with the PgDCP installation
 
-Please add only `system_utilities` role in `main.yml` file to install `just, deno, sqlite and pgloader` utilities.
-
-Listed below are few sample extensions that will be installed,
 
     plpython
     plsh
