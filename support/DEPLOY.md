@@ -42,8 +42,6 @@ vim.tiny main.yml
 After cloning and checkout, set only the following variables in `main.yml` with your system/application details.
 ```
 Host_IP : <Private IPv4 address of instance>
-DB_Name : <Database name>
-DB_User : <Database username>
 DB_Password : <Database password>
 Promscale_ReadOnly_Password : <Promscale password>
 ```
@@ -51,8 +49,8 @@ Promscale_ReadOnly_Password : <Promscale password>
 ```bash 
 sudo ansible-playbook main.yml
 ```
-# The following PostgreSQL extensions will be installed along with the PgDCP installation
 
+After successful PgDCP installation, the following PostgreSQL extensions will be installed along with the PostgreSQL 13.
 
     plpython
     plsh
@@ -75,4 +73,24 @@ sudo ansible-playbook main.yml
     git_fdw
     sqlite_fdw
     supascript
+    
+    
+    
+    
+ ## How to check whether PgDCP is properly running
+   
+     service postgresql status
+    
+#### You should see something like this:
+    
+    ● postgresql.service - PostgreSQL RDBMS
+     Loaded: loaded (/lib/systemd/system/postgresql.service; enabled; vendor preset: enabled)
+     Active: active (exited) since Tue 2022-03-22 08:20:07 IST; 11h ago
+     Process: 2161 ExecStart=/bin/true (code=exited, status=0/SUCCESS)
+     Main PID: 2161 (code=exited, status=0/SUCCESS)
+     
+#### How to login into PgDCP
+    psql -h <Private IPv4 address of this instance> -U postgres
 
+#### How to list available databases 
+     \l
