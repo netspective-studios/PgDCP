@@ -41,7 +41,7 @@ vim.tiny main.yml
 ```
 After cloning and checkout, set only the following variables in `main.yml` with your system/application details.
 ```
-Host_IP : <Private IPv4 address of instance>
+Host_IP : <Private IPv4 address of this instance>
 DB_Password : <Database password>
 Promscale_ReadOnly_Password : <Promscale password>
 ```
