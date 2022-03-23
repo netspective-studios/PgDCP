@@ -20,8 +20,8 @@ NOTE: Since we are handling PHI data in this instance, it should be deployed onl
 ## Connect to this Linux instance using Session Manager
 To connect using Session Manager, follow the instructions [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/session-manager.html).
 
-# One-time Setup
-## Install Ansible on this instance
+## One-time Setup
+### Install Ansible on this instance
 Execute the following commands from the Session Manager terminal.
 ```
 sudo apt update
@@ -29,13 +29,13 @@ sudo apt install python2.7 ansible git -y
 sudo update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1
 sudo apt install python-pip    // This package only required for Ubuntu 18.04 
 ```
-## Clone the git Repository 
+### Clone the git Repository 
 ```
 git clone https://github.com/netspective-studios/PgDCP.git
 cd PgDCP/support
 ```
 
-## Set variables
+### Set variables
 ```
 vim.tiny main.yml
 ```
@@ -45,7 +45,7 @@ Host_IP : <Private IPv4 address of instance>
 DB_Password : <Database password>
 Promscale_ReadOnly_Password : <Promscale password>
 ```
-## Execute the below command for PgDCP installation
+### Execute the below command for PgDCP installation
 ```bash 
 sudo ansible-playbook main.yml
 ```
@@ -77,7 +77,7 @@ After successful PgDCP installation, the following PostgreSQL extensions will be
     
     
     
- ## How to check whether PgDCP is properly running
+ ### How to check whether PgDCP is properly running
    
      service postgresql status
     
