@@ -8,7 +8,8 @@
 
 - name: Install plv8 runtimeDependencies modules
   apt:
-    pkg: [ 'libc++1' , 'libtinfo5' , 'libc++abi1' ]
+    pkg: [ 'libc++1' , 'libtinfo5' , 'libc++abi1' , 'ninja-build' ]
+    #pkg: [ 'libc++1' , 'libtinfo5' , 'libc++abi1' ]
 
 - name: Clone plv8 from GitHub
   git:
