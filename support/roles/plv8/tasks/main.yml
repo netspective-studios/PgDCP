@@ -4,7 +4,7 @@
 
 - name: Install plv8 buildDependencies modules
   apt:
-    pkg: [ 'ca-certificates' , 'curl' , 'git-core', 'gpp', 'cpp', 'pkg-config', 'apt-transport-https' , 'cmake' , 'libc++-dev' , 'libc++abi-dev' ]
+    pkg: [ 'build-essential' , 'ca-certificates' , 'curl' , 'git-core', 'gpp', 'cpp', 'pkg-config', 'apt-transport-https' , 'cmake' , 'libc++-dev' , 'libc++abi-dev' ]
 
 - name: Install plv8 runtimeDependencies modules
   apt:
