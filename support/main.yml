@@ -33,6 +33,7 @@
     - plsh
     - plperl
     - pljava
+    - plv8
     - postgis
     - pgtap
     - plpgsql_check
