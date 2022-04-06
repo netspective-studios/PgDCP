@@ -284,6 +284,7 @@ Platform and site reliability engineers should review:
   control, Jenkins and Maven\.](https://github.com/pauldzy/Tentative_PLpgSQL_CI)
 - [Securing Your PostgreSQL Database](https://goteleport.com/blog/securing-postgres-postgresql/)
 - [Advanced multi\-threaded PostgreSQL connection pooler and request router](https://github.com/yandex/odyssey)
+- [Postgres Container Apps: Easy Deploy Postgres Apps](https://blog.crunchydata.com/blog/announcing-postgres-container-apps-easy-deploy-postgres-apps)
 
 Engineers writing stored routines (functions, SPs) should review:
 
