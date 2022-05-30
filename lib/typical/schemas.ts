@@ -281,7 +281,7 @@ export class ExtensionsSchema extends TypicalSchema {
   readonly pgVectorExtn: SQLa.PostgreSqlExtension;
   readonly oracleFDW: SQLa.PostgreSqlExtension;
   readonly plsh: SQLa.PostgreSqlExtension;
-
+  readonly mysqlFDW: SQLa.PostgreSqlExtension;
   constructor() {
     super("dcp_extensions");
     this.pgTapExtn = this.extension("pgtap");
@@ -300,6 +300,7 @@ export class ExtensionsSchema extends TypicalSchema {
     this.pgVectorExtn = this.extension("vector");
     this.oracleFDW = this.extension("oracle_fdw");
     this.plsh = this.extension("plsh");
+    this.mysqlFDW = this.extension("mysql_fdw");
   }
 }
 
