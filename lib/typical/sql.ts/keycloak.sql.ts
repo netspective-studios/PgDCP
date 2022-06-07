@@ -502,6 +502,27 @@ export function SQLShielded(
       $updateuserpasswordfn$ LANGUAGE plpython3u
       ;
 
+      DROP FUNCTION IF EXISTS ${lQR("update_user_password_permanent")} CASCADE;
+      CREATE OR REPLACE FUNCTION ${lQR("update_user_password_permanent")}(username text,password varchar,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text  )
+      RETURNS json
+      AS $updateuserpasswordfn$
+      import json
+      from keycloak import KeycloakOpenID
+      from keycloak import KeycloakAdmin
+      try:         
+        keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                          username=admin_username,
+                                          password=admin_password,
+                                          realm_name=master_realm,                                     
+                                          verify=True)    
+        keycloak_admin.realm_name = user_realm_name
+        user_id_keycloak = keycloak_admin.get_user_id(username)
+        response = keycloak_admin.set_user_password(user_id=user_id_keycloak, password=password, temporary=False)
+        return json.dumps(response);                 
+      except Exception as error:
+        return json.dumps(repr(error))
+      $updateuserpasswordfn$ LANGUAGE plpython3u
+      ;
 
       DROP FUNCTION IF EXISTS ${lQR("send_verify_email")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("send_verify_email")}(username text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
