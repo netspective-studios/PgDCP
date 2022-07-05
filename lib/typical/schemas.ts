@@ -266,6 +266,7 @@ export class TypicalSchema implements SQLa.PostgreSqlSchema {
 
 export class ExtensionsSchema extends TypicalSchema {
   readonly pgTapExtn: SQLa.PostgreSqlExtension;
+  readonly mvStatsExtn: SQLa.PostgreSqlExtension;
   readonly pgStatStatementsExtn: SQLa.PostgreSqlExtension;
   readonly pgCryptoExtn: SQLa.PostgreSqlExtension;
   readonly pgJwtExtn: SQLa.PostgreSqlExtension;
@@ -285,6 +286,7 @@ export class ExtensionsSchema extends TypicalSchema {
   constructor() {
     super("dcp_extensions");
     this.pgTapExtn = this.extension("pgtap");
+    this.mvStatsExtn = this.extension("mv_stats");
     this.pgStatStatementsExtn = this.extension("pg_stat_statements");
     this.unaccentExtn = this.extension("unaccent");
     this.ltreeExtn = this.extension("ltree");
