@@ -151,6 +151,32 @@ export function SQLShielded(
         return repr(error)
       $logoutfn$ LANGUAGE plpython3u
       ;
+
+
+      DROP FUNCTION IF EXISTS ${lQR("user_logout")} CASCADE;
+     CREATE OR REPLACE FUNCTION ${lQR("user_logout")}(username text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text)
+     RETURNS json
+     AS $sendverifyemailfn$
+     import json
+     from keycloak import KeycloakOpenID
+     from keycloak import KeycloakAdmin
+     try: 
+       
+       keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                         username=admin_username,
+                                         password=admin_password,
+                                         realm_name=master_realm,                                     
+                                         verify=True)    
+       keycloak_admin.realm_name = user_realm_name
+       user_id_keycloak = keycloak_admin.get_user_id(username)
+       response = keycloak_admin.user_logout(user_id=user_id_keycloak)
+       return json.dumps(response);                 
+     except Exception as error:
+       return json.dumps(repr(error))
+     $sendverifyemailfn$ LANGUAGE plpython3u
+     ;
+
+
       DROP FUNCTION IF EXISTS ${lQR("create_user")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("create_user")}(email text, username text, value_password text,  firstname character varying, lastname character varying,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text  )
       RETURNS text      
