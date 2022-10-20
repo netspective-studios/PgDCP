@@ -1534,6 +1534,32 @@ AS $get_token_realm_access$
        return json.dumps(repr(error))
      $createuserFn$ LANGUAGE plpython3u     ;
 
+
+     DROP FUNCTION IF EXISTS ${kaQR("create_user_without_password")} CASCADE;
+     CREATE OR REPLACE FUNCTION ${kaQR("create_user_without_password")}(email text, username text, firstname character varying, lastname character varying,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text)
+     RETURNS json      
+     AS $createuserFn$
+     import json
+     from keycloak import KeycloakOpenID
+     from keycloak import KeycloakAdmin
+     try: 
+       
+       keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                         username=admin_username,
+                                         password=admin_password,
+                                         realm_name=master_realm,                                     
+                                         verify=True)    
+       keycloak_admin.realm_name = user_realm_name                                
+       new_user = keycloak_admin.create_user({"email":email,
+                             "username": username,
+                             "enabled": True,
+                             "firstName":firstname,
+                             "lastName": lastname})
+       return json.dumps(new_user);                 
+     except Exception as error:
+       return json.dumps(repr(error))
+     $createuserFn$ LANGUAGE plpython3u     ;
+
      DROP FUNCTION IF EXISTS ${kaQR("get_token_realm")} CASCADE;
      CREATE OR REPLACE FUNCTION ${kaQR("get_token_realm")}(username text, passwords text, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text, client_name text, clientid text)
      RETURNS json
