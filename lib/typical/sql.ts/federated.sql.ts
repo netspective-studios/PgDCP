@@ -41,6 +41,7 @@ export function SQL(
         purpose text NOT NULL,
         ssl_cert text NULL,
         ssl_key text NULL,
+        ssl_ca text NULL,
         ssl_capath text NULL,
         -- TODO: add readonly, readwrite, etc. suggested permissions?
         CONSTRAINT fdw_postgres_authn_unq_row UNIQUE(context, identity)
