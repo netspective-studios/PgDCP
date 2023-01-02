@@ -602,6 +602,35 @@ export function SQLShielded(
             return json.dumps(repr(error))
           $function$
       ;
+          
+      DROP FUNCTION IF EXISTS ${lQR("create_disabled_user_with_attributes")} CASCADE;
+      CREATE OR REPLACE FUNCTION ${lQR("create_disabled_user_with_attributes")}(email text, username text, value_password text, firstname character varying, lastname character varying, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text, user_attributes json)
+      RETURNS json
+      LANGUAGE plpython3u
+      AS $function$
+          import json
+          from keycloak import KeycloakOpenID
+          from keycloak import KeycloakAdmin
+          try: 
+            
+            keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                              username=admin_username,
+                                              password=admin_password,
+                                              realm_name=master_realm,                                     
+                                              verify=True)    
+            keycloak_admin.realm_name = user_realm_name                                
+            new_user = keycloak_admin.create_user({"email":email,
+                                  "username": username,
+                                  "enabled": False,
+                                  "firstName":firstname,
+                                  "lastName": lastname,
+                                  "credentials": [{"value": value_password,"type":  "password"}],
+                                  "attributes":json.loads(user_attributes)})
+            return json.dumps(new_user);                 
+          except Exception as error:
+            return json.dumps(repr(error))
+          $function$
+      ;
 
 
       DROP FUNCTION IF EXISTS ${lQR("send_verify_email")} CASCADE;
