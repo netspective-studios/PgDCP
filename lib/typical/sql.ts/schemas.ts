@@ -280,6 +280,7 @@ export class ExtensionsSchema extends TypicalSchema {
   readonly isjsonbValid: SQLa.PostgreSqlExtension;
   readonly pgVectorExtn: SQLa.PostgreSqlExtension;
   readonly oracleFDW: SQLa.PostgreSqlExtension;
+  readonly supa_audit: SQLa.PostgreSqlExtension;
 
   constructor() {
     super("dcp_extensions");
@@ -298,6 +299,7 @@ export class ExtensionsSchema extends TypicalSchema {
     this.isjsonbValid = this.extension("is_jsonb_valid");
     this.pgVectorExtn = this.extension("vector");
     this.oracleFDW = this.extension("oracle_fdw");
+    this.supa_audit = this.extension("supa_audit");
   }
 }
 
