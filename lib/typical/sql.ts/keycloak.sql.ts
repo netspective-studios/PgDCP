@@ -951,6 +951,31 @@ export function SQLShielded(
          $getusersfn$
      ;
 
+     DROP FUNCTION IF EXISTS ${lQR("update_user_openai_token")} CASCADE;
+     CREATE OR REPLACE FUNCTION ${lQR("update_user_openai_token")}(username text, openai_token text, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text)
+ RETURNS json
+ LANGUAGE plpython3u
+AS $function$
+       import json
+       from keycloak import KeycloakOpenID
+       from keycloak import KeycloakAdmin
+       try: 
+             
+         keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+           username=admin_username,
+           password=admin_password,
+           realm_name=master_realm,                                     
+           verify=True)    
+         keycloak_admin.realm_name = user_realm_name
+         user_id_keycloak = keycloak_admin.get_user_id(username)
+         response = keycloak_admin.update_user(user_id=user_id_keycloak,payload={ "attributes": {
+                           "openai_token": openai_token
+                         }})
+         return json.dumps(response);                 
+       except Exception as error:
+         return json.dumps(repr(error))
+       $function$
+;
      DROP FUNCTION IF EXISTS ${lQR("update_user_git_token")} CASCADE;
      CREATE OR REPLACE FUNCTION ${lQR("update_user_git_token")}(username text, git_token text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
      RETURNS json
@@ -1435,7 +1460,7 @@ export function SQLAnonymous(
                          client_id=client_id,
                          realm_name=user_realm_name,
                          client_secret_key=client_secret_key)                      
-       token = keycloak_openid.token(username, passwords)        
+       token = keycloak_openid.token(username, passwords, scope="openid")       
        return json.dumps(token)                 
      except Exception as error:
        return json.dumps(json.loads(error.args[0]))
@@ -1664,7 +1689,7 @@ AS $get_token_realm_access$
                           client_id=client_name,
                           realm_name=user_realm_name,
                           client_secret_key=client_secret_key)        
-        token = keycloak_openid.token(username, passwords)       
+        token = keycloak_openid.token(username, passwords, scope="openid")       
         return json.dumps(token)                 
       except Exception as error:
         return json.dumps(json.loads(error.args[0]))
