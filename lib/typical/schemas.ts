@@ -283,6 +283,8 @@ export class ExtensionsSchema extends TypicalSchema {
   readonly oracleFDW: SQLa.PostgreSqlExtension;
   readonly plsh: SQLa.PostgreSqlExtension;
   readonly mysqlFDW: SQLa.PostgreSqlExtension;
+  readonly supa_audit: SQLa.PostgreSqlExtension;
+
   constructor() {
     super("dcp_extensions");
     this.pgTapExtn = this.extension("pgtap");
@@ -303,6 +305,7 @@ export class ExtensionsSchema extends TypicalSchema {
     this.oracleFDW = this.extension("oracle_fdw");
     this.plsh = this.extension("plsh");
     this.mysqlFDW = this.extension("mysql_fdw");
+    this.supa_audit = this.extension("supa_audit");
   }
 }
 
