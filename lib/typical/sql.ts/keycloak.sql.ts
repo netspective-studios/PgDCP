@@ -742,7 +742,7 @@ export function SQLShielded(
           if allgroups[s]["name"] == parent_group_name:
             grp = allgroups[s]["id"]
         group = keycloak_admin.create_group(parent=  grp, payload={"name": group_name}, skip_exists=False)
-        return group['id']
+        return group
       except Exception as error:
         return repr(error)
       $createsubgroupfn$ LANGUAGE plpython3u
