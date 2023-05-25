@@ -1047,6 +1047,30 @@ AS $function$
       return json.dumps(repr(error))
     $usergittokenfn$  LANGUAGE plpython3u;  
 
+
+    DROP FUNCTION IF EXISTS ${lQR("get_user_openai_token")} CASCADE;
+    CREATE OR REPLACE FUNCTION ${lQR("get_user_openai_token")} (username text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text )
+    RETURNS json
+    AS $usergittokenfn$
+    import json
+    from keycloak import KeycloakOpenID
+    from keycloak import KeycloakAdmin
+    try:      
+          
+      keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+         username=admin_username,
+         password=admin_password,
+         realm_name=master_realm,                                     
+         verify=True)    
+      keycloak_admin.realm_name = user_realm_name
+      user_id_keycloak = keycloak_admin.get_user_id(username)
+      user = keycloak_admin.get_user(user_id_keycloak)
+      openai_token = user['attributes']['openai_token']
+      return json.dumps(openai_token);                 
+    except Exception as error:
+      return json.dumps(repr(error))
+    $usergittokenfn$  LANGUAGE plpython3u;  
+
     DROP FUNCTION IF EXISTS ${lQR("get_groupid")} CASCADE;
     CREATE OR REPLACE FUNCTION ${lQR("get_groupid")}(group_name text, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text)
     RETURNS text
@@ -1360,10 +1384,9 @@ AS $function$
                                           realm_name=master_realm,
                                           verify=True)    
         keycloak_admin.realm_name = user_realm_name
-        client_id = keycloak_admin.get_client_id(client_name)    
         user_id_keycloak = keycloak_admin.get_user_id(username)
         role_id = keycloak_admin.get_realm_role(role_name=role_name)
-        keycloak_admin.assign_realm_roles( user_id=user_id_keycloak, client_id=client_id, roles=[{"id":role_id["id"] ,"name": role_id["name"]}])
+        keycloak_admin.assign_realm_roles( user_id=user_id_keycloak,  roles=[{"id":role_id["id"] ,"name": role_id["name"]}])
         return  'success';
       except Exception as error:
         return repr(error)
