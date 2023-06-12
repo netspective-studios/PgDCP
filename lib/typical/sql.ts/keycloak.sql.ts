@@ -69,6 +69,29 @@ export function SQLShielded(
      $getclientsecretfn$ LANGUAGE plpython3u
    ; 
 
+   DROP FUNCTION IF EXISTS ${lQR("update_user_email_verified_flag")} CASCADE;
+   CREATE OR REPLACE FUNCTION ${lQR("update_user_email_verified_flag")}(username text, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text)
+    RETURNS json
+    LANGUAGE plpython3u
+    AS $function$
+          import json
+          from keycloak import KeycloakOpenID
+          from keycloak import KeycloakAdmin
+          try:         
+            keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                              username=admin_username,
+                                              password=admin_password,
+                                              realm_name=master_realm,                                     
+                                              verify=True)    
+            keycloak_admin.realm_name = user_realm_name
+            user_id_keycloak = keycloak_admin.get_user_id(username)
+            response = keycloak_admin.update_user(user_id=user_id_keycloak, 
+                                                payload={"emailVerified":True})
+            return json.dumps(response);                 
+          except Exception as error:
+            return json.dumps(repr(error))
+          $function$
+    ;
   
    DROP FUNCTION IF EXISTS ${lQR("user_info")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("user_info")}(access_token text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text  )
