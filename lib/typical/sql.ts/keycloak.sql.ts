@@ -93,6 +93,42 @@ export function SQLShielded(
           $function$
     ;
   
+ DROP FUNCTION IF EXISTS ${lQR("update_user_details")}(username text, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text, firstname character varying , lastname character varying ) CASCADE;
+  
+ CREATE OR REPLACE FUNCTION ${lQR("update_user_details")}(username text, api_base_url text, admin_username text, admin_password text, user_realm_name text, master_realm text, firstname character varying DEFAULT NULL::character varying, lastname character varying DEFAULT NULL::character varying)
+ RETURNS json
+ LANGUAGE plpython3u
+AS $function$
+import json
+from keycloak import KeycloakOpenID
+from keycloak import KeycloakAdmin
+
+try:
+    keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                   username=admin_username,
+                                   password=admin_password,
+                                   realm_name=master_realm,
+                                   verify=True)
+    keycloak_admin.realm_name = user_realm_name
+    user_id_keycloak = keycloak_admin.get_user_id(username)
+
+    update_payload = {}
+
+    if firstname is not None:
+        update_payload["firstName"] = firstname
+    if lastname is not None:
+        update_payload["lastName"] = lastname
+
+    if update_payload:
+        response = keycloak_admin.update_user(user_id=user_id_keycloak, payload=update_payload)
+        return json.dumps(response)
+    else:
+        return json.dumps({"message": "No updates specified."})
+except Exception as error:
+    return json.dumps({"error": repr(error)})
+$function$
+;
+
    DROP FUNCTION IF EXISTS ${lQR("user_info")} CASCADE;
       CREATE OR REPLACE FUNCTION ${lQR("user_info")}(access_token text,api_base_url text,admin_username text , admin_password text,user_realm_name text,master_realm text,client_name text  )
       RETURNS json
