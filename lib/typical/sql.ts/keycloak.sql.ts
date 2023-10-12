@@ -1808,19 +1808,19 @@ AS $get_token_realm_access$
     RETURNS text    
     AS $disablerealm$
     from keycloak import KeycloakOpenID
-      rom keycloak import KeycloakAdmin
-      try:        
-        keycloak_admin = KeycloakAdmin(server_url=api_base_url,
-                                          username=admin_username,
-                                          password=admin_password,
-                                          realm_name=master_realm,                                     
-                                          verify=True)
-        
-        keycloak_admin.update_realm(realm_name = user_realm_name ,payload={"enabled" : False})  
-        return  "success";
-      except Exception as error:
-        return repr(error)
-      $disablerealm$ LANGUAGE plpython3u;
+    from keycloak import KeycloakAdmin
+    try:        
+     keycloak_admin = KeycloakAdmin(server_url=api_base_url,
+                                       username=admin_username,
+                                       password=admin_password,
+                                       realm_name=master_realm,
+                                       verify=True)
+     keycloak_admin.update_realm(realm_name = user_realm_name ,payload={"enabled" : False})  
+     return  "success";
+    except Exception as error:
+     return repr(error)
+    $disablerealm$ LANGUAGE plpython3u;
+
 
     END;
     $$ LANGUAGE PLPGSQL;
